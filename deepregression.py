@@ -7,8 +7,8 @@ class Sddr_Single(nn.Module):
     
     def __init__(self, deep_models_dict, struct_shapes, P):
         """
-        deep_models_dict: dictinary with key are names of deep models and values are objects that define the deep models)\
-        struct_shapes: number structural features
+        deep_models_dict: dictionary where key are names of deep models and values are objects that define the deep models
+        struct_shapes: number of structural features
         P: numpy matrix for the smoothing regularization (with added zero matrix in the beginning for the linear part)
         
         """
@@ -19,10 +19,7 @@ class Sddr_Single(nn.Module):
         output_size_of_deep_models  = get_output_sizes_of_deep_models(deep_models_dict)
         
         self.deep_head = nn.Linear(output_size_of_deep_models,1, bias = False)
-        
-        
-        
-        
+              
         
     def _orthog_layer(self, Q, Uhat):
         """
@@ -60,16 +57,14 @@ class Sddr_Single(nn.Module):
         
         
         
-class sddr(nn.Module):
+class Sddr(nn.Module):
     
     def __init__(self, family, regularization_params, parsed_formula_contents)
         """
         family: string e.g. "gaussian", "binomial"...
-        parsed_formula_contents: 
-        dictionary with keys are parameters of the distribution, e.g. "eta" and "scale"
-        values are dicts with keys deep_models_dict, struct_shapes and P (as used in Sddr_Single)
-
-
+        regularization_params: smoothing parameters
+        parsed_formula_contents: dictionary with keys being parameters of the distribution, e.g. "eta" and "scale"
+        and values being dicts with keys deep_models_dict, struct_shapes and P (as used in Sddr_Single)
         """
         self.family = family
         self.regularization_params = regularization_params
