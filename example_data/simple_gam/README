@@ -1,0 +1,30 @@
+# Data
+
+* Y: The outcome vector (Poisson distributed)
+* X: The original data (two features, without intercept column)
+* true_coefficients (the true model coefficients estimated by a GAM)
+* smoothing_parameters (the two smoothing_parameters for the two features)
+* P_only: the penalty matrix (without smoothing_parameters multiplied to it)
+* full_P: the penalty matrix multiplied with the smoothing parameters
+* B: the model matrix for the features = one column for the intercept and then the evaluated spline bases
+
+# Model
+
+The model is a generalized additive model with two splines (one has a quadratic effect, one has only a linear effect) and an intercept. Y is assumed to come from a Poisson distribution. 
+
+# Loss function
+
+The loss function to be used in this case is something like
+
+-torch.mean(torch.distributions.poisson.Poisson(rate).log_prob(Y)) + torch.matmul(torch.matmul(torch.transpose(networkweight), full_P), networkweight)
+
+where rate is the estimated outcome of the network (one hidden unit in one hidden layer with linear activation, which gets B as input) and Y is the true outcome value
+
+# Expected result
+
+The weights in the network should be in the same ballpark as true_coefficients and if you multiply B[:,1:10] with true_coefficients[1:10] and plot the result (lets call it hatY) in a sorted manner, you should see the quadratic effect. Sorting should be done like this
+
+firstCov = X[:,0]
+sortedHatY = [x for _,x in sorted(zip(firstCov,hatY))]
+
+-> plot sortedHatY vs. np.sort(firstCov)
