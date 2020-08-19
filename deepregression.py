@@ -8,14 +8,42 @@ import pandas as pd
 
 ## SDDR NETWORK PART
 class Sddr_Single(nn.Module):
+    '''
+    This class represents an sddr network with a structured part, one or many deep models, a linear layer for 
+    the structured part and a linear layer for the concatenated outputs of the deep models. The concatenated 
+    outputs of the deep models are first filtered with an orthogonilization layer which removes any linear 
+    parts of the deep output (by taking the Q matrix of the QR decomposition of the output of the structured part). 
+    The two outputs of the linear layers are added so a prediction of a snigle parameter of the distribution is made
+    and is returned as the final output of the network.
+    The model follows the architecture depicted here:
+    https://docs.google.com/presentation/d/1cBgh9LoMNAvOXo2N5t6xEp9dfETrWUvtXsoSBkgVrG4/edit#slide=id.g8ed34c120e_0_0
+
+    Parameters
+    ----------
+    deep_models_dict: dict
+        dictionary where keys are names of the deep models and values are objects that define the deep models
+    deep_shapes: dict
+        dictionary where keys are names of the deep models and values are the outputs shapes of the deep models
+    struct_shapes: int?
+        number of structural features
+    P: numpy matrix 
+        matrix used for the smoothing regularization (with added zero matrix in the beginning for the linear part)
+    Attributes
+    ----------
+    P: numpy matrix 
+        matrix used for the smoothing regularization (with added zero matrix in the beginning for the linear part)
+    deep_models_dict: dict
+        dictionary where keys are names of the deep models and values are objects that define the deep models
+    structured_head: nn.Linear
+        A linear layer which is fed the structured part of the data
+    deep_head: nn.Linear
+        A linear layer which is fed the unstructured part of the data
+    deep_models_exist: Boolean
+        This value is true if deep models have been used on init of the ssdr_single network, otherwise it is false
+    '''
     
     def __init__(self, deep_models_dict, deep_shapes, struct_shapes, P):
-        """
-        deep_models_dict: dictionary where key are names of deep models and values are objects that define the deep models
-        struct_shapes: number of structural features
-        P: numpy matrix for the smoothing regularization (with added zero matrix in the beginning for the linear part)
         
-        """
         super(Sddr_Single, self).__init__()
         self.P = P
         self.deep_models_dict = deep_models_dict
@@ -85,18 +113,49 @@ class Sddr_Single(nn.Module):
         
         
 class Sddr(nn.Module):
+    '''
+    This class represents the full sddr network which can consist of one or many smaller sddr nets (in a parallel manner).
+    Each smaller sddr predicts one distribution parameter and these are then sent into a transformation layer which applies
+    constraints on the parameters depending on the given distribution. The output parameters are then fed into a distributional
+    layer and a log-loss is computed. A regularization term is added to the log-loss to compute the total loss of the network.
+    The model follows the architecture depicted here:
+    https://docs.google.com/presentation/d/1cBgh9LoMNAvOXo2N5t6xEp9dfETrWUvtXsoSBkgVrG4/edit#slide=id.g8ed34c120e_5_16
+
+    Parameters
+    ----------
+        family: string 
+            A string describing the given distribution, e.g. "gaussian", "binomial", ...
+        regularization_params: 
+            The smoothing parameters 
+        parsed_formula_contents: dict
+            A dictionary with keys being parameters of the distribution, e.g. "eta" and "scale"
+            and values being dicts with keys deep_models_dict, struct_shapes and P (as used in Sddr_Single)
+    Attributes
+    ----------
+        family: string 
+            A string describing the given distribution, e.g. "gaussian", "binomial", ...
+        regularization_params: dict
+            A dictionary where keys are the name of the distribution parameter (e.g. eta,scale) and values 
+            are the smoothing parameters 
+        #parameter_names: not used
+        
+        single_parameter_sddr_list: dict
+            A dictionary where keys are the name of the distribution parameter and values are the single_sddr object 
+        distribution_layer_type: class object of some type of torch.distributions
+            The distribution layer object, defined in the init and depending on the family, e.g. for
+            family='normal' the object we will be of type torch.distributions.normal.Normal
+        regularization: Torch
+            The regularization added to the final loss
+        distribution_layer: class instance of some type of torch.distributions
+            The final layer of the sddr network, which is initiated depending on the type of distribution (as defined 
+            in family) and the predicted parameters from the forward pass
+    '''
     
     def __init__(self, family, regularization_params, parsed_formula_contents):
-        """
-        family: string e.g. "gaussian", "binomial"...
-        regularization_params: smoothing parameters
-        parsed_formula_contents: dictionary with keys being parameters of the distribution, e.g. "eta" and "scale"
-        and values being dicts with keys deep_models_dict, struct_shapes and P (as used in Sddr_Single)
-        """
         super(Sddr, self).__init__()
         self.family = family
         self.regularization_params = regularization_params
-        self.parameter_names = parsed_formula_contents.keys
+        #self.parameter_names = parsed_formula_contents.keys
         self.single_parameter_sddr_list = dict()
         for key, value in parsed_formula_contents.items():
             deep_models_dict = value["deep_models_dict"]
@@ -110,9 +169,9 @@ class Sddr(nn.Module):
                 
 
         #define distributional layer
-        if family == "normal":
+        if self.family == "normal":
             self.distribution_layer_type = torch.distributions.normal.Normal
-        elif family == "poisson":
+        elif self.family == "poisson":
             self.distribution_layer_type = torch.distributions.poisson.Poisson
     
     def _distribution_trafos(self,pred):
@@ -129,16 +188,16 @@ class Sddr(nn.Module):
         elif family == "poisson":
             pred_trafo["rate"] = add_const + pred["rate"].exp()
         
-        return pred_trafo
+        return pred_traf
     
     def forward(self,meta_datadict):
         
-        self.regul = 0
+        self.regularization = 0
         pred = dict()
         for parameter_name, data_dict  in meta_datadict.items():
             sddr_net = self.single_parameter_sddr_list[parameter_name]
             pred[parameter_name] = sddr_net(data_dict)
-            self.regul += sddr_net.get_regularization()*self.regularization_params[parameter_name]
+            self.regularization += sddr_net.get_regularization()*self.regularization_params[parameter_name]
             
         predicted_parameters = self._distribution_trafos(pred)
         
@@ -149,91 +208,11 @@ class Sddr(nn.Module):
     
     def get_loss(self, Y):
     
-#         regul = 0            # move to forward, or we need meta_datadict as input to get_loss
+#         regularization = 0            # move to forward, or we need meta_datadict as input to get_loss
 #         for parameter_name, data_dict  in meta_datadict.items():
 #             sddr_net = self.single_parameter_sddr_list[parameter_name]
-#             regul += sddr_net.get_regularization()*self.regularization_params[parameter_name]
+#             regularization += sddr_net.get_regularization()*self.regularization_params[parameter_name]
         log_loss = -self.distribution_layer.log_prob(Y)
-        loss = log_loss + self.regul
+        loss = log_loss + self.regularization
         
         return loss
-        
-        
-
-
-        
-        
-## TRAIN and TEST on the small case in example_data/simple_gam/
-
-class MyDataset(Dataset):
-    def __init__(self):
-        x_csv = pd.read_csv (r'./example_data/simple_gam/X.csv',sep=';',header=None)
-        y_csv = pd.read_csv (r'./example_data/simple_gam/Y.csv',header=None)
-        B_csv = pd.read_csv (r'./example_data/simple_gam/B.csv',sep=';',header=None)
-        
-        self.struct_data = torch.from_numpy(B_csv.values).float()
-        self.deep_data = torch.from_numpy(x_csv.values).float()
-        self.y = torch.from_numpy(y_csv.values).float()
-        
-    def __getitem__(self, index):
-        struct = self.struct_data[index]
-        deep = self.deep_data[index]
-        gt = self.y[index]
-        
-        datadict = {"structured": struct, "dm1": deep}
-        meta_datadict = dict()
-        meta_datadict["rate"] = datadict
-        
-        return {'meta_datadict': meta_datadict, 'target': gt}        
-    
-    def __len__(self):
-        return len(self.deep_data)
-
-
-def train():
-    
-    family = "poisson"
-    
-    regularization_params = dict()
-    regularization_params["rate"] = 1.   # already mutiplied in full_P
-    
-    deep_models_dict = {}
-    deep_shapes = {}
-    struct_shapes = 19
-    P = pd.read_csv (r'./example_data/simple_gam/full_P.csv',sep=';',header=None).values
-    
-    parsed_formula_contents = dict()
-    parsed_formula_contents["rate"] = {"deep_models_dict": deep_models_dict, "deep_shapes": deep_shapes, "struct_shapes": struct_shapes, "P": P}
-    
-
-    dataset = MyDataset()
-    loader = DataLoader(
-        dataset,
-        batch_size=1000,
-    )
-    
-    
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    bignet = Sddr(family, regularization_params, parsed_formula_contents)
-    bignet = bignet.to(device)
-    optimizer = optim.RMSprop(bignet.parameters())
-
-    bignet.train()
-    print('Begin training ...')
-    for epoch in range(1, 2500):
-
-        for batch in loader:
-            target = batch['target'].to(device)
-            meta_datadict = batch['meta_datadict']          # .to(device) should be improved 
-            meta_datadict['rate']['structured'] = meta_datadict['rate']['structured'].to(device)
-            meta_datadict['rate']['dm1'] = meta_datadict['rate']['dm1'].to(device)
-           
-            optimizer.zero_grad()
-            output = bignet(meta_datadict)
-            loss = torch.mean(bignet.get_loss(target))
-            loss.backward()
-            optimizer.step()
-        if epoch % 100 == 0:
-            print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch,loss.item()))
-            
-    return list(bignet.parameters())[0].detach().numpy()
