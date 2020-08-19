@@ -188,7 +188,7 @@ class Sddr(nn.Module):
         elif family == "poisson":
             pred_trafo["rate"] = add_const + pred["rate"].exp()
         
-        return pred_traf
+        return pred_trafo
     
     def forward(self,meta_datadict):
         

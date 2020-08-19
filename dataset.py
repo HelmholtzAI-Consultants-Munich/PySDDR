@@ -1,8 +1,17 @@
+import pandas as pd
+import torch
+from torch.utils.data import Dataset
+
+'''
+x_path = r'./example_data/simple_gam/X.csv'
+y_path = r'./example_data/simple_gam/Y.csv'
+b_path = r'./example_data/simple_gam/B.csv'
+'''
 class MyDataset(Dataset):
-    def __init__(self):
-        x_csv = pd.read_csv (r'./example_data/simple_gam/X.csv',sep=';',header=None)
-        y_csv = pd.read_csv (r'./example_data/simple_gam/Y.csv',header=None)
-        B_csv = pd.read_csv (r'./example_data/simple_gam/B.csv',sep=';',header=None)
+    def __init__(self, x_path, y_path, b_path):
+        x_csv = pd.read_csv (x_path, sep=';',header=None)
+        y_csv = pd.read_csv (y_path, header=None)
+        B_csv = pd.read_csv (b_path, sep=';',header=None)
         
         self.struct_data = torch.from_numpy(B_csv.values).float()
         self.deep_data = torch.from_numpy(x_csv.values).float()
