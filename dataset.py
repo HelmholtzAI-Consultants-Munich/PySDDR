@@ -11,9 +11,11 @@ class MyDataset(Dataset):
     def __init__(self, x_path, y_path, b_path):
         x_csv = pd.read_csv (x_path, sep=';',header=None)
         y_csv = pd.read_csv (y_path, header=None)
-        B_csv = pd.read_csv (b_path, sep=';',header=None)
-        
-        self.struct_data = torch.from_numpy(B_csv.values).float()
+        B_csv = pd.read_csv (b_path, sep=';',header=None).values
+
+        #just for now [:,1:]
+        #B_csv = B_csv[:,1:]
+        self.struct_data = torch.from_numpy(B_csv).float()
         self.deep_data = torch.from_numpy(x_csv.values).float()
         self.y = torch.from_numpy(y_csv.values).float()
         

@@ -76,7 +76,7 @@ class Sddr_Single(nn.Module):
     
     def forward(self, datadict):
         """Comment 6.8.2020 We checked that we can actually have a dictionary as an input here. that should work fine"""
-        
+        # check if dataframe in structired is empty!!
         X = datadict["structured"]
         
         if self._deep_models_exist:
