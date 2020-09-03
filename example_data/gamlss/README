@@ -1,0 +1,38 @@
+# Data
+
+* `Y`: The outcome vector (Poisson distributed)
+* `X`: The original data (two features, without intercept column)
+* `coef_mu`: weights estimated for the mean parameter by deepregression
+* `coef_sigma`: weights estimated for the sigma parameter by deepregression
+* `P_mu`: the penalty matrix multiplied with the smoothing parameters for mean parameter
+* `P_sigma`: the penalty matrix multiplied with the smoothing parameters for scale parameter
+* `B_mu`: the model matrix for the features in the mean parameter = one column for the intercept and then the evaluated spline bases
+* `B_sigma`: the model matrix for the features in the scale parameter = one column for the intercept and then the evaluated spline bases
+
+# Model
+
+The model is a generalized additive model with 
+- two splines (one has a quadratic effect, one has only a linear effect) and an intercept for the mean parameter and 
+- two splines (one has only a linear effect with slope 0.5, one has the form sin(4*x)) and an intercept for the scale parameter.
+The 
+`Y` is assumed to come from a logistic distribution. This is not available off-the-shelf in PyTorch but can be generated using
+TransformedDistribution (https://pytorch.org/docs/stable/distributions.html#torch.distributions.transformed_distribution.TransformedDistribution)
+
+# Loss function
+
+The loss function to be used in this case is something like
+
+```
+-logistic(mu,sigma).log_prob(Y)) + torch.matmul(torch.matmul(torch.transpose(networkweight_mu), P_mu), networkweight_mu) + 
+torch.matmul(torch.matmul(torch.transpose(networkweight_sigma), P_sigma), networkweight_sigma)
+```
+
+- where mu is the estimated mean of the network (one hidden unit in one hidden layer with linear activation, which gets `B_mu` as input) 
+- where sigma is the estimated scale of the network (one hidden unit in one hidden layer with linear activation, which gets `B_sigma` as input) 
+and `Y` is the true outcome value
+
+# Expected result
+
+The weights in the network should be in the same ballpark as `coef_mu` and `coef_sigma`. Again, if you multiply the coef (weights) with the respective B
+matrices, and plot the ordered effect against the sorted respective column in `X` (column 1 and 2 correspond to the splines in mu, 3 and 4 to the splines
+in sigma), you should see effects like the one in results.pdf
