@@ -121,7 +121,7 @@ def parse_formulas(family, formulas, data, cur_distribution, deep_models_dict, d
     # for each parameter of the distribution
     for param in formulas.keys():
         meta_datadict[param] = dict()
-        structured_part, unstructured_terms = split_formula(formulas[param], net_names_list)
+        structured_part, unstructured_terms = split_formula(formulas[param], list(deep_models_dict.keys())
         print('results from split formula')
         print(structured_part)
         print(unstructured_terms)
