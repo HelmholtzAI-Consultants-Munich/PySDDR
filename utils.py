@@ -81,7 +81,7 @@ def split_formula(formula, net_names_list):
     structured_part = '+'.join(structured_terms)    
     return structured_part, unstructured_terms
 
-def parse_formulas(family, formulas, data, cur_distribution, net_names_list):
+def parse_formulas(family, formulas, data, cur_distribution, deep_models_dict, deep_shapes):
     """
     Parses the formulas defined by the user and returns a dict of dicts which can be fed into SDDR network
     Parameters
@@ -89,22 +89,23 @@ def parse_formulas(family, formulas, data, cur_distribution, net_names_list):
         family : dictionary
             A dictionary holding all the available distributions as keys and values are again dictionaries with the parameters as keys and 
             values the formula which applies for each parameter 
-
         formulas : dictionary
             A dictionary with keys corresponding to the parameters of the distribution defined by the user and values to strings defining the
             formula for each distribution, e.g. formulas['loc'] = '~ 1 + bs(x1, df=9) + dm1(x2, df=9)'
-        
         data: Pandas.DataFrame
             A data frame holding all the data 
-
         cur_distribution : string
             The current distribution defined by the user
-        
-        net_names_list: list of strings
-            A list of all newtwork names defined by the user
-            
+        deep_models_dict: dictionary 
+            A dictionary where keys are model names and values are instances
+        deep_shapes: dictionary
+            A dictionary where keys are network names and values are the number of output features of the networks
+
     Returns
     -------
+        parsed_formula_contents: dictionary
+            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts will be: 'struct_shapes',
+            'P', 'deep_models_dict' and 'deep_shapes'
         meta_datadict: dictionary
             A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts will be: 'structured' and 
             neural network names if defined in the formula of the parameter (e.g. 'dm1'). Their values are the data for the structured part (after 
@@ -115,7 +116,9 @@ def parse_formulas(family, formulas, data, cur_distribution, net_names_list):
     if not formulas:
         exit
     meta_datadict = dict()
+    parsed_formula_contents = dict()
     struct_list = []
+    # for each parameter of the distribution
     for param in formulas.keys():
         meta_datadict[param] = dict()
         structured_part, unstructured_terms = split_formula(formulas[param], net_names_list)
@@ -124,8 +127,11 @@ def parse_formulas(family, formulas, data, cur_distribution, net_names_list):
         print(unstructured_terms)
         if not structured_part:
             structured_part='~0'
-        structured_matrix = dmatrix(structured_part, data, return_type='dataframe')
+        # a function will be written to return P and structured matrix
+        structured_matrix, P = dmatrix(structured_part, data, return_type='dataframe')
         meta_datadict[param]['structured'] = structured_matrix
+        parsed_formula_contents[param]['struct_shapes'] = structured_matrix.shape[1]
+        parsed_formula_contents[param]['P'] = P
         if unstructured_terms:
             for term in unstructured_terms:
                 term_split = term.split('(')
@@ -135,7 +141,10 @@ def parse_formulas(family, formulas, data, cur_distribution, net_names_list):
                 unstructured_data = data[feature_names_list]
                 unstructured_data = unstructured_data.to_numpy()
                 meta_datadict[param][net_name] = unstructured_data
-    return meta_datadict
+                parsed_formula_contents[param]['deep_models_dict'][net_name] = deep_models_dict[net_name]
+                parsed_formula_contents[param]['deep_shapes'][net_name] = deep_shapes[net_name]
+
+    return parsed_formula_contents, meta_datadict
 
 if __name__ == '__main__':
     # test
