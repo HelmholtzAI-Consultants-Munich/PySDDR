@@ -22,7 +22,7 @@ def train():
     y_path = r'./example_data/simple_gam/Y.csv'
     
     formulas = dict()
-    formulas['rate'] = '~1+bs(x1, df=9)+d1(x1)+d2(x2)'
+    formulas['rate'] = '~1+spline(x1, bs="bs",df=9)+d1(x1)+d2(x2)'
     
     deep_models_dict = dict()
     deep_models_dict['rate'] = dict()
