@@ -98,7 +98,7 @@ class Sddr_Single(nn.Module):
         structured_pred = self.structured_head(X)
         
         pred = structured_pred + deep_pred
-        
+
         return pred
     
     def get_regularization(self):

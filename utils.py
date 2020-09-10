@@ -186,6 +186,8 @@ def parse_formulas(family, formulas, data, cur_distribution, deep_models_dict, d
         meta_datadict[param]['structured'] = structured_matrix.values
         parsed_formula_contents[param]['struct_shapes'] = structured_matrix.shape[1]
         parsed_formula_contents[param]['P'] = P
+        parsed_formula_contents[param]['deep_models_dict'] = dict()
+        parsed_formula_contents[param]['deep_shapes'] = dict()
         if unstructured_terms:
             for term in unstructured_terms:
                 term_split = term.split('(')
@@ -195,8 +197,8 @@ def parse_formulas(family, formulas, data, cur_distribution, deep_models_dict, d
                 unstructured_data = data[feature_names_list]
                 unstructured_data = unstructured_data.to_numpy()
                 meta_datadict[param][net_name] = unstructured_data
-                parsed_formula_contents[param]['deep_models_dict']={net_name:deep_models_dict[param][net_name]}
-                parsed_formula_contents[param]['deep_shapes'] = {net_name: deep_shapes[param][net_name]}
+                parsed_formula_contents[param]['deep_models_dict'][net_name]= deep_models_dict[param][net_name]
+                parsed_formula_contents[param]['deep_shapes'][net_name] = deep_shapes[param][net_name]
 
     return parsed_formula_contents, meta_datadict
 
