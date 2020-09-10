@@ -3,6 +3,7 @@ from patsy import dmatrix
 import statsmodels.api as sm
 import pandas as pd
 import os
+from torch import nn
 
 def checkups(family, formulas, cur_distribution):
     """
@@ -29,7 +30,7 @@ def checkups(family, formulas, cur_distribution):
     """
     # return an empty dict if distribution not available
     if cur_distribution not in family.keys():
-        print('Distribution not in family of distributions! Available distributions are: ', family.keys())
+        print('Distribution not in family of distributions! Available distributions are: ', list(family.keys()))
         return dict() 
     else:
         #if len(formulas) > len(family[cur_distribution]):
@@ -120,18 +121,19 @@ def parse_formulas(family, formulas, data, cur_distribution, deep_models_dict, d
     struct_list = []
     # for each parameter of the distribution
     for param in formulas.keys():
-        meta_datadict[param] = dict()
-        structured_part, unstructured_terms = split_formula(formulas[param], list(deep_models_dict.keys())
-        print('results from split formula')
-        print(structured_part)
-        print(unstructured_terms)
+        structured_part, unstructured_terms = split_formula(formulas[param], list(deep_models_dict[param].keys()))
+        #print('results from split formula')
+        #print(structured_part)
+        #print(unstructured_terms)
         if not structured_part:
             structured_part='~0'
         # a function will be written to return P and structured matrix
-        structured_matrix, P = dmatrix(structured_part, data, return_type='dataframe')
-        meta_datadict[param]['structured'] = structured_matrix
-        parsed_formula_contents[param]['struct_shapes'] = structured_matrix.shape[1]
-        parsed_formula_contents[param]['P'] = P
+        #structured_matrix, P = dmatrix(structured_part, data, return_type='dataframe')
+        structured_matrix = dmatrix(structured_part, data, return_type='dataframe')
+        meta_datadict[param] = {'structured': structured_matrix.values}
+        parsed_formula_contents[param] = {'struct_shapes': structured_matrix.shape[1]}
+        # add when we have it
+        #parsed_formula_contents[param]['P'] = P
         if unstructured_terms:
             for term in unstructured_terms:
                 term_split = term.split('(')
@@ -141,8 +143,8 @@ def parse_formulas(family, formulas, data, cur_distribution, deep_models_dict, d
                 unstructured_data = data[feature_names_list]
                 unstructured_data = unstructured_data.to_numpy()
                 meta_datadict[param][net_name] = unstructured_data
-                parsed_formula_contents[param]['deep_models_dict'][net_name] = deep_models_dict[net_name]
-                parsed_formula_contents[param]['deep_shapes'][net_name] = deep_shapes[net_name]
+                parsed_formula_contents[param]['deep_models_dict'] = {net_name: deep_models_dict[param][net_name]}
+                parsed_formula_contents[param]['deep_shapes'] = {net_name: deep_shapes[param][net_name]}
 
     return parsed_formula_contents, meta_datadict
 
@@ -160,16 +162,22 @@ if __name__ == '__main__':
     x = iris.rename(columns={'Sepal.Length':'x1','Sepal.Width':'x2','Petal.Length':'x3','Petal.Width':'x4','Species':'y'})
     # define formulas
     formulas = dict()
-    formulas['loc'] = '~1+bs(x1, df=9)+bs(x2, df=9)'
+    formulas['loc'] = '~1+bs(x1, df=9)+d1(x1)+d2(x2)'
+    deep_models_dict = dict()
+    deep_models_dict['loc'] = dict()
+    deep_models_dict['loc']['d1'] = nn.Sequential(nn.Linear(1,10))
+    deep_models_dict['loc']['d2'] = nn.Sequential(nn.Linear(10,3),nn.ReLU(), nn.Linear(3,8))
+    deep_shapes = dict()
+    deep_shapes['loc'] = {'d1' : 10, 'd2' : 8}
+
     #formulas['scale'] = '~d2(x4,x1)'
     #formulas['n'] = '~9+sb(x1)'
     # define distributions and network names
-    cur_distribution = 'normalss'
+    cur_distribution = 'poisson'
     family = {'normal':{'loc': 'whateva', 'scale': 'whateva2'}, 'poisson': {'loc': 'whateva'}, 'binomial':{'n': 'whateva', 'p': 'whateva'}}
-    net_names_list = ['d1', 'd2', 'd3']
     # geta meta_datadict
-    meta_datadict = parse_formulas(family, formulas, x, cur_distribution, net_names_list)
-    print(meta_datadict)
+    meta_datadict = parse_formulas(family, formulas, x, cur_distribution, deep_models_dict, deep_shapes)
+    #print(meta_datadict)
 
         
 '''
