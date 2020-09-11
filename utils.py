@@ -198,7 +198,7 @@ def parse_formulas(family, formulas, data, cur_distribution, deep_models_dict, d
                 unstructured_data = unstructured_data.to_numpy()
                 meta_datadict[param][net_name] = unstructured_data
                 parsed_formula_contents[param]['deep_models_dict'][net_name]= deep_models_dict[param][net_name]
-                parsed_formula_contents[param]['deep_shapes'][net_name] = deep_shapes[param][net_name]
+                parsed_formula_contents[param]['deep_shapes'][net_name] = deep_shapes[param][net_name] #Dominik: can we not just say unstructured_data.shape[1] here? so the user does not have to provide this shapes?
 
     return parsed_formula_contents, meta_datadict
 
