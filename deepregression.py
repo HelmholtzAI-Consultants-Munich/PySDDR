@@ -13,7 +13,7 @@ class Sddr_Single(nn.Module):
     the structured part and a linear layer for the concatenated outputs of the deep models. The concatenated 
     outputs of the deep models are first filtered with an orthogonilization layer which removes any linear 
     parts of the deep output (by taking the Q matrix of the QR decomposition of the output of the structured part). 
-    The two outputs of the linear layers are added so a prediction of a snigle parameter of the distribution is made
+    The two outputs of the linear layers are added so a prediction of a single parameter of the distribution is made
     and is returned as the final output of the network.
     The model follows the architecture depicted here:
     https://docs.google.com/presentation/d/1cBgh9LoMNAvOXo2N5t6xEp9dfETrWUvtXsoSBkgVrG4/edit#slide=id.g8ed34c120e_0_0

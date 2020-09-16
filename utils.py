@@ -199,6 +199,7 @@ def parse_formulas(family, formulas, data, cur_distribution, deep_models_dict, d
                 meta_datadict[param][net_name] = unstructured_data
                 parsed_formula_contents[param]['deep_models_dict'][net_name]= deep_models_dict[param][net_name]
                 parsed_formula_contents[param]['deep_shapes'][net_name] = deep_shapes[param][net_name] #Dominik: can we not just say unstructured_data.shape[1] here? so the user does not have to provide this shapes?
+                # Christina: this is the shape of the output of the deep models not the shape of the input, e.g. if you have a nn.Linear(1,5) the deep_shape=5 whereas unstructured_data.shape[1]=1
 
     return parsed_formula_contents, meta_datadict
 
