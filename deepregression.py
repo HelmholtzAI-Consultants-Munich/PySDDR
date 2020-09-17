@@ -151,10 +151,11 @@ class Sddr(nn.Module):
             in family) and the predicted parameters from the forward pass
     '''
     
-    def __init__(self, family, regularization_params, parsed_formula_contents):
+    def __init__(self, family, regularization_params, parsed_formula_contents,family_class):
         super(Sddr, self).__init__()
         self.family = family
         self.regularization_params = regularization_params
+        self.family_class = family_class
         #self.parameter_names = parsed_formula_contents.keys
         self.single_parameter_sddr_list = dict()
         for key, value in parsed_formula_contents.items():
@@ -167,28 +168,72 @@ class Sddr(nn.Module):
             #register the Sddr_Single network
             self.add_module(key,self.single_parameter_sddr_list[key])
                 
-
-        #define distributional layer
-        if self.family == "normal":
-            self.distribution_layer_type = torch.distributions.normal.Normal
-        elif self.family == "poisson":
-            self.distribution_layer_type = torch.distributions.poisson.Poisson
+        
+        #define distributional layer       ?????????????????
+        self.distribution_layer_type = family_class.get_distribution_layer_type(self.family)
+#         if self.family == "Normal":
+#             self.distribution_layer_type = torch.distributions.normal.Normal
+#         elif self.family == "Poisson":
+#             self.distribution_layer_type = torch.distributions.poisson.Poisson
+#         elif self.family == "Gamma":
+#             self.distribution_layer_type = torch.distributions.gamma.Gamma
+#         elif self.family == "Beta":
+#             self.distribution_layer_type = torch.distributions.beta.Beta
+#         elif self.family == "Bernoulli" or self.family == "Bernoulli_prob":
+#             self.distribution_layer_type = torch.distributions.bernoulli.Bernoulli       
+#         elif self.family == "Multinomial":
+#             self.distribution_layer_type = torch.distributions.multinomial.Multinomial   #????????
+#         elif self.family == "NegativeBinomial":
+#             self.distribution_layer_type = torch.distributions.negative_binomial.NegativeBinomial
+#         else:
+#             raise ValueError('Unknown distribution')
+            
+        
     
-    def _distribution_trafos(self,pred):
-        #applies the specific transformations to the prediction so they they correspond to the restrictions
-        #of the parameters
-        #this is family specific
-        pred_trafo = dict()
-        add_const = 1e-8
+#     def _distribution_trafos(self,pred):
+#         #applies the specific transformations to the prediction so they they correspond to the restrictions
+#         #of the parameters
+#         #this is family specific
         
-        family = self.family
-        if family == "normal":
-            pred_trafo["loc"] = pred["loc"]
-            pred_trafo["scale"] = add_const + pred["scale"].exp()
-        elif family == "poisson":
-            pred_trafo["rate"] = add_const + pred["rate"].exp()
+#         pred_trafo = create_family.get_distribution_trafos(self.family, pred)
+#         pred_trafo = dict()
+#         add_const = 1e-8
         
-        return pred_trafo
+#         family = self.family
+#         if family == "Normal":
+#             pred_trafo["loc"] = pred["loc"]
+#             pred_trafo["scale"] = add_const + pred["scale"].exp()
+            
+#         elif family == "Poisson":
+#             pred_trafo["rate"] = add_const + pred["rate"].exp()
+            
+#         elif self.family == "Gamma":
+#             pred_trafo["concentration"] = add_const + pred["concentration"].exp()
+#             pred_trafo["rate"] = add_const + pred["rate"].exp()
+            
+#         elif self.family == "Beta":
+#             pred_trafo["concentration1"] = add_const + pred["concentration1"].exp()
+#             pred_trafo["concentration0"] = add_const + pred["concentration0"].exp()
+            
+#         elif self.family == "Bernoulli":
+#             pred_trafo["logits"] = pred["logits"]
+            
+#         elif self.family == "Bernoulli_prob":
+#             pred_trafo["probs"] = torch.nn.functional.sigmoid(pred["probs"])
+            
+#         elif self.family == "Multinomial":
+#             pred_trafo["total_count"] = 1
+#             pred_trafo["probs"] = torch.nn.functional.softmax(pred["probs"])
+            
+#         elif self.family == "NegativeBinomial":   # loc, scale -> f(total count) , p(probs)
+#             pred_trafo["total_count"] = pred["total_count"]  # constant
+#             pred_trafo["probs"] = pred["probs"]
+            
+#         else:
+#             raise ValueError('Unknown distribution')
+            
+        
+#         return pred_trafo
     
     def forward(self,meta_datadict):
         
@@ -199,7 +244,7 @@ class Sddr(nn.Module):
             pred[parameter_name] = sddr_net(data_dict)
             self.regularization += sddr_net.get_regularization()*self.regularization_params[parameter_name]
             
-        predicted_parameters = self._distribution_trafos(pred)
+        predicted_parameters = self.family_class.get_distribution_trafos(self.family, pred)
         
         #define distributional layer (takes eta and scale)
         self.distribution_layer = self.distribution_layer_type(**predicted_parameters)
