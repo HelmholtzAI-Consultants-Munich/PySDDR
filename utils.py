@@ -204,6 +204,78 @@ def parse_formulas(family, formulas, data, cur_distribution, deep_models_dict, d
     return parsed_formula_contents, meta_datadict
 
 
+class create_family():
+    
+    def __init__(self):        
+        self.families = {'Normal':{'loc': 'whateva', 'scale': 'whateva2'}, 
+                       'Poisson': {'rate': 'whateva'}, 
+                       'Gamma':{'concentration': 'whateva', 'rate': 'whateva'},
+                       'Beta':{'concentration1': 'whateva', 'concentration0': 'whateva'},
+                       'Bernoulli':{'logits': 'whateva'},
+                       'Bernoulli_prob':{'probs':'whateva'},
+                       'Multinomial':{'probs':'whateva'},
+                       'NegativeBinomial':{'loc': 'whateva', 'scale': 'whateva2'}}
+        
+    def get_distribution_layer_type(self, family):   
+        
+        if family == "Normal":
+            distribution_layer_type = torch.distributions.normal.Normal
+        elif family == "Poisson":
+            distribution_layer_type = torch.distributions.poisson.Poisson
+        elif family == "Gamma":
+            distribution_layer_type = torch.distributions.gamma.Gamma
+        elif family == "Beta":
+            distribution_layer_type = torch.distributions.beta.Beta
+        elif family == "Bernoulli" or self.family == "Bernoulli_prob":
+            distribution_layer_type = torch.distributions.bernoulli.Bernoulli       
+        elif family == "Multinomial":
+            distribution_layer_type = torch.distributions.multinomial.Multinomial 
+        elif family == "NegativeBinomial":
+            distribution_layer_type = torch.distributions.negative_binomial.NegativeBinomial
+        else:
+            raise ValueError('Unknown distribution')
+           
+        return distribution_layer_type
+        
+    def get_distribution_trafos(self, family, pred):
+        pred_trafo = dict()
+        add_const = 1e-8
+        
+        if family == "Normal":
+            pred_trafo["loc"] = pred["loc"]
+            pred_trafo["scale"] = add_const + pred["scale"].exp()
+            
+        elif family == "Poisson":
+            pred_trafo["rate"] = add_const + pred["rate"].exp()
+            
+        elif family == "Gamma":
+            pred_trafo["concentration"] = add_const + pred["concentration"].exp()
+            pred_trafo["rate"] = add_const + pred["rate"].exp()
+            
+        elif family == "Beta":
+            pred_trafo["concentration1"] = add_const + pred["concentration1"].exp()
+            pred_trafo["concentration0"] = add_const + pred["concentration0"].exp()
+            
+        elif family == "Bernoulli":
+            pred_trafo["logits"] = pred["logits"]
+            
+        elif family == "Bernoulli_prob":
+            pred_trafo["probs"] = torch.nn.functional.sigmoid(pred["probs"])
+            
+        elif family == "Multinomial":
+            pred_trafo["total_count"] = 1
+            pred_trafo["probs"] = torch.nn.functional.softmax(pred["probs"])
+            
+        elif family == "NegativeBinomial":   
+            ####### to do: loc, scale -> f(total count) , p(probs)
+            pred_trafo["total_count"] = pred["total_count"]  # constant
+            pred_trafo["probs"] = pred["probs"]
+            
+        else:
+            raise ValueError('Unknown distribution')
+                 
+        return pred_trafo
+    
 
 if __name__ == '__main__':
     # test
