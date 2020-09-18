@@ -8,7 +8,7 @@ x_path = r'./example_data/simple_gam/X.csv'
 y_path = r'./example_data/simple_gam/Y.csv'
 b_path = r'./example_data/simple_gam/B.csv'
 '''
-class MyDataset(Dataset):
+class SddrDataset(Dataset):
     def __init__(self, x_path, y_path,family, formulas,cur_distribution, deep_models_dict,deep_shapes):
         
         x_csv = pd.read_csv(x_path, names=['x1','x2'],delimiter=';')

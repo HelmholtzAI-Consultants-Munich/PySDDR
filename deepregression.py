@@ -7,7 +7,7 @@ import pandas as pd
 
 
 ## SDDR NETWORK PART
-class Sddr_Single(nn.Module):
+class Sddr_Param_Net(nn.Module):
     '''
     This class represents an sddr network with a structured part, one or many deep models, a linear layer for 
     the structured part and a linear layer for the concatenated outputs of the deep models. The concatenated 
@@ -44,7 +44,7 @@ class Sddr_Single(nn.Module):
     
     def __init__(self, deep_models_dict, deep_shapes, struct_shapes, P):
         
-        super(Sddr_Single, self).__init__()
+        super(Sddr_Param_Net, self).__init__()
         self.P = P
         self.deep_models_dict = deep_models_dict
         
@@ -112,7 +112,7 @@ class Sddr_Single(nn.Module):
         
         
         
-class Sddr(nn.Module):
+class SddrNet(nn.Module):
     '''
     This class represents the full sddr network which can consist of one or many smaller sddr nets (in a parallel manner).
     Each smaller sddr predicts one distribution parameter and these are then sent into a transformation layer which applies
@@ -129,7 +129,7 @@ class Sddr(nn.Module):
             The smoothing parameters 
         parsed_formula_contents: dict
             A dictionary with keys being parameters of the distribution, e.g. "eta" and "scale"
-            and values being dicts with keys deep_models_dict, struct_shapes and P (as used in Sddr_Single)
+            and values being dicts with keys deep_models_dict, struct_shapes and P (as used in Sddr_Param_Net)
     Attributes
     ----------
         family: string 
@@ -152,7 +152,7 @@ class Sddr(nn.Module):
     '''
     
     def __init__(self, family, regularization_params, parsed_formula_contents):
-        super(Sddr, self).__init__()
+        super(SddrNet, self).__init__()
         self.family = family
         self.regularization_params = regularization_params
         #self.parameter_names = parsed_formula_contents.keys
@@ -162,9 +162,9 @@ class Sddr(nn.Module):
             deep_shapes = value["deep_shapes"]
             struct_shapes = value["struct_shapes"]
             P = value["P"]
-            self.single_parameter_sddr_list[key] = Sddr_Single(deep_models_dict, deep_shapes, struct_shapes, P)
+            self.single_parameter_sddr_list[key] = Sddr_Param_Net(deep_models_dict, deep_shapes, struct_shapes, P)
             
-            #register the Sddr_Single network
+            #register the Sddr_Param_Net network
             self.add_module(key,self.single_parameter_sddr_list[key])
                 
 
