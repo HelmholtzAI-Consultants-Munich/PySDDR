@@ -108,7 +108,7 @@ def _get_P_from_design_matrix(dm, data):
     column_counter = 0
     
     for term in terms:
-        if len(term.factors) == 0:
+        if len(term.factors) != 1: #currently we only use smoothing for 1D, in the future we also want to add smoothing for tensorproducts
             column_counter += 1
         else:
             factor_info = factor_infos[term.factors[0]]
