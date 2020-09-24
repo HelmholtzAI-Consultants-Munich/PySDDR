@@ -46,8 +46,9 @@ class SDDR(object):
             for batch in self.loader:
                 target = batch['target'].to(self.device)
                 meta_datadict = batch['meta_datadict']          # .to(device) should be improved 
-                meta_datadict['rate']['structured'] = meta_datadict['rate']['structured'].to(self.device)
-                meta_datadict['rate']['d1'] = meta_datadict['rate']['d1'].to(self.device)
+                for param in meta_datadict.keys():
+                    for key in meta_datadict[param].keys():
+                        meta_datadict[param][key] = meta_datadict[param][key].to(self.device)
             
                 self.optimizer.zero_grad()
                 output = self.net(meta_datadict)
