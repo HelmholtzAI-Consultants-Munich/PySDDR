@@ -1,5 +1,3 @@
-
-## TRAIN and TEST on the small case in example_data/simple_gam
 import pandas as pd
 import torch
 from torch import nn
@@ -8,7 +6,7 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 from deepregression import SddrNet, Sddr_Param_Net
 from dataset import SddrDataset
-from utils import parse_formulas
+from utils import parse_formulas, create_family
 
 class SDDR(object):
     def __init__(self, **kwargs):
@@ -20,37 +18,36 @@ class SDDR(object):
                 self.config = kwargs
             break
 
-        #self.family = # init family
-        dataset = SddrDataset(self.config['data_path'], 
-                            self.config['ground_truth_path'],
-                            #self.family,
-                            self.config['formulas'],
-                            self.config['current_distribution'],
-                            self.config['deep_models_dict'])
+        self.family = create_family(self.config['current_distribution'])
 
-        self.regularization_params = self.config['regularization_params']
+        self.dataset = SddrDataset(self.config['data_path'], 
+                                self.config['ground_truth_path'],
+                                self.family,
+                                self.config['formulas'],
+                                self.config['deep_models_dict'])
+
+        self.regularization_params = self.config['train_parameters']['regularization_params']
 
         self.parsed_formula_contents = dataset.get_parsed_formula_content()
 
         self.loader = DataLoader(dataset,
-                                batch_size=self.config['batch_size'])
+                                batch_size=self.config['train_parameters']['batch_size'])
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.net = SddrNet(cur_distribution, regularization_params, self.parsed_formula_contents)
-        self.net = self.net.to(device)
-        self.optimizer = optim.RMSprop(bignet.parameters())
+        self.net = SddrNet(self.family_class, self.regularization_params, self.parsed_formula_contents)
+        self.net = self.net.to(self.device)
+        self.optimizer = optim.RMSprop(self.net.parameters())
         
-    def train():
-
+    def train(self):
         self.net.train()
         print('Begin training ...')
-        for epoch in range(self.config['epochs']):
+        for epoch in range(self.config['train_parameters']['epochs']):
 
             for batch in self.loader:
-                target = batch['target'].to(device)
+                target = batch['target'].to(self.device)
                 meta_datadict = batch['meta_datadict']          # .to(device) should be improved 
-                meta_datadict['rate']['structured'] = meta_datadict['rate']['structured'].to(device)
-                meta_datadict['rate']['d1'] = meta_datadict['rate']['d1'].to(device)
+                meta_datadict['rate']['structured'] = meta_datadict['rate']['structured'].to(self.device)
+                meta_datadict['rate']['d1'] = meta_datadict['rate']['d1'].to(self.device)
             
                 self.optimizer.zero_grad()
                 output = self.net(meta_datadict)
@@ -62,7 +59,11 @@ class SDDR(object):
                 
         #return list(bignet.parameters())[0].detach().numpy()
 
-        #def eval(self):
+        def eval(self):
+            structured_head_params = list(self.net.parameters())[-2].detach().numpy()
+            for param in self.self.config['formulas'].keys()
+                smoothed_structured = self.dataset.meta_datadict[]
+
         #del load():
         #def inference():
 

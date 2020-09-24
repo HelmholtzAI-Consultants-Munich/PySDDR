@@ -52,7 +52,8 @@ if __name__ == '__main__':
         train_parameters = {
         'batch_size': 1,
         'epochs': 5,
-        'regularization_params': 1
+        'regularization_params': {
+                                'rate':1}
         }
 
         sddr = SDDR(data_path=data_path,
