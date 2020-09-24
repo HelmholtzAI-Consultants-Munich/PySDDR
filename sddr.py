@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 import torch.optim as optim
 from deepregression import SddrNet, Sddr_Param_Net
 from dataset import SddrDataset
-from utils import parse_formulas, create_family
+from utils import parse_formulas, Family
 
 class SDDR(object):
     def __init__(self, **kwargs):
@@ -18,7 +18,7 @@ class SDDR(object):
                 self.config = kwargs
             break
 
-        self.family = create_family(self.config['current_distribution'])
+        self.family = Family(self.config['current_distribution'])
 
         self.dataset = SddrDataset(self.config['data_path'], 
                                 self.config['ground_truth_path'],
@@ -28,13 +28,13 @@ class SDDR(object):
 
         self.regularization_params = self.config['train_parameters']['regularization_params']
 
-        self.parsed_formula_contents = dataset.get_parsed_formula_content()
+        self.parsed_formula_contents = self.dataset.get_parsed_formula_content()
 
-        self.loader = DataLoader(dataset,
+        self.loader = DataLoader(self.dataset,
                                 batch_size=self.config['train_parameters']['batch_size'])
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.net = SddrNet(self.family_class, self.regularization_params, self.parsed_formula_contents)
+        self.net = SddrNet(self.family, self.regularization_params, self.parsed_formula_contents)
         self.net = self.net.to(self.device)
         self.optimizer = optim.RMSprop(self.net.parameters())
         
@@ -47,8 +47,8 @@ class SDDR(object):
                 target = batch['target'].to(self.device)
                 meta_datadict = batch['meta_datadict']          # .to(device) should be improved 
                 for param in meta_datadict.keys():
-                    for key in meta_datadict[param].keys():
-                        meta_datadict[param][key] = meta_datadict[param][key].to(self.device)
+                    for data_part in meta_datadict[param].keys():
+                        meta_datadict[param][data_part] = meta_datadict[param][data_part].to(self.device)
             
                 self.optimizer.zero_grad()
                 output = self.net(meta_datadict)
@@ -59,12 +59,13 @@ class SDDR(object):
                 print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch,loss.item()))
                 
         #return list(bignet.parameters())[0].detach().numpy()
-
-        def eval(self):
-            structured_head_params = list(self.net.parameters())[-2].detach().numpy()
-            for param in self.self.config['formulas'].keys()
-                smoothed_structured = self.dataset.meta_datadict[]
-
+    '''
+    def eval(self):
+        for param in self.self.config['formulas'].keys():
+            structured_head_params = list(self.net.single_parameter_sddr_list[param].parameters()
+            #list(self.net.parameters())[-2].detach().numpy()
+            smoothed_structured = self.dataset.meta_datadict[param]['structured']
+    '''
         #del load():
         #def inference():
 

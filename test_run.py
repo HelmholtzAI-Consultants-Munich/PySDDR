@@ -26,17 +26,18 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
     if args.config:
+        # not yet implemented to read network architecture
         config = get_config(args.config) #load config file
         sddr = SDDR(config=config)
     else:
         # specify either a dict with params or a list of param values
-        data_path = '/data/data.csv'
-        ground_truth_path = '/data/ground_truth.csv'
+        data_path = './example_data/simple_gam/X.csv'
+        ground_truth_path = './example_data/simple_gam/Y.csv'
         output_dir = './outputs'
 
-        current_distribution  = 'normal'
+        current_distribution  = 'Normal'
 
-        formulas = {'location': '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)',
+        formulas = {'loc': '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)',
                     'scale': '~1+spline(x2, bs="bs",df=9)'
                     }
 
@@ -50,10 +51,9 @@ if __name__ == '__main__':
         }
 
         train_parameters = {
-        'batch_size': 1,
-        'epochs': 5,
-        'regularization_params': {
-                                'rate':1}
+        'batch_size': 1000,
+        'epochs': 1000,
+        'regularization_params': {'loc':1, 'scale':1}
         }
 
         sddr = SDDR(data_path=data_path,

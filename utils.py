@@ -8,21 +8,18 @@ import torch
 
 from statsmodels.gam.api import CyclicCubicSplines, BSplines
 
-def checkups(family, formulas, cur_distribution):
+def checkups(params, formulas):
     """
     Checks if the user has given an available distribution, too many formulas or wrong parameters for the given distribution
     Parameters
     ----------
-        family : dictionary
-            A dictionary holding all the available distributions as keys and values are again dictionaries with the parameters as keys and 
-            values the formula which applies for each parameter 
+        params : list of strings
+            A list of strings of the parameters of the current distribution
 
         formulas : dictionary
             A dictionary with keys corresponding to the parameters of the distribution defined by the user and values to strings defining the
             formula for each distribution, e.g. formulas['loc'] = '~ 1 + bs(x1, df=9) + dm1(x2, df=9)'
             
-        cur_distribution : string
-            The current distribution defined by the user
             
     Returns
     -------
@@ -32,21 +29,18 @@ def checkups(family, formulas, cur_distribution):
             is returned.  
     """
     # return an empty dict if distribution not available
-    if cur_distribution not in family.keys():
-        print('Distribution not in family of distributions! Available distributions are: ', list(family.keys()))
-        return dict() 
-    else:
-        #if len(formulas) > len(family[cur_distribution]):
-        # check either if too many formulas have been given and drop them or if wrong parameter names have been given
-        new_formulas=dict()
-        for param in family[cur_distribution].keys():
-            if param in formulas:
-                new_formulas[param] = formulas[param]
-            # define an empty formula for parameters for which the user has not specified a formula
-            else:
-                print('Parameter formula', param,'for distribution not defined. Creating a zero formula for it.')
-                new_formulas[param] = '~0'
-        return new_formulas
+
+    #if len(formulas) > len(family[cur_distribution]):
+    # check either if too many formulas have been given and drop them or if wrong parameter names have been given
+    new_formulas=dict()
+    for param in params:
+        if param in formulas:
+            new_formulas[param] = formulas[param]
+        # define an empty formula for parameters for which the user has not specified a formula
+        else:
+            print('Parameter formula', param,'for distribution not defined. Creating a zero formula for it.')
+            new_formulas[param] = '~0'
+    return new_formulas
 
 def split_formula(formula, net_names_list):
     """
@@ -133,7 +127,7 @@ def _get_P_from_design_matrix(dm, data):
     return big_P
 
 
-def parse_formulas(family, formulas, data, deep_models_dict, deep_shapes):
+def parse_formulas(family, formulas, data, deep_models_dict):
     """
     Parses the formulas defined by the user and returns a dict of dicts which can be fed into SDDR network
 
@@ -150,9 +144,7 @@ def parse_formulas(family, formulas, data, deep_models_dict, deep_shapes):
         cur_distribution : string
             The current distribution defined by the user
         deep_models_dict: dictionary 
-            A dictionary where keys are model names and values are instances
-        deep_shapes: dictionary
-            A dictionary where keys are network names and values are the number of output features of the networks
+            A dictionary where keys are model names and values are dicts with model architecture and output shapes
     Returns
     -------
         parsed_formula_contents: dictionary
@@ -164,9 +156,7 @@ def parse_formulas(family, formulas, data, deep_models_dict, deep_shapes):
             smoothing for the non-linear terms) and unstructured part(s) of the SDDR model 
     """
     # perform checks on given distribution name, parameter names and number of formulas given
-    formulas = checkups(family.families, formulas, family.family)
-    if not formulas:
-        exit
+    formulas = checkups(family.get_params(), formulas)
     meta_datadict = dict()
     parsed_formula_contents = dict()
     struct_list = []
@@ -174,7 +164,7 @@ def parse_formulas(family, formulas, data, deep_models_dict, deep_shapes):
     for param in formulas.keys():
         meta_datadict[param] = dict()
         parsed_formula_contents[param] = dict()
-        structured_part, unstructured_terms = split_formula(formulas[param], list(deep_models_dict[param].keys()))
+        structured_part, unstructured_terms = split_formula(formulas[param], list(deep_models_dict.keys()))
         print('results from split formula')
         print(structured_part)
         print(unstructured_terms)
@@ -198,10 +188,8 @@ def parse_formulas(family, formulas, data, deep_models_dict, deep_shapes):
                 unstructured_data = data[feature_names_list]
                 unstructured_data = unstructured_data.to_numpy()
                 meta_datadict[param][net_name] = unstructured_data
-                parsed_formula_contents[param]['deep_models_dict'][net_name]= deep_models_dict[net_name]
-                parsed_formula_contents[param]['deep_shapes'][net_name] = deep_shapes[net_name] #Dominik: can we not just say unstructured_data.shape[1] here? so the user does not have to provide this shapes?
-                # Christina: this is the shape of the output of the deep models not the shape of the input, e.g. if you have a nn.Linear(1,5) the deep_shape=5 whereas unstructured_data.shape[1]=1
-
+                parsed_formula_contents[param]['deep_models_dict'][net_name]= deep_models_dict[net_name]['model']
+                parsed_formula_contents[param]['deep_shapes'][net_name] = deep_models_dict[net_name]['output_shape']
     return parsed_formula_contents, meta_datadict
 
 
@@ -216,17 +204,21 @@ class Family():
         'Multinomial_prob': multinomial distribution parameterized by total_count(=1) and probs 
     '''
     def __init__(self,family):        
-        self.families = {'Normal':{'loc': 'whateva', 'scale': 'whateva2'}, 
-                       'Poisson': {'rate': 'whateva'}, 
-                       'Bernoulli':{'logits': 'whateva'},
-                       'Bernoulli_prob':{'probs':'whateva'},
-                       'Multinomial_prob':{'probs':'whateva'}}
-#                        'Multinomial':{'logits':'whateva'},
-#                        'Gamma':{'concentration': 'whateva', 'rate': 'whateva'},
-#                        'Beta':{'concentration1': 'whateva', 'concentration0': 'whateva'},
-                       #'NegativeBinomial':{'loc': 'whateva', 'scale': 'whateva2'}}  # available family list
-            
+        self.families = {'Normal':['loc', 'scale'], 
+                       'Poisson': ['rate'], 
+                       'Bernoulli': ['logits'],
+                       'Bernoulli_prob':['probs'],
+                       'Multinomial_prob':['probs']}
+#                        'Multinomial':['logits'],
+#                        'Gamma':['concentration', 'rate'],
+#                        'Beta':['concentration1', 'concentration0'],
+                       #'NegativeBinomial':['loc', 'scale']}  # available family list
+        assert family in self.families.keys(),'Given distribution is not available. Please try with a different distribution. Available distributions are %s' % (self.families.keys())
+
         self.family = family   # current distribution family
+
+    def get_params(self):
+        return self.families[self.family]
         
     def get_distribution_layer_type(self):   
         
@@ -309,11 +301,10 @@ if __name__ == '__main__':
     formulas = dict()
     formulas['loc'] = '~1+bs(x1, df=9)+d1(x1)+d2(x2)'
     deep_models_dict = dict()
-    deep_models_dict['loc'] = dict()
-    deep_models_dict['loc']['d1'] = nn.Sequential(nn.Linear(1,10))
-    deep_models_dict['loc']['d2'] = nn.Sequential(nn.Linear(10,3),nn.ReLU(), nn.Linear(3,8))
-    deep_shapes = dict()
-    deep_shapes['loc'] = {'d1' : 10, 'd2' : 8}
+    deep_models_dict['d1']['model'] = nn.Sequential(nn.Linear(1,10))
+    deep_models_dict['d2']['model'] = nn.Sequential(nn.Linear(10,3),nn.ReLU(), nn.Linear(3,8))
+    deep_models_dict['d1']['output_shape'] = 10
+    deep_models_dict['d2']['output_shape'] = 8
 
     #formulas['scale'] = '~d2(x4,x1)'
     #formulas['n'] = '~9+sb(x1)'
@@ -321,7 +312,7 @@ if __name__ == '__main__':
     cur_distribution = 'poisson'
     family = {'normal':{'loc': 'whateva', 'scale': 'whateva2'}, 'poisson': {'loc': 'whateva'}, 'binomial':{'n': 'whateva', 'p': 'whateva'}}
     # geta meta_datadict
-    meta_datadict = parse_formulas(family, formulas, x, cur_distribution, deep_models_dict, deep_shapes)
+    meta_datadict = parse_formulas(family, formulas, x, cur_distribution, deep_models_dict)
     #print(meta_datadict)
 
         
