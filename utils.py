@@ -4,6 +4,7 @@ import statsmodels.api as sm
 import pandas as pd
 import os
 from torch import nn
+import torch
 
 from statsmodels.gam.api import CyclicCubicSplines, BSplines
 
@@ -219,7 +220,7 @@ class create_family():
                        'Poisson': {'rate': 'whateva'}, 
                        'Bernoulli':{'logits': 'whateva'},
                        'Bernoulli_prob':{'probs':'whateva'},
-                       'Multinomial_prob':{'prob':'whateva'}}
+                       'Multinomial_prob':{'probs':'whateva'}}
 #                        'Multinomial':{'logits':'whateva'},
 #                        'Gamma':{'concentration': 'whateva', 'rate': 'whateva'},
 #                        'Beta':{'concentration1': 'whateva', 'concentration0': 'whateva'},
@@ -228,7 +229,6 @@ class create_family():
         self.family = family   # current distribution family
         
     def get_distribution_layer_type(self):   
-        import torch
         
         if self.family == "Normal":
             distribution_layer_type = torch.distributions.normal.Normal
