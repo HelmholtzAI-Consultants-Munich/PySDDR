@@ -9,12 +9,12 @@ y_path = r'./example_data/simple_gam/Y.csv'
 b_path = r'./example_data/simple_gam/B.csv'
 '''
 class SddrDataset(Dataset):
-    def __init__(self, x_path, y_path,family, formulas,cur_distribution, deep_models_dict,deep_shapes):
+    def __init__(self, x_path, y_path,family, formulas, deep_models_dict,deep_shapes):
         
         x_csv = pd.read_csv(x_path, names=['x1','x2'],delimiter=';')
         y_csv = pd.read_csv(y_path, header=None)
         
-        self.parsed_formula_content, self.meta_datadict = parse_formulas(family, formulas, x_csv, cur_distribution, deep_models_dict, deep_shapes)        
+        self.parsed_formula_content, self.meta_datadict = parse_formulas(family, formulas, x_csv, deep_models_dict, deep_shapes)        
   
         for param in self.meta_datadict.keys():
             for key in self.meta_datadict[param].keys():

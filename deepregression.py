@@ -151,9 +151,8 @@ class SddrNet(nn.Module):
             in family) and the predicted parameters from the forward pass
     '''
     
-    def __init__(self, family, regularization_params, parsed_formula_contents):
+    def __init__(self, family_class, regularization_params, parsed_formula_contents):
         super(SddrNet, self).__init__()
-        self.family = family
         self.regularization_params = regularization_params
         self.family_class = family_class
         #self.parameter_names = parsed_formula_contents.keys
@@ -169,8 +168,8 @@ class SddrNet(nn.Module):
             self.add_module(key,self.single_parameter_sddr_list[key])
                 
         
-        #define distributional layer       ?????????????????
-        self.distribution_layer_type = family_class.get_distribution_layer_type(self.family)
+        #define distributional layer 
+        self.distribution_layer_type = family_class.get_distribution_layer_type()
 #         if self.family == "Normal":
 #             self.distribution_layer_type = torch.distributions.normal.Normal
 #         elif self.family == "Poisson":
@@ -244,7 +243,7 @@ class SddrNet(nn.Module):
             pred[parameter_name] = sddr_net(data_dict)
             self.regularization += sddr_net.get_regularization()*self.regularization_params[parameter_name]
             
-        predicted_parameters = self.family_class.get_distribution_trafos(self.family, pred)
+        predicted_parameters = self.family_class.get_distribution_trafos(pred)
         
         #define distributional layer (takes eta and scale)
         self.distribution_layer = self.distribution_layer_type(**predicted_parameters)
