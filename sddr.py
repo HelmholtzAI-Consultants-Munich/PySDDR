@@ -11,16 +11,22 @@ from dataset import SddrDataset
 from utils import parse_formulas
 
 class SDDR(object):
-    def __init__(self, config):
-        self.config = config
-        self.family = # init family
+    def __init__(self, **kwargs):
+
+        for key in kwargs.keys():
+            if key == 'config':
+                self.config = kwargs['config']
+            else:
+                self.config = kwargs
+            break
+
+        #self.family = # init family
         dataset = SddrDataset(self.config['data_path'], 
                             self.config['ground_truth_path'],
-                            self.family,
+                            #self.family,
                             self.config['formulas'],
-                            self.config['cur_distribution'],
-                            self.config['deep_models_dict'],
-                            self.config['deep_shapes'])
+                            self.config['current_distribution'],
+                            self.config['deep_models_dict'])
 
         self.regularization_params = self.config['regularization_params']
 
