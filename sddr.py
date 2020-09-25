@@ -7,6 +7,7 @@ import torch.optim as optim
 from deepregression import SddrNet, Sddr_Param_Net
 from dataset import SddrDataset
 from utils import parse_formulas, Family
+from matplotlib import pyplot as plt
 
 class SDDR(object):
     def __init__(self, **kwargs):
@@ -59,13 +60,33 @@ class SDDR(object):
                 print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch,loss.item()))
                 
         #return list(bignet.parameters())[0].detach().numpy()
-    '''
-    def eval(self):
-        for param in self.self.config['formulas'].keys():
-            structured_head_params = list(self.net.single_parameter_sddr_list[param].parameters()
-            #list(self.net.parameters())[-2].detach().numpy()
-            smoothed_structured = self.dataset.meta_datadict[param]['structured']
-    '''
+    
+    def eval(self, param, plot=True):
+
+        structured_head_params = self.net.single_parameter_sddr_list[param].structured_head.weight.detach()
+        smoothed_structured = self.dataset.meta_datadict[param]['structured']
+        has_intercept, list_of_dfs = self.dataset.dm_info_dict[param]['has_intercept'], self.dataset.dm_info_dict[param]['list_of_dfs']
+        if has_intercept:
+            prev_end = 1
+        else:
+            prev_end = 0
+        partial_effects = []
+        for df in list_of_dfs:
+            hatY_pred = torch.matmul(smoothed_structured[:,prev_end:prev_end+df], structured_head_params[0, prev_end:prev_end+df])
+            partial_effect = [x for _,x in sorted(zip(self.dataset.firstCov, hatY_pred.numpy()))]
+            partial_effects.append((self.dataset.firstCov, partial_effect))
+            prev_end = prev_end+df
+        if plot:
+            num_plots = len(partial_effects)
+            plt.figure(figsize=(10,5))
+            for i in range(num_plots):
+                plt.subplot(1,num_plots,i+1)
+                firstCov, partial_effect = partial_effects[i]
+                plt.scatter(np.sort(firstCov), partial_effect)
+                plt.title('Partial effect %s' % (i))
+            plt.show()
+        return partial_effects
+        
         #del load():
         #def inference():
 

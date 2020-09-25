@@ -3,22 +3,18 @@ import torch
 from torch.utils.data import Dataset
 from utils import parse_formulas
 
-'''
-x_path = r'./example_data/simple_gam/X.csv'
-y_path = r'./example_data/simple_gam/Y.csv'
-b_path = r'./example_data/simple_gam/B.csv'
-'''
 class SddrDataset(Dataset):
     def __init__(self, x_path, y_path,family, formulas, deep_models_dict):
         
         x_csv = pd.read_csv(x_path, names=['x1','x2'],delimiter=';')
         y_csv = pd.read_csv(y_path, header=None)
         
-        self.parsed_formula_content, self.meta_datadict = parse_formulas(family, formulas, x_csv, deep_models_dict)        
-  
+        self.firstCov = x_csv.values[:,0]
+        self.parsed_formula_content, self.meta_datadict, self.dm_info_dict = parse_formulas(family, formulas, x_csv, deep_models_dict)        
+
         for param in self.meta_datadict.keys():
-            for key in self.meta_datadict[param].keys():
-                self.meta_datadict[param][key] = torch.from_numpy(self.meta_datadict[param][key]).float()
+            for data_part in self.meta_datadict[param].keys():
+                self.meta_datadict[param][data_part] = torch.from_numpy(self.meta_datadict[param][data_part]).float()
 
         self.y = torch.from_numpy(y_csv.values).float()
         

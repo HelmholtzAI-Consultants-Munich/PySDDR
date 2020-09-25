@@ -126,8 +126,18 @@ def _get_P_from_design_matrix(dm, data):
 
     return big_P
 
+def get_dofs(structured_matrix):
+    list_of_dfs = []
+    has_intercept = 'False'
+    for term in structured_matrix.design_info.terms:
+        if term.name() == "Intercept":
+            has_intercept = 'True'
+        elif 'spline' in term.name():
+            number_of_columns = np.prod([structured_matrix.design_info.factor_infos[factor].num_columns for factor in term.factors])
+            list_of_dfs.append(number_of_columns)
+    return has_intercept, list_of_dfs
 
-def parse_formulas(family, formulas, data, deep_models_dict):
+def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
     """
     Parses the formulas defined by the user and returns a dict of dicts which can be fed into SDDR network
 
@@ -154,24 +164,33 @@ def parse_formulas(family, formulas, data, deep_models_dict):
             A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts will be: 'structured' and 
             neural network names if defined in the formula of the parameter (e.g. 'dm1'). Their values are the data for the structured part (after 
             smoothing for the non-linear terms) and unstructured part(s) of the SDDR model 
+         dm_info_dict: dictionary
+            A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the formula has an intercept 
+            or not and a list of the degrees of freedom of the splines in the formula
     """
     # perform checks on given distribution name, parameter names and number of formulas given
     formulas = checkups(family.get_params(), formulas)
     meta_datadict = dict()
     parsed_formula_contents = dict()
     struct_list = []
+    dm_info_dict = dict()
     # for each parameter of the distribution
     for param in formulas.keys():
         meta_datadict[param] = dict()
         parsed_formula_contents[param] = dict()
         structured_part, unstructured_terms = split_formula(formulas[param], list(deep_models_dict.keys()))
-        print('results from split formula')
-        print(structured_part)
-        print(unstructured_terms)
+        if verbose:
+            print('results from split formula')
+            print(structured_part)
+            print(unstructured_terms)
         if not structured_part:
             structured_part='~0'
         
         structured_matrix = dmatrix(structured_part, data, return_type='dataframe')
+        # get degrees of freedom for each spline
+        has_intercept, list_of_dfs = get_dofs(structured_matrix)
+        dm_info_dict[param] = {'has_intercept': has_intercept, 'list_of_dfs': list_of_dfs}
+
         P = _get_P_from_design_matrix(structured_matrix, data)
 
         meta_datadict[param]['structured'] = structured_matrix.values
@@ -190,7 +209,7 @@ def parse_formulas(family, formulas, data, deep_models_dict):
                 meta_datadict[param][net_name] = unstructured_data
                 parsed_formula_contents[param]['deep_models_dict'][net_name]= deep_models_dict[net_name]['model']
                 parsed_formula_contents[param]['deep_shapes'][net_name] = deep_models_dict[net_name]['output_shape']
-    return parsed_formula_contents, meta_datadict
+    return parsed_formula_contents, meta_datadict,  dm_info_dict
 
 
 class Family():
