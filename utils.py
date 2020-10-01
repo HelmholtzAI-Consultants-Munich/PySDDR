@@ -28,10 +28,6 @@ def checkups(params, formulas):
             If a formula hasn't been given for a parameter and ~0 formula is set. If the current distribution is not available an empty dictionary
             is returned.  
     """
-    # return an empty dict if distribution not available
-
-    #if len(formulas) > len(family[cur_distribution]):
-    # check either if too many formulas have been given and drop them or if wrong parameter names have been given
     new_formulas=dict()
     for param in params:
         if param in formulas:
@@ -144,8 +140,7 @@ def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
     Parameters
     ----------
         family : dictionary
-            A dictionary holding all the available distributions as keys and values are again dictionaries with the parameters as keys and 
-            values the formula which applies for each parameter 
+            A dictionary holding all the available distributions as keys and values are again dictionaries with the parameters as keys and values the formula which applies for each parameter 
         formulas : dictionary
             A dictionary with keys corresponding to the parameters of the distribution defined by the user and values to strings defining the
             formula for each distribution, e.g. formulas['loc'] = '~ 1 + bs(x1, df=9) + dm1(x2, df=9)'
@@ -158,15 +153,11 @@ def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
     Returns
     -------
         parsed_formula_contents: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts will be: 'struct_shapes',
-            'P', 'deep_models_dict' and 'deep_shapes'
+            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts will be: 'struct_shapes', 'P', 'deep_models_dict' and 'deep_shapes'
         meta_datadict: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts will be: 'structured' and 
-            neural network names if defined in the formula of the parameter (e.g. 'dm1'). Their values are the data for the structured part (after 
-            smoothing for the non-linear terms) and unstructured part(s) of the SDDR model 
+            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts will be: 'structured' and neural network names if defined in the formula of the parameter (e.g. 'dm1'). Their values are the data for the structured part (after smoothing for the non-linear terms) and unstructured part(s) of the SDDR model 
          dm_info_dict: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the formula has an intercept 
-            or not and a list of the degrees of freedom of the splines in the formula
+            A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the formula has an intercept or not and a list of the degrees of freedom of the splines in the formula
     """
     # perform checks on given distribution name, parameter names and number of formulas given
     formulas = checkups(family.get_params(), formulas)
@@ -207,20 +198,35 @@ def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
                 unstructured_data = data[feature_names_list]
                 unstructured_data = unstructured_data.to_numpy()
                 meta_datadict[param][net_name] = unstructured_data
-                parsed_formula_contents[param]['deep_models_dict'][net_name]= deep_models_dict[net_name]['model']
+                if isinstance(deep_models_dict[net_name]['model'],str):
+                    parsed_formula_contents[param]['deep_models_dict'][net_name]= eval(deep_models_dict[net_name]['model'])
+                else:
+                    parsed_formula_contents[param]['deep_models_dict'][net_name]= deep_models_dict[net_name]['model']
                 parsed_formula_contents[param]['deep_shapes'][net_name] = deep_models_dict[net_name]['output_shape']
     return parsed_formula_contents, meta_datadict,  dm_info_dict
 
 
 class Family():
     '''
-        family calss, currently only 4 discributions are available:
-        'Normal': bernoulli distribution with logits (identity)
-        'Poisson': poisson with rate (exp)
-        'Bernoulli': bernoulli distribution with logits (identity)
-        'Bernoulli_prob': bernoulli distribution with probabilities (sigmoid)
-        'Multinomial': multinomial distribution parameterized by total_count(=1) and logits
-        'Multinomial_prob': multinomial distribution parameterized by total_count(=1) and probs 
+    Create Family class, currently only 4 distributions are available:
+        - 'Normal': bernoulli distribution with logits (identity)
+        - 'Poisson': poisson with rate (exp)
+        - 'Bernoulli': bernoulli distribution with logits (identity)
+        - 'Bernoulli_prob': bernoulli distribution with probabilities (sigmoid)
+        - 'Multinomial': multinomial distribution parameterized by total_count(=1) and logits
+        - 'Multinomial_prob': multinomial distribution parameterized by total_count(=1) and probs
+    Later more distributions will be implemented, such as Gamma, Beta and NegativeBinomial
+    
+    Parameters
+    ----------
+        family : string
+            The current distribution defined by the user
+    Attributes
+    -------
+        families: dictionary
+            A dictionary holding all the available distributions as keys and values are again dictionaries with the parameters as keys and values the formula which applies for each parameter
+        family: string
+            The current distribution defined by the user
     '''
     def __init__(self,family):        
         self.families = {'Normal':['loc', 'scale'], 
@@ -237,10 +243,15 @@ class Family():
         self.family = family   # current distribution family
 
     def get_params(self):
+        '''
+        Return parameters for current distribution family, e.g. 'rate' for 'Poisson' family
+        '''
         return self.families[self.family]
         
     def get_distribution_layer_type(self):   
-        
+        '''
+        Return corresponding type of distributional layer, which is used in the network 
+        '''
         if self.family == "Normal":
             distribution_layer_type = torch.distributions.normal.Normal
         elif self.family == "Poisson":
@@ -261,6 +272,17 @@ class Family():
         return distribution_layer_type
         
     def get_distribution_trafos(self, pred):
+        '''
+        Do transformation for each parameter
+        Parameters
+        ----------
+        pred : tensor
+            The output of each single_parameter_net
+        Returns
+        -------
+        pred_trafo: tensor
+            Transformed output
+        '''
         pred_trafo = dict()
         add_const = 1e-8
         

@@ -163,72 +163,7 @@ class SddrNet(nn.Module):
             #register the Sddr_Param_Net network
             self.add_module(key,self.single_parameter_sddr_list[key])
                 
-        
-        #define distributional layer 
         self.distribution_layer_type = family_class.get_distribution_layer_type()
-#         if self.family == "Normal":
-#             self.distribution_layer_type = torch.distributions.normal.Normal
-#         elif self.family == "Poisson":
-#             self.distribution_layer_type = torch.distributions.poisson.Poisson
-#         elif self.family == "Gamma":
-#             self.distribution_layer_type = torch.distributions.gamma.Gamma
-#         elif self.family == "Beta":
-#             self.distribution_layer_type = torch.distributions.beta.Beta
-#         elif self.family == "Bernoulli" or self.family == "Bernoulli_prob":
-#             self.distribution_layer_type = torch.distributions.bernoulli.Bernoulli       
-#         elif self.family == "Multinomial":
-#             self.distribution_layer_type = torch.distributions.multinomial.Multinomial   #????????
-#         elif self.family == "NegativeBinomial":
-#             self.distribution_layer_type = torch.distributions.negative_binomial.NegativeBinomial
-#         else:
-#             raise ValueError('Unknown distribution')
-            
-        
-    
-#     def _distribution_trafos(self,pred):
-#         #applies the specific transformations to the prediction so they they correspond to the restrictions
-#         #of the parameters
-#         #this is family specific
-        
-#         pred_trafo = create_family.get_distribution_trafos(self.family, pred)
-#         pred_trafo = dict()
-#         add_const = 1e-8
-        
-#         family = self.family
-#         if family == "Normal":
-#             pred_trafo["loc"] = pred["loc"]
-#             pred_trafo["scale"] = add_const + pred["scale"].exp()
-            
-#         elif family == "Poisson":
-#             pred_trafo["rate"] = add_const + pred["rate"].exp()
-            
-#         elif self.family == "Gamma":
-#             pred_trafo["concentration"] = add_const + pred["concentration"].exp()
-#             pred_trafo["rate"] = add_const + pred["rate"].exp()
-            
-#         elif self.family == "Beta":
-#             pred_trafo["concentration1"] = add_const + pred["concentration1"].exp()
-#             pred_trafo["concentration0"] = add_const + pred["concentration0"].exp()
-            
-#         elif self.family == "Bernoulli":
-#             pred_trafo["logits"] = pred["logits"]
-            
-#         elif self.family == "Bernoulli_prob":
-#             pred_trafo["probs"] = torch.nn.functional.sigmoid(pred["probs"])
-            
-#         elif self.family == "Multinomial":
-#             pred_trafo["total_count"] = 1
-#             pred_trafo["probs"] = torch.nn.functional.softmax(pred["probs"])
-            
-#         elif self.family == "NegativeBinomial":   # loc, scale -> f(total count) , p(probs)
-#             pred_trafo["total_count"] = pred["total_count"]  # constant
-#             pred_trafo["probs"] = pred["probs"]
-            
-#         else:
-#             raise ValueError('Unknown distribution')
-            
-        
-#         return pred_trafo
     
     def forward(self,meta_datadict):
         
@@ -241,17 +176,12 @@ class SddrNet(nn.Module):
             
         predicted_parameters = self.family_class.get_distribution_trafos(pred)
         
-        #define distributional layer (takes eta and scale)
         self.distribution_layer = self.distribution_layer_type(**predicted_parameters)
         
         return self.distribution_layer
     
     def get_loss(self, Y):
     
-#         regularization = 0            # move to forward, or we need meta_datadict as input to get_loss
-#         for parameter_name, data_dict  in meta_datadict.items():
-#             sddr_net = self.single_parameter_sddr_list[parameter_name]
-#             regularization += sddr_net.get_regularization()*self.regularization_params[parameter_name]
         log_loss = -self.distribution_layer.log_prob(Y)
         loss = log_loss + self.regularization
         

@@ -26,7 +26,6 @@ def get_args():
 if __name__ == '__main__':
     args = get_args()
     if args.config:
-        # not yet implemented to read network architecture
         config = get_config(args.config) #load config file
         sddr = SDDR(config=config)
     else:
@@ -56,7 +55,7 @@ if __name__ == '__main__':
         'epochs': 2500,
         'regularization_params': {'rate': 1} #{'loc':1, 'scale':1}
         }
-
+        
         sddr = SDDR(data_path=data_path,
                     ground_truth_path=ground_truth_path,
                     output_dir=output_dir,
@@ -68,3 +67,4 @@ if __name__ == '__main__':
 
     sddr.train()
     partial_effects = sddr.eval('rate')
+    sddr.save()

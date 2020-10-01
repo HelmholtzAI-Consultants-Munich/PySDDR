@@ -58,7 +58,7 @@ class SDDR(object):
                 self.optimizer.step()
             if epoch % 100 == 0:
                 print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch,loss.item()))
-                
+        
         #return list(bignet.parameters())[0].detach().numpy()
     
     def eval(self, param, plot=True):
@@ -86,9 +86,33 @@ class SDDR(object):
                 plt.title('Partial effect %s' % (i))
             plt.show()
         return partial_effects
+    
+    def save(self,name = 'model.pth'):
+        torch.save(self.net, name)
+    
+    def coeff(self, param):
+        # return coefficients (network weights) of the structured head
+        return self.net.single_parameter_sddr_list[param].structured_head.weight.detach().numpy()
+    
+    def get_distribution(self):
+        # return trained distribution, could be applied .mean/.variance ...
+        return self.net.distribution_layer
+    
+    def predict(self, net_path=None, data=None):
+        # not implement yet
+        if net_path == None:
+            net = self.net
+        else:
+            net = torch.load(net_path)
+            net.eval()
+        if data == None:
+            data = self.dataset
         
-        #del load():
-        #def inference():
+        #distribution_layer = net(data)
+        #return distribution_layer
+        
+    #del load():
+    #def inference():
 
 if __name__ == "__main__":
     params = train()
