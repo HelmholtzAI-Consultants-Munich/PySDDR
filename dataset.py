@@ -12,12 +12,10 @@ class SddrDataset(Dataset):
         elif isinstance(data,pd.core.frame.DataFrame) and isinstance(target,str):
             self._data = data
             self._target = data[target].values
-            print(2)
             
         elif isinstance(data,pd.core.frame.DataFrame) and isinstance(target,pd.core.frame.DataFrame):
             self._data = data
             self._target = target.iloc[:,0].values
-            print(3)
             
         self.parsed_formula_content, self.meta_datadict, self.dm_info_dict = parse_formulas(family, formulas, self._data, deep_models_dict)        
 
