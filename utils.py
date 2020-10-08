@@ -194,7 +194,6 @@ def get_info_from_design_matrix(structured_matrix):
 def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
     """
     Parses the formulas defined by the user and returns a dict of dicts which can be fed into SDDR network
-
     Parameters
     ----------
         family: dictionary

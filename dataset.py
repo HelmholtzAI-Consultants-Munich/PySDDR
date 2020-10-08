@@ -4,7 +4,7 @@ from torch.utils.data import Dataset
 from utils import parse_formulas
 
 class SddrDataset(Dataset):
-    def __init__(self, data, target,family, formulas, deep_models_dict):
+    def __init__(self, data, target, family, formulas, deep_models_dict):
         
         if isinstance(data,str):
             self._data = pd.read_csv(data ,sep=None,engine='python')
@@ -16,6 +16,7 @@ class SddrDataset(Dataset):
         elif isinstance(data,pd.core.frame.DataFrame) and isinstance(target,pd.core.frame.DataFrame):
             self._data = data
             self._target = target.iloc[:,0].values
+            print(self._target)
             
         self.parsed_formula_content, self.meta_datadict, self.dm_info_dict = parse_formulas(family, formulas, self._data, deep_models_dict)        
 
