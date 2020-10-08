@@ -2,8 +2,8 @@ from sddr import SDDR
 import argparse
 import yaml
 
-
 import torch.nn as nn
+
 # get configs
 def get_config(config):
     with open(config, 'r') as stream:
@@ -30,16 +30,12 @@ if __name__ == '__main__':
         sddr = SDDR(config=config)
     else:
         # specify either a dict with params or a list of param values
-        data_path = './example_data/simple_gam/X.csv'
-        ground_truth_path = './example_data/simple_gam/Y.csv'
+        data = './example_data/simple_gam/X.csv'
+        target = './example_data/simple_gam/Y.csv'
         output_dir = './outputs'
 
-        current_distribution  = 'Poisson' #'Normal'
-        '''
-        formulas = {'loc': '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)',
-                    'scale': '~1+spline(x2, bs="bs",df=9)'
-                    }
-        '''
+        distribution  = 'Poisson'
+
         formulas = {'rate': '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)'}
         deep_models_dict = {
         'd1': {
@@ -53,13 +49,13 @@ if __name__ == '__main__':
         train_parameters = {
         'batch_size': 1000,
         'epochs': 2500,
-        'regularization_params': {'rate': 1} #{'loc':1, 'scale':1}
+        'regularization_params': {'rate': 1}
         }
         
-        sddr = SDDR(data_path=data_path,
-                    ground_truth_path=ground_truth_path,
+        sddr = SDDR(data=data,
+                    target=target,
                     output_dir=output_dir,
-                    current_distribution=current_distribution,
+                    distribution=distribution,
                     formulas=formulas,
                     deep_models_dict=deep_models_dict,
                     train_parameters=train_parameters)

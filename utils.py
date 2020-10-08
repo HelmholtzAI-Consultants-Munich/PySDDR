@@ -75,7 +75,27 @@ def split_formula(formula, net_names_list):
     structured_part = '+'.join(structured_terms)    
     return structured_part, unstructured_terms
 
-def spline(x,bs="bs",df=4, degree=3,return_penalty = False):
+def spline(x, bs="bs", df=4, degree=3, return_penalty = False):
+    """
+    Computes basis functions
+    Parameters
+    ----------
+        x: Pandas.DataFrame
+            A data frame holding all the data 
+        bs: string, default is 'bs'
+            The type of splines to use - default is b splines, but can alos use ccyclic cubic splines if bs='cc'
+        df: int, default is 4
+            Number of degrees of freedom (equals the number of columns in s.basis)
+        degree: int, default is 3
+            Explanation???????
+        return_penalty: bool, default is False
+            If False s.basis is returned, else s.penalty_matrices is returned
+    Returns
+    -------
+        The function returns one of:
+        s.basis: The basis functions
+        s.penalty_matrices: The penalty matrices of the splines 
+    """
     if bs == "bs":
         s = BSplines(x, df=[df], degree=[degree], include_intercept=True)
     elif bs == "cc":
@@ -90,7 +110,19 @@ def spline(x,bs="bs",df=4, degree=3,return_penalty = False):
         return s.basis
 
 def _get_P_from_design_matrix(dm, data):
-
+    """
+    Computes and returns the penalty matrix
+    Parameters
+    ----------
+        dm: patsy.dmatrix
+            The design matrix for the structured part of the formula - computed by patsy
+        data: Pandas.DataFrame
+            A data frame holding all the data 
+    Returns
+    -------
+        big_P: numpy array
+            The penalty matrix of the design matrix
+    """
     factor_infos = dm.design_info.factor_infos
     terms = dm.design_info.terms
     
@@ -107,7 +139,6 @@ def _get_P_from_design_matrix(dm, data):
             state = factor_info.state.copy()
             num_columns = factor_info.num_columns
 
-            
             #here the hack starts
             code = state['eval_code']
 
@@ -122,16 +153,43 @@ def _get_P_from_design_matrix(dm, data):
 
     return big_P
 
-def get_dofs(structured_matrix):
+def get_info_from_design_matrix(structured_matrix):
+    """
+    Parses the formulas defined by the user and returns a dict of dicts which can be fed into SDDR network
+    Parameters
+    ----------
+        structured_matrix: patsy.dmatrix
+            The design matrix for the structured part of the formula - computed by patsy
+    Returns
+    -------
+        has_intercept: boolean
+            If intercept column returns True else returns False
+        list_of_dfs: list of ints
+            A list containing the degrees of freedom of each spline used to compute the design matrix
+        list_of_features: list of strings
+            A list of lists. Each item in the parent list corresponds to one spline (used to compute the design matrix) and 
+            is a list of the names of the features sent as input into that spline.
+    """
     list_of_dfs = []
+    list_of_features = []
     has_intercept = 'False'
     for term in structured_matrix.design_info.terms:
-        if term.name() == "Intercept":
+        dm_term_name = term.name()
+        if dm_term_name == "Intercept":
             has_intercept = 'True'
-        elif 'spline' in term.name():
+        elif 'spline' in dm_term_name:
+            # get the number of columns produced by the spline = number of dofs of the spline
             number_of_columns = np.prod([structured_matrix.design_info.factor_infos[factor].num_columns for factor in term.factors])
+            # get the feature names sent as input to each spline
+            split_term = dm_term_name.split('(')[-1]
+            split_term = split_term.split(', bs')[0]
+            feature_names = split_term.split(',')
+            #co_names_in_formula = parser.expr(code).compile().co_names
+            #relevant_variables = set(co_names_in_formula).intersection(set(data.columns))
+            # append to lists
+            list_of_features.append(feature_names)
             list_of_dfs.append(number_of_columns)
-    return has_intercept, list_of_dfs
+    return has_intercept, list_of_dfs, list_of_features
 
 def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
     """
@@ -139,11 +197,12 @@ def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
 
     Parameters
     ----------
-        family : dictionary
-            A dictionary holding all the available distributions as keys and values are again dictionaries with the parameters as keys and values the formula which applies for each parameter 
-        formulas : dictionary
-            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values to strings defining the
-            formula for each distribution, e.g. formulas['loc'] = '~ 1 + bs(x1, df=9) + dm1(x2, df=9)'
+        family: dictionary
+            A dictionary holding all the available distributions as keys and values are again dictionaries with the 
+            parameters as keys and values the formula which applies for each parameter 
+        formulas: dictionary
+            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values
+            to strings defining the formula for each distribution, e.g. formulas['loc'] = '~ 1 + bs(x1, df=9) + dm1(x2, df=9)'
         data: Pandas.DataFrame
             A data frame holding all the data 
         cur_distribution : string
@@ -153,11 +212,16 @@ def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
     Returns
     -------
         parsed_formula_contents: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts will be: 'struct_shapes', 'P', 'deep_models_dict' and 'deep_shapes'
+            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts 
+            will be: 'struct_shapes', 'P', 'deep_models_dict' and 'deep_shapes' with corresponding values
         meta_datadict: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts will be: 'structured' and neural network names if defined in the formula of the parameter (e.g. 'dm1'). Their values are the data for the structured part (after smoothing for the non-linear terms) and unstructured part(s) of the SDDR model 
+            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts 
+            will be: 'structured' and neural network names if defined in the formula of the parameter (e.g. 'dm1'). Their values 
+            are the data for the structured part (after smoothing for the non-linear terms) and unstructured part(s) of the SDDR 
+            model 
          dm_info_dict: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the formula has an intercept or not and a list of the degrees of freedom of the splines in the formula
+            A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the
+            formula has an intercept or not and a list of the degrees of freedom of the splines in the formula
     """
     # perform checks on given distribution name, parameter names and number of formulas given
     formulas = checkups(family.get_params(), formulas)
@@ -169,35 +233,44 @@ def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
     for param in formulas.keys():
         meta_datadict[param] = dict()
         parsed_formula_contents[param] = dict()
+        # split the formula into sructured and unstructured parts
         structured_part, unstructured_terms = split_formula(formulas[param], list(deep_models_dict.keys()))
+        # print the results of the splitting if verbose is set
         if verbose:
             print('results from split formula')
             print(structured_part)
             print(unstructured_terms)
+        # if there is not structured part create a null model?
         if not structured_part:
             structured_part='~0'
-        
+        # create the structured matrix from the structured part of the formula - based on patsy
         structured_matrix = dmatrix(structured_part, data, return_type='dataframe')
-        # get degrees of freedom for each spline
-        has_intercept, list_of_dfs = get_dofs(structured_matrix)
-        dm_info_dict[param] = {'has_intercept': has_intercept, 'list_of_dfs': list_of_dfs}
-
+        # get bool depending on if formula has intercept or not and degrees of freedom and input feature names for each spline
+        has_intercept, list_of_dfs, list_of_features = get_info_from_design_matrix(structured_matrix)
+        dm_info_dict[param] = {'has_intercept': has_intercept, 'list_of_dfs': list_of_dfs, 'list_of_features': list_of_features}
+        # compute the penalty matrix
         P = _get_P_from_design_matrix(structured_matrix, data)
-
+        # add content to the dicts to be returned
         meta_datadict[param]['structured'] = structured_matrix.values
         parsed_formula_contents[param]['struct_shapes'] = structured_matrix.shape[1]
         parsed_formula_contents[param]['P'] = P
         parsed_formula_contents[param]['deep_models_dict'] = dict()
         parsed_formula_contents[param]['deep_shapes'] = dict()
+        # if there are unstructured terms in the formula (returned from split_formula)
         if unstructured_terms:
+            # for each unstructured term of the unstructured part of the formula
             for term in unstructured_terms:
+                # get the feature name as input to each term
                 term_split = term.split('(')
                 net_name = term_split[0]
                 feature_names = term_split[1].split(')')[0]
+                # create a list of feature names if there are multiple inputs in term
                 feature_names_list = feature_names.split(',')
+                # and create the unstructured data
                 unstructured_data = data[feature_names_list]
                 unstructured_data = unstructured_data.to_numpy()
                 meta_datadict[param][net_name] = unstructured_data
+                # new addition - what is done here??
                 if isinstance(deep_models_dict[net_name]['model'],str):
                     parsed_formula_contents[param]['deep_models_dict'][net_name]= eval(deep_models_dict[net_name]['model'])
                 else:
