@@ -222,7 +222,8 @@ def _get_info_from_design_matrix(structured_matrix, feature_names):
     """
     list_of_spline_slices = []
     list_of_spline_input_features = []
-    has_intercept = False
+    list_of_term_names = []
+    
     for term in structured_matrix.design_info.terms:
         dm_term_name = term.name()
         if 'spline' in dm_term_name:
@@ -235,9 +236,11 @@ def _get_info_from_design_matrix(structured_matrix, feature_names):
             # append to lists
             list_of_spline_input_features.append(feature_names_spline)
             list_of_spline_slices.append(slice_of_term)
+            list_of_term_names.append(dm_term_name)
             
     dm_info = {'list_of_spline_slices': list_of_spline_slices,
-               'list_of_spline_input_features': list_of_spline_input_features}
+               'list_of_spline_input_features': list_of_spline_input_features,
+               'list_of_term_names' : list_of_term_names}
             
     return dm_info
 

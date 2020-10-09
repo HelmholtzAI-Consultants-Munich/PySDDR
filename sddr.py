@@ -129,18 +129,22 @@ class SDDR(object):
         # and the structured data after the smoothing
         smoothed_structured = self.dataset.meta_datadict[param]['structured']
         
-        # get a list of degrees of freedom for each spline of the distribution's parameter's equaltion
-        # number of dofs = number of columns of spline output  
+        # get a list of the slice that each spline has in the design matrix
         list_of_spline_slices = self.dataset.dm_info_dict[param]['list_of_spline_slices']
+        
+        # get a list of the names of spline terms
+        list_of_term_names = self.dataset.dm_info_dict[param]['list_of_term_names']
         
         # get a list of feature names sent as input to each spline
         list_of_spline_input_features = self.dataset.dm_info_dict[param]['list_of_spline_input_features']
         
         partial_effects = []
         can_plot = []
+        xlabels = []
+        ylabels = []
         
         # for each spline
-        for spline_slice, spline_input_features in zip(list_of_spline_slices, list_of_spline_input_features):
+        for spline_slice, spline_input_features, term_name in zip(list_of_spline_slices, list_of_spline_input_features, list_of_term_names):
             
             # compute the partial effect = smooth_features * coefs (weights)
             structured_pred = torch.matmul(smoothed_structured[:,spline_slice], structured_head_params[0, spline_slice])
@@ -153,6 +157,11 @@ class SDDR(object):
                 
                 # and keep track so that the partial effect of this spline can be plotted later on
                 can_plot.append(True)
+                
+                ylabels.append(term_name)
+                xlabels.append(spline_input_features[0])
+                
+                
             else:
                 feature = []
                 for feature_name in spline_input_features:
@@ -180,6 +189,9 @@ class SDDR(object):
                     partial_effect = [x for _,x in sorted(zip(feature, partial_effect))]
                     plt.scatter(np.sort(feature), partial_effect)
                     plt.title('Partial effect %s' % (i+1))
+                    plt.ylabel(ylabels[i])
+                    plt.xlabel(xlabels[i])
+            plt.tight_layout()
             plt.show()
         return partial_effects
     
