@@ -4,9 +4,10 @@ from torch import nn
 import numpy as np
 from torch.utils.data import DataLoader
 import torch.optim as optim
-from deepregression import SddrNet, Sddr_Param_Net
+from sddr_network import SddrNet, Sddr_Param_Net
 from dataset import SddrDataset
-from utils import parse_formulas, Family
+from utils import parse_formulas
+from family import Family
 from matplotlib import pyplot as plt
 
 class SDDR(object):
@@ -68,7 +69,7 @@ class SDDR(object):
 
         self.regularization_params = self.config['train_parameters']['regularization_params']
 
-        self.parsed_formula_contents = self.dataset.get_parsed_formula_content()
+        self.parsed_formula_contents = self.dataset.parsed_formula_content
 
         self.loader = DataLoader(self.dataset,
                                 batch_size=self.config['train_parameters']['batch_size'])
@@ -131,7 +132,7 @@ class SDDR(object):
         # number of dofs = number of columns of spline output  
         list_of_dfs = self.dataset.dm_info_dict[param]['list_of_dfs']
         # get a list of feature names sent as input to each spline
-        list_of_features = self.dataset.dm_info_dict[param]['list_of_features']
+        list_of_spline_input_features = self.dataset.dm_info_dict[param]['list_of_spline_input_features']
         if has_intercept:
             prev_end = 1
         else:
@@ -139,18 +140,18 @@ class SDDR(object):
         partial_effects = []
         can_plot = []
         # for each spline
-        for df, feature_names in zip(list_of_dfs, list_of_features):
+        for df, spline_input_features in zip(list_of_dfs, list_of_spline_input_features):
             # compute the partial effect = smooth_features * coefs (weights)
             structured_pred = torch.matmul(smoothed_structured[:,prev_end:prev_end+df], structured_head_params[0, prev_end:prev_end+df])
             # if only one feature was sent as input to spline
-            if len(feature_names) == 1:
+            if len(spline_input_features) == 1:
                 # get that feature
-                feature = self.dataset.get_feature(feature_names[0])
+                feature = self.dataset.get_feature(spline_input_features[0])
                 # and keep track so that the partial effect of this spline can be plotted later on
                 can_plot.append(True)
             else:
                 feature = []
-                for feature_name in feature_names:
+                for feature_name in spline_input_features:
                     feature.append(self.dataset.get_feature(feature_name))
                 # the partial effect of this spline cannot be plotted later on - too complicated for now as not 2d
                 can_plot.append(False)
