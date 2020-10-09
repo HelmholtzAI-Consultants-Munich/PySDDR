@@ -186,8 +186,8 @@ def _get_all_input_features_for_term(term, feature_names):
         term: patsy term object
             patsy term object for which the feature names should be extracted
             
-        feature_names: set
-            set of all possible feature names in the data set like [x1,x2,x3,x4,x5]
+        feature_names: list
+            list of all possible feature names in the data set like [x1,x2,x3,x4,x5]
             
     Returns
     -------
