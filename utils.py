@@ -200,7 +200,7 @@ def _get_all_input_features_for_term(term, feature_names):
     for factor in factors:
         factor_name = factor.name()
         input_features_factor = _get_input_features_for_functional_expression(factor_name, list(feature_names))
-        input_features_term.union(set(input_features_factor))
+        input_features_term = input_features_term.union(set(input_features_factor))
         
     input_features_term = list(input_features_term)
     return input_features_term

@@ -84,13 +84,13 @@ class SddrDataset(Dataset):
         
     def get_feature(self, feature_column):
         """
-        For a given feature name, extract the respective column from the input matrix (X)
+        For a given feature name, extract the respective column from the input matrix (data - without target columns)
         """
         return self._data.loc[:,feature_column].values
     
     def get_list_of_feature_names(self):
         """
-        Get the names of all input features (column names of input matrix (X)).
+        Get the names of all input features (column names of input matrix (data - without target columns)).
         """
         return list(self._data.columns)
         
