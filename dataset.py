@@ -9,9 +9,11 @@ class SddrDataset(Dataset):
         if isinstance(data,str):
             self._data = pd.read_csv(data ,sep=None,engine='python')
             self._target = pd.read_csv(target).iloc[:,0].values
+            
         elif isinstance(data,pd.core.frame.DataFrame) and isinstance(target,str):
-            self._data = data
             self._target = data[target].values
+            
+            self._data = data.drop(target, axis=1)
             
         elif isinstance(data,pd.core.frame.DataFrame) and isinstance(target,pd.core.frame.DataFrame):
             self._data = data
