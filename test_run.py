@@ -63,4 +63,4 @@ if __name__ == '__main__':
 
     sddr.train()
     partial_effects = sddr.eval('rate')
-    sddr.save()
+    #sddr.save()
