@@ -125,38 +125,42 @@ class SDDR(object):
         """
         # get the weights of the linear layer of the structured part
         structured_head_params = self.net.single_parameter_sddr_list[param].structured_head.weight.detach()
+        
         # and the structured data after the smoothing
         smoothed_structured = self.dataset.meta_datadict[param]['structured']
-        has_intercept = self.dataset.dm_info_dict[param]['has_intercept']
+        
         # get a list of degrees of freedom for each spline of the distribution's parameter's equaltion
         # number of dofs = number of columns of spline output  
-        list_of_dfs = self.dataset.dm_info_dict[param]['list_of_dfs']
+        list_of_spline_slices = self.dataset.dm_info_dict[param]['list_of_spline_slices']
+        
         # get a list of feature names sent as input to each spline
         list_of_spline_input_features = self.dataset.dm_info_dict[param]['list_of_spline_input_features']
-        if has_intercept:
-            prev_end = 1
-        else:
-            prev_end = 0
+        
         partial_effects = []
         can_plot = []
+        
         # for each spline
-        for df, spline_input_features in zip(list_of_dfs, list_of_spline_input_features):
+        for spline_slice, spline_input_features in zip(list_of_spline_slices, list_of_spline_input_features):
+            
             # compute the partial effect = smooth_features * coefs (weights)
-            structured_pred = torch.matmul(smoothed_structured[:,prev_end:prev_end+df], structured_head_params[0, prev_end:prev_end+df])
+            structured_pred = torch.matmul(smoothed_structured[:,spline_slice], structured_head_params[0, spline_slice])
+            
             # if only one feature was sent as input to spline
             if len(spline_input_features) == 1:
+                
                 # get that feature
                 feature = self.dataset.get_feature(spline_input_features[0])
+                
                 # and keep track so that the partial effect of this spline can be plotted later on
                 can_plot.append(True)
             else:
                 feature = []
                 for feature_name in spline_input_features:
                     feature.append(self.dataset.get_feature(feature_name))
+                    
                 # the partial effect of this spline cannot be plotted later on - too complicated for now as not 2d
                 can_plot.append(False)
             partial_effects.append((feature, structured_pred.numpy()))
-            prev_end = prev_end+df
 
         if plot:
             num_plots =  sum(can_plot)

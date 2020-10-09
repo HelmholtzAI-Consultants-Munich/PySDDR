@@ -214,37 +214,32 @@ def _get_info_from_design_matrix(structured_matrix, feature_names):
             The design matrix for the structured part of the formula - computed by patsy
     Returns
     -------
-        has_intercept: boolean
-            If intercept column returns True else returns False
-        list_of_dfs: list of ints
-            A list containing the degrees of freedom of each spline used to compute the design matrix
-        list_of_features: list of strings
-            A list of lists. Each item in the parent list corresponds to one spline (used to compute the design matrix) and 
-            is a list of the names of the features sent as input into that spline.
+        list_of_spline_slices: list of slice objects
+            A list containing slices in the design matrix that correspond to a spline-term e.g. "spline(x2, bs="bs", df=4, degree=3)" or "x1:spline(x2, bs="bs", df=4, degree=3)"
+        list_of_spline_input_features: list of strings
+            A list of lists. Each item in the parent list corresponds to a term that contains a spline and 
+            is a list of the names of the features (used to compute the design matrix) sent as input into that spline.
     """
-    list_of_dfs = []
+    list_of_spline_slices = []
     list_of_spline_input_features = []
-    has_intercept = 'False'
+    has_intercept = False
     for term in structured_matrix.design_info.terms:
         dm_term_name = term.name()
-        if dm_term_name == "Intercept":
-            has_intercept = 'True'
-        elif 'spline' in dm_term_name:
-            # get the number of columns produced by the spline = number of dofs of the spline
-            number_of_columns = np.prod([structured_matrix.design_info.factor_infos[factor].num_columns for factor in term.factors])
+        if 'spline' in dm_term_name:
             # get the feature names sent as input to each spline
-            # old code
-            #split_term = dm_term_name.split('(')[-1]
-            #split_term = split_term.split(', bs')[0]
-            #feature_names = split_term.split(',')
-            # Dominik: changed that code, ad the parsing was not robust to e.g. change of order of arguments for spline. e.g. spline(x, df=4, bs="bs", degree=3)
             feature_names_spline = _get_all_input_features_for_term(term, feature_names)
-
+            
+            # get the slice object for this term (corresponding to start and end index in the designmatrix)
+            slice_of_term = structured_matrix.design_info.term_name_slices[dm_term_name] 
             
             # append to lists
             list_of_spline_input_features.append(feature_names_spline)
-            list_of_dfs.append(number_of_columns)
-    return has_intercept, list_of_dfs, list_of_spline_input_features
+            list_of_spline_slices.append(slice_of_term)
+            
+    dm_info = {'list_of_spline_slices': list_of_spline_slices,
+               'list_of_spline_input_features': list_of_spline_input_features}
+            
+    return dm_info
 
 def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
     """
@@ -306,8 +301,7 @@ def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
         structured_matrix = dmatrix(structured_part, data, return_type='dataframe')
         
         # get bool depending on if formula has intercept or not and degrees of freedom and input feature names for each spline
-        has_intercept, list_of_dfs, list_of_spline_input_features = _get_info_from_design_matrix(structured_matrix, feature_names = data.columns)
-        dm_info_dict[param] = {'has_intercept': has_intercept, 'list_of_dfs': list_of_dfs, 'list_of_spline_input_features': list_of_spline_input_features}
+        dm_info_dict[param] = _get_info_from_design_matrix(structured_matrix, feature_names = data.columns)
         
         # compute the penalty matrix
         P = _get_P_from_design_matrix(structured_matrix, data)

@@ -10,7 +10,8 @@ from dataset import SddrDataset
 
 from patsy import dmatrix
 import statsmodels.api as sm
-from utils import parse_formulas, spline, Family
+from utils import parse_formulas, spline
+from family import Family
 
 
 class TestSddrDataset(unittest.TestCase):
@@ -169,6 +170,12 @@ class Testparse_formulas(unittest.TestCase):
         self.assertEqual(parsed_formula_content["scale"]['P'].shape, (1, 1))
         self.assertEqual(parsed_formula_content["scale"]['P'], 0)
         
+        # test if dm_info_dict is correct
+        self.assertTrue(dm_info_dict['loc']['list_of_spline_slices'] == [])
+        self.assertTrue(dm_info_dict['scale']['list_of_spline_slices'] == [])
+        self.assertTrue(dm_info_dict['loc']['list_of_spline_input_features'] == [])
+        self.assertTrue(dm_info_dict['scale']['list_of_spline_input_features'] == [])
+        
     def test_structured_parse_formulas(self):
         """
         Test if linear model is correctly processed in parse_formulas
@@ -201,6 +208,12 @@ class Testparse_formulas(unittest.TestCase):
         self.assertEqual(parsed_formula_content["scale"]['struct_shapes'], 2)
         self.assertEqual(parsed_formula_content["scale"]['P'].shape, (2, 2))
         self.assertTrue((parsed_formula_content["scale"]['P']==0).all())
+        
+        # test if dm_info_dict is correct
+        self.assertTrue(dm_info_dict['loc']['list_of_spline_slices'] == [])
+        self.assertTrue(dm_info_dict['scale']['list_of_spline_slices'] == [])
+        self.assertTrue(dm_info_dict['loc']['list_of_spline_input_features'] == [])
+        self.assertTrue(dm_info_dict['scale']['list_of_spline_input_features'] == [])
         
     def test_unstructured_parse_formulas(self):
         """
@@ -254,6 +267,12 @@ class Testparse_formulas(unittest.TestCase):
         self.assertEqual(parsed_formula_content['scale']['deep_models_dict']['d2'],deep_models_dict['d2']['model'])
         self.assertEqual(parsed_formula_content['scale']['deep_shapes']['d2'], deep_models_dict['d2']['output_shape'])
         
+        # test if dm_info_dict is correct
+        self.assertTrue(dm_info_dict['loc']['list_of_spline_slices'] == [])
+        self.assertTrue(dm_info_dict['scale']['list_of_spline_slices'] == [])
+        self.assertTrue(dm_info_dict['loc']['list_of_spline_input_features'] == [])
+        self.assertTrue(dm_info_dict['scale']['list_of_spline_input_features'] == [])
+        
         
     def test_smoothingspline_parse_formulas(self):
         """
@@ -262,7 +281,7 @@ class Testparse_formulas(unittest.TestCase):
         # define formulas
 
         formulas = dict()
-        formulas['loc'] = '~1'
+        formulas['loc'] = '~-1 + spline(x1,bs="bs",df=4, degree=3):x2 + spline(x2,bs="bs",df=5, degree=3):x1'
         formulas['scale'] = '~1 + x1 + spline(x1,bs="bs",df=10, degree=3)'
 
         # define distributions and network names
@@ -274,21 +293,25 @@ class Testparse_formulas(unittest.TestCase):
         #call parse_formulas
         parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict)       
 
-        ground_truth_loc = dmatrix('~1', self.x, return_type='dataframe').to_numpy()
+        ground_truth_loc = dmatrix('~-1 + spline(x1,bs="bs",df=4, degree=3):x2 + spline(x2,bs="bs",df=5, degree=3):x1', self.x, return_type='dataframe').to_numpy()
         ground_truth_scale = dmatrix('~1 + x1 + spline(x1,bs="bs",df=10, degree=3)', self.x, return_type='dataframe').to_numpy()
         #test if shapes of design matrices and P are as correct
         self.assertTrue((meta_datadict['loc']['structured'] == ground_truth_loc).all())
         self.assertTrue((meta_datadict['scale']['structured'] == ground_truth_scale).all())
         self.assertTrue((meta_datadict['loc']['structured'].shape == ground_truth_loc.shape),'shape missmatch')
         self.assertTrue((meta_datadict['scale']['structured'].shape == ground_truth_scale.shape),'shape missmatch')
-        self.assertEqual(parsed_formula_content["loc"]['struct_shapes'], 1)
-        self.assertEqual(parsed_formula_content["loc"]['P'].shape, (1, 1))
+        self.assertEqual(parsed_formula_content["loc"]['struct_shapes'], 9)
+        self.assertEqual(parsed_formula_content["loc"]['P'].shape, (9, 9))
         self.assertTrue((parsed_formula_content["loc"]['P']==0).all())
         self.assertEqual(parsed_formula_content["scale"]['struct_shapes'], 12)
         self.assertEqual(parsed_formula_content["scale"]['P'].shape, (12, 12))
         self.assertTrue((parsed_formula_content["scale"]['P'][2:,2:]==spline(self.x.x1,bs="bs",df=10, degree=3,return_penalty = True)).all())
         
-        
+        # test if dm_info_dict is correct
+        self.assertTrue(dm_info_dict['loc']['list_of_spline_slices'] == [slice(0,4), slice(4,9)])
+        self.assertTrue(dm_info_dict['scale']['list_of_spline_slices'] == [slice(2,12)])
+        self.assertTrue(dm_info_dict['loc']['list_of_spline_input_features'] == [list({'x1','x2'}), list({'x2','x1'})])
+        self.assertTrue(dm_info_dict['scale']['list_of_spline_input_features'] == [list({'x1'})])
 
 if __name__ == '__main__':
     unittest.main()
