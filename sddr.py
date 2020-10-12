@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 import torch
 from torch import nn
 import numpy as np
@@ -74,18 +75,38 @@ class SDDR(object):
         self.loader = DataLoader(self.dataset,
                                 batch_size=self.config['train_parameters']['batch_size'])
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+        print('Using device: ', self.device)
         self.net = SddrNet(self.family, self.regularization_params, self.parsed_formula_contents)
         self.net = self.net.to(self.device)
-        self.optimizer = optim.RMSprop(self.net.parameters())
+
+        # check if learning rate and optimizer have been set in dict
+        if 'optimizer' not in self.config['train_parameters'].keys():
+            self.config['train_parameters']['optimizer'] = None
+        # check if user has given an optimizer (current options are adam and sgd only) and if not choose rmsprop as the optimizer
+        if self.config['train_parameters']['optimizer']:
+            # if optimizer parameters have been given initialize an optimizer with those
+            if 'optimizer_params' in self.config['train_parameters'].keys():
+                self.optimizer = self.config['train_parameters']['optimizer'](self.net.parameters(),**self.config['train_parameters']['optimizer_params'])
+            # else use torch default parameter values
+            else:
+                self.optimizer = self.config['train_parameters']['optimizer'](self.net.parameters())
+        # if an optimizer hasn't been defined by the user use adam per default
+        else:
+            self.optimizer = optim.Adam(self.net.parameters())
+        # check if an output directory has been given - if yes check if it already exists and create it if not
+        if self.config['output_dir']:
+            if not os.path.exists(self.config['output_dir']):
+                os.mkdir(self.config['output_dir'])
     
-    def train(self):
+    def train(self, plot=False):
         '''
         Trains the SddrNet for a number of epochs and prints the loss throughout training
         '''
         self.net.train()
+        loss_list = []
         print('Beginning training ...')
         for epoch in range(self.config['train_parameters']['epochs']):
+            self.epoch_loss = 0
             for batch in self.loader:
                 # for each batch
                 target = batch['target'].to(self.device)
@@ -98,12 +119,24 @@ class SDDR(object):
                 self.optimizer.zero_grad()
                 output = self.net(meta_datadict)
                 # compute the loss
-                loss = torch.mean(self.net.get_loss(target.to(self.device))) # should target not be sent to device to??
+                loss = torch.mean(self.net.get_loss(target)) # should target not be sent to device to??
                 # and backprobagate
                 loss.backward()
                 self.optimizer.step()
+                self.epoch_loss += loss.item()
+            # compute the avg loss over all batches in the epoch
+            self.epoch_loss = self.epoch_loss/len(self.loader)
             if epoch % 100 == 0:
-                print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch,loss.item()))
+                print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, self.epoch_loss))
+            # and save it in a list in case we want to print later
+            loss_list.append(self.epoch_loss)
+        if plot:
+            plt.plot(loss_list)
+            plt.title('Training Loss')
+            plt.ylabel('Loss')
+            plt.xlabel('Epochs')
+            plt.savefig(os.path.join(self.config['output_dir'], 'train_loss.png'))
+            #plt.show()
     
     def eval(self, param, plot=True):
         """
@@ -145,28 +178,20 @@ class SDDR(object):
         
         # for each spline
         for spline_slice, spline_input_features, term_name in zip(list_of_spline_slices, list_of_spline_input_features, list_of_term_names):
-            
             # compute the partial effect = smooth_features * coefs (weights)
             structured_pred = torch.matmul(smoothed_structured[:,spline_slice], structured_head_params[0, spline_slice])
-            
             # if only one feature was sent as input to spline
             if len(spline_input_features) == 1:
-                
                 # get that feature
                 feature = self.dataset.get_feature(spline_input_features[0])
-                
                 # and keep track so that the partial effect of this spline can be plotted later on
                 can_plot.append(True)
-                
                 ylabels.append(term_name)
                 xlabels.append(spline_input_features[0])
-                
-                
             else:
                 feature = []
                 for feature_name in spline_input_features:
                     feature.append(self.dataset.get_feature(feature_name))
-                    
                 # the partial effect of this spline cannot be plotted later on - too complicated for now as not 2d
                 can_plot.append(False)
             partial_effects.append((feature, structured_pred.numpy()))
@@ -192,18 +217,79 @@ class SDDR(object):
                     plt.ylabel(ylabels[i])
                     plt.xlabel(xlabels[i])
             plt.tight_layout()
+            plt.savefig(os.path.join(self.config['output_dir'], 'partial_effects.png'))
             plt.show()
         return partial_effects
     
-    def save(self,name = 'model.pth'):
-        torch.save(self.net, name)
+    def save(self, name = 'model.pth'):
+        """
+        Saves the current model's weights and some training conifgureation in a state_dict
+
+        Parameters
+        ----------
+            name: string
+                The name of the file to be saved
+        """
+        state={
+            'epoch': self.config['train_parameters']['epochs'],
+            'loss': self.epoch_loss,
+            'optimizer': self.optimizer.state_dict(),
+            'sddr_net': self.net.state_dict(),
+        }
+        save_path = os.path.join(self.config['output_dir'], name)
+        torch.save(state, save_path)
+
+    def load(self, name):
+        """
+        Loads a pre-trained model
+
+        Parameters
+        ----------
+            name: string
+                The file name from which to load the trained network
+        """
+        if not torch.cuda.is_available():
+            state_dict = torch.load(name, map_location='cpu')
+        else:
+            state_dict = torch.load(name)
+        self.net.load_state_dict(state_dict['sddr_net'])
+
+        if self.config['mode']=='train':
+            # Load optimizers
+            self.optimizer.load_state_dict(state_dict['optimizer'])
+            # Load losses
+            self.loss = state_dict['loss']
+            epoch = state_dict['epoch']
+        print('Loading model {} at epoch {} with a loss {:.4f}'.format(name, epoch, self.loss))
+
+    def inference(self, metadadict):
+        """
+        Returns the model's prediction
+        Parameters
+        ----------
+            metadadict: dictionary
+                A dictionary with the input data structured into structured and unstructured parts
+        Returns
+        -------
+            pred: torch.distributions
+                An instance of some torch.distributions class (e.g. torch.distributions.poisson.Poisson) which holds
+                also predicted parameters of the distribution(e.g. rate)
+        """
+        self.net.eval()
+        with torch.no_grad():
+            pred = self.net(metadadict)
+            return pred
     
     def coeff(self, param):
-        # return coefficients (network weights) of the structured head
+        '''
+        Return coefficients (network weights) of the structured head
+        '''
         return self.net.single_parameter_sddr_list[param].structured_head.weight.detach().numpy()
     
     def get_distribution(self):
-        # return trained distribution, could be applied .mean/.variance ...
+        '''
+        Return trained distribution, could be applied .mean/.variance ...
+        '''
         return self.net.distribution_layer
     
     def predict(self, net_path=None, data=None):
@@ -218,9 +304,7 @@ class SDDR(object):
         
         #distribution_layer = net(data)
         #return distribution_layer
-        
-    #del load():
-    #def inference():
+    
 
 if __name__ == "__main__":
     params = train()

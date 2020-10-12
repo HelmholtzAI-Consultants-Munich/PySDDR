@@ -2,6 +2,7 @@ from sddr import SDDR
 import argparse
 import yaml
 
+import torch.optim as optim
 import torch.nn as nn
 
 # get configs
@@ -33,6 +34,8 @@ if __name__ == '__main__':
         data = './example_data/simple_gam/X.csv'
         target = './example_data/simple_gam/Y.csv'
         output_dir = './outputs'
+        mode = 'train'
+        resume = None # ./outputs/model.pth
 
         distribution  = 'Poisson'
 
@@ -48,19 +51,25 @@ if __name__ == '__main__':
 
         train_parameters = {
         'batch_size': 1000,
-        'epochs': 2500,
+        'epochs': 1000,
+        'optimizer': optim.SGD,
+        'optimizer_params':{'lr': 0.01, 'momentum': 0.9}, 
         'regularization_params': {'rate': 1}
         }
-        
-        sddr = SDDR(data=data,
-                    target=target,
-                    output_dir=output_dir,
-                    distribution=distribution,
-                    formulas=formulas,
-                    deep_models_dict=deep_models_dict,
-                    train_parameters=train_parameters)
 
+    sddr = SDDR(data=data,
+                mode=mode,
+                target=target,
+                output_dir=output_dir,
+                distribution=distribution,
+                formulas=formulas,
+                deep_models_dict=deep_models_dict,
+                train_parameters=train_parameters)
 
-    sddr.train()
+    
+    if resume in locals() and resume:
+        sddr.load(resume)
+    sddr.train(plot=True)
     partial_effects = sddr.eval('rate')
-    #sddr.save()
+    sddr.save('model.pth')
+
