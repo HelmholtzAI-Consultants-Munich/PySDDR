@@ -18,7 +18,7 @@ class TestSddrDataset(unittest.TestCase):
     def __init__(self,*args,**kwargs):
         super(TestSddrDataset, self).__init__(*args,**kwargs)
         
-        self.current_distribution  = 'Poisson' #'Normal'
+        self.current_distribution  = 'Poisson' 
 
         self.formulas = {'rate': '~1 + x1 + x2 + spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)'}
         self.deep_models_dict = {
@@ -33,7 +33,7 @@ class TestSddrDataset(unittest.TestCase):
         self.train_parameters = {
         'batch_size': 1000,
         'epochs': 2500,
-        'regularization_params': {'rate': 1} #{'loc':1, 'scale':1}
+        'regularization_params': {'rate': 1} 
         }
 
         self.family = Family(self.current_distribution)
@@ -47,7 +47,7 @@ class TestSddrDataset(unittest.TestCase):
         self.target = pd.read_csv(self.ground_truth_path)
         
         self.true_x2_11 = np.float32(self.data.x2[11])
-        self.true_target_11 = self.target.y[11]
+        self.true_target_11 = self.target.values[11]
 
 
     def test_pandasinput(self):
@@ -69,7 +69,7 @@ class TestSddrDataset(unittest.TestCase):
         linear_input_test_value = dataset[11]["meta_datadict"]["rate"]["structured"].numpy()[2]
         deep_input_test_value = dataset[11]["meta_datadict"]["rate"]["d2"].numpy()[0]
         target_test_value = dataset[11]["target"].numpy()
-
+        
         #test if outputs are equal to the true values in the iris dataset
         self.assertEqual(feature_names, self.true_feature_names)
         
@@ -77,6 +77,12 @@ class TestSddrDataset(unittest.TestCase):
         self.assertAlmostEqual(linear_input_test_value, self.true_x2_11,places=4)
         self.assertAlmostEqual(deep_input_test_value, self.true_x2_11,places=4)
         self.assertAlmostEqual(target_test_value, self.true_target_11,places=4)
+        
+        # test shapes of outputs
+        self.assertEqual(self.true_target_11.shape,target_test_value.shape)
+        self.assertEqual(self.true_x2_11.shape,linear_input_test_value.shape)
+        self.assertEqual(self.true_x2_11.shape,deep_input_test_value.shape)
+        self.assertEqual(self.true_x2_11.shape,feature_test_value.shape)
       
     def test_pandasinputpandastarget(self):
         """
@@ -102,6 +108,12 @@ class TestSddrDataset(unittest.TestCase):
         self.assertAlmostEqual(linear_input_test_value, self.true_x2_11,places=4)
         self.assertAlmostEqual(deep_input_test_value, self.true_x2_11,places=4)
         self.assertAlmostEqual(target_test_value, self.true_target_11,places=4)
+        
+        # test shapes of outputs
+        self.assertEqual(self.true_target_11.shape,target_test_value.shape)
+        self.assertEqual(self.true_x2_11.shape,linear_input_test_value.shape)
+        self.assertEqual(self.true_x2_11.shape,deep_input_test_value.shape)
+        self.assertEqual(self.true_x2_11.shape,feature_test_value.shape)
     
     
     def test_filepathinput(self):
@@ -127,6 +139,13 @@ class TestSddrDataset(unittest.TestCase):
         self.assertAlmostEqual(linear_input_test_value, self.true_x2_11,places=4)
         self.assertAlmostEqual(deep_input_test_value, self.true_x2_11,places=4)
         self.assertAlmostEqual(target_test_value, self.true_target_11,places=4)
+        
+
+        # test shapes of outputs
+        self.assertEqual(self.true_target_11.shape,target_test_value.shape)
+        self.assertEqual(self.true_x2_11.shape,linear_input_test_value.shape)
+        self.assertEqual(self.true_x2_11.shape,deep_input_test_value.shape)
+        self.assertEqual(self.true_x2_11.shape,feature_test_value.shape)
 
 
 class Testparse_formulas(unittest.TestCase):
@@ -281,8 +300,8 @@ class Testparse_formulas(unittest.TestCase):
         # define formulas
 
         formulas = dict()
-        formulas['loc'] = '~-1 + spline(x1,bs="bs",df=4, degree=3):x2 + spline(x2,bs="bs",df=5, degree=3):x1'
-        formulas['scale'] = '~1 + x1 + spline(x1,bs="bs",df=10, degree=3)'
+        formulas['loc'] = '~-1 + spline(x1,bs="bs",df=4, degree=3):x2 + x1:spline(x2,bs="bs",df=5, degree=3)'
+        formulas['scale'] = '~1 + x1 + spline(x1,df=10, degree=3,bs="bs")'
 
         # define distributions and network names
         cur_distribution = 'Normal'
@@ -310,7 +329,7 @@ class Testparse_formulas(unittest.TestCase):
         # test if dm_info_dict is correct
         self.assertTrue(dm_info_dict['loc']['list_of_spline_slices'] == [slice(0,4), slice(4,9)])
         self.assertTrue(dm_info_dict['scale']['list_of_spline_slices'] == [slice(2,12)])
-        self.assertTrue(dm_info_dict['loc']['list_of_spline_input_features'] == [list({'x1','x2'}), list({'x2','x1'})])
+        self.assertTrue(dm_info_dict['loc']['list_of_spline_input_features'] == [list({'x1','x2'}), list({'x1','x2'})])
         self.assertTrue(dm_info_dict['scale']['list_of_spline_input_features'] == [list({'x1'})])
 
 if __name__ == '__main__':
