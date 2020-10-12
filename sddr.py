@@ -98,7 +98,7 @@ class SDDR(object):
                 self.optimizer.zero_grad()
                 output = self.net(meta_datadict)
                 # compute the loss
-                loss = torch.mean(self.net.get_loss(target)) # should target not be sent to device to??
+                loss = torch.mean(self.net.get_loss(target.to(self.device))) # should target not be sent to device to??
                 # and backprobagate
                 loss.backward()
                 self.optimizer.step()

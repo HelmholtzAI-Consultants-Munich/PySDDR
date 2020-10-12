@@ -63,7 +63,8 @@ class SddrDataset(Dataset):
         # data loader for csv files
         if isinstance(data,str):
             self._data = pd.read_csv(data ,sep=None,engine='python')
-            self._target = pd.read_csv(target).iloc[:,0].values
+            #self._target = pd.read_csv(target).iloc[:,0].values
+            self._target = pd.read_csv(target).values
         
         # data loader for input matrix (X) in Pandas.Dataframe format and target (Y) as feature name (str)
         elif isinstance(data,pd.core.frame.DataFrame) and isinstance(target,str):
@@ -74,7 +75,7 @@ class SddrDataset(Dataset):
         elif isinstance(data,pd.core.frame.DataFrame) and isinstance(target,pd.core.frame.DataFrame):
             self._data = data
             self._target = target.iloc[:,0].values
-
+            
         self.parsed_formula_content, self.meta_datadict, self.dm_info_dict = parse_formulas(family, formulas, self._data, deep_models_dict)        
         for param in self.meta_datadict.keys():
             for data_part in self.meta_datadict[param].keys():
