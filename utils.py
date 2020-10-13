@@ -78,13 +78,14 @@ def _split_formula(formula, net_names_list):
 
 def spline(x, bs="bs", df=4, degree=3, return_penalty = False):
     """
-    Computes basis functions
+    Computes basis functions and smooting penalty matrix for differents types of splines (BSplines, Cyclic cubic splines).
+    
     Parameters
     ----------
         x: Pandas.DataFrame
             A data frame holding all the data 
         bs: string, default is 'bs'
-            The type of splines to use - default is b splines, but can alos use ccyclic cubic splines if bs='cc'
+            The type of splines to use - default is b splines, but can also use cyclic cubic splines if bs='cc'
         df: int, default is 4
             Number of degrees of freedom (equals the number of columns in s.basis)
         degree: int, default is 3
@@ -94,7 +95,7 @@ def spline(x, bs="bs", df=4, degree=3, return_penalty = False):
     Returns
     -------
         The function returns one of:
-        s.basis: The basis functions
+        s.basis: The basis functions of the spline
         s.penalty_matrices: The penalty matrices of the splines 
     """
     if bs == "bs":
@@ -112,13 +113,13 @@ def spline(x, bs="bs", df=4, degree=3, return_penalty = False):
 
 def _get_P_from_design_matrix(dm, data):
     """
-    Computes and returns the penalty matrix
+    Computes and returns the penalty matrix that corresponds to a patsy design matrix. The result us a single block diagonal penalty matrix that combines the penalty matrices of each term in the formula that was used to create the design matrix.  Only smooting splines terms have a non-zero penalty matrix. 
     Parameters
     ----------
         dm: patsy.dmatrix
             The design matrix for the structured part of the formula - computed by patsy
         data: Pandas.DataFrame
-            A data frame holding all the data 
+            A data frame holding all features from which the design matrix was created
     Returns
     -------
         big_P: numpy array
@@ -296,7 +297,7 @@ def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
             print(structured_part)
             print(unstructured_terms)
             
-        # if there is not structured part create a null model?
+        # if there is not structured part create a null model
         if not structured_part:
             structured_part='~0'
             
@@ -335,10 +336,10 @@ def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
                 unstructured_data = unstructured_data.to_numpy()
                 meta_datadict[param][net_name] = unstructured_data
                 
-                # new addition - what is done here??
+                #store deep models given by the user in a deep model dict that corresponds to the parameter in which this deep model is used
+                # if the deeps models are given as string, evaluate the expression first
                 if isinstance(deep_models_dict[net_name]['model'],str):
                     parsed_formula_contents[param]['deep_models_dict'][net_name]= eval(deep_models_dict[net_name]['model'])
-                    
                 else:
                     parsed_formula_contents[param]['deep_models_dict'][net_name]= deep_models_dict[net_name]['model']
                     

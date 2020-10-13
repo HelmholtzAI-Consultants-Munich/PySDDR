@@ -25,10 +25,11 @@ class Family():
     '''
     def __init__(self,family):        
         self.families = {'Normal':['loc', 'scale'], 
-                       'Poisson': ['rate'], 
-                       'Bernoulli': ['logits'],
-                       'Bernoulli_prob':['probs'],
-                       'Multinomial_prob':['probs']}
+                         'Poisson': ['rate'], 
+                         'Bernoulli': ['logits'],
+                         'Bernoulli_prob':['probs'],
+                         'Multinomial_prob':['probs'],
+                         'Logistic':['loc', 'scale']}
 #                        'Multinomial':['logits'],
 #                        'Gamma':['concentration', 'rate'],
 #                        'Beta':['concentration1', 'concentration0'],
@@ -55,6 +56,13 @@ class Family():
             distribution_layer_type = torch.distributions.bernoulli.Bernoulli       
         elif self.family == "Multinomial_prob":
             distribution_layer_type = torch.distributions.multinomial.Multinomial 
+        elif self.family == "Logistic":
+            def logistic(loc, scale):
+                base_distribution = torch.distributions.uniform.Uniform(0, 1)
+                transforms = [torch.distributions.transforms.SigmoidTransform().inv, 
+                              torch.distributions.transforms.AffineTransform(loc=loc, scale=scale)]
+                return torch.distributions.transformed_distribution.TransformedDistribution(base_distribution, transforms)
+            distribution_layer_type = logistic
 #         elif family == "Gamma":
 #             distribution_layer_type = torch.distributions.gamma.Gamma
 #         elif family == "Beta":
@@ -97,6 +105,11 @@ class Family():
         elif self.family == "Multinomial_prob":
             pred_trafo["total_count"] = 1
             pred_trafo["probs"] = torch.nn.functional.softmax(pred["probs"])
+            
+        elif self.family == "Logistic":
+            pred_trafo["loc"] = pred["loc"]
+            pred_trafo["scale"] = add_const + pred["scale"].exp()
+
             
 #         elif self.family == "Multinomial":
 #             pred_trafo["total_count"] = 1

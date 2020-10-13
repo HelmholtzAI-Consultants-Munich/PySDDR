@@ -15,6 +15,18 @@ from family import Family
 
 
 class TestSddrDataset(unittest.TestCase):
+    '''
+    Test SddrDataset for model with a linear part, splines and deep networks using the iris data set. 
+    
+    It is tested 
+        - if get_list_of_feature_names() returns the correct list of feature names of the features from the input dataset.
+        - if get_feature(feature_name) returns the correct features (shape and value)
+        - if the structured part and the input to the deep network are in meta_datadict are correct (shape and value)
+        - if the correct target (shape and value) are returned)
+        
+    We do not check parsed_formula_content and dm_info_dict herem as they are tested by Testparse_formulas.
+    '''
+    
     def __init__(self,*args,**kwargs):
         super(TestSddrDataset, self).__init__(*args,**kwargs)
         
@@ -52,7 +64,7 @@ class TestSddrDataset(unittest.TestCase):
 
     def test_pandasinput(self):
         """
-        Test if SddrDataset correctly works with a pandas dataframe as input
+        Test if SddrDataset correctly works with a pandas dataframe as input.
         """
         
               
@@ -71,7 +83,7 @@ class TestSddrDataset(unittest.TestCase):
         target_test_value = dataset[11]["target"].numpy()
         
         #test if outputs are equal to the true values in the iris dataset
-        self.assertEqual(feature_names, self.true_feature_names)
+        self.assertEqual(feature_names, self.true_feature_names) 
         
         self.assertAlmostEqual(feature_test_value, self.true_x2_11,places=4)
         self.assertAlmostEqual(linear_input_test_value, self.true_x2_11,places=4)
@@ -86,7 +98,7 @@ class TestSddrDataset(unittest.TestCase):
       
     def test_pandasinputpandastarget(self):
         """
-        Test if SddrDataset correctly works with a pandas dataframe as input and target also given as dataframe
+        Test if SddrDataset correctly works with a pandas dataframe as input and target also given as dataframe.
         """
         
         dataset = SddrDataset(data = self.data, 
@@ -118,7 +130,7 @@ class TestSddrDataset(unittest.TestCase):
     
     def test_filepathinput(self):
         """
-        Test if SddrDataset correctly works with file paths as inputs
+        Test if SddrDataset correctly works with file paths as inputs.
         """
         dataset = SddrDataset(self.data_path, 
                         self.ground_truth_path,
@@ -149,6 +161,24 @@ class TestSddrDataset(unittest.TestCase):
 
 
 class Testparse_formulas(unittest.TestCase):
+    '''
+    Test parse_formulas function for different formulas with the iris dataset.
+    
+    It is tested (for all parameters of the distribution)
+        - if in meta_datadict
+            + the structured part is correct and has correct shape
+            + the inputs for the neural networks is correct (values and shape)
+            
+        - if in parsed_formula_content
+            + the penatly matrix is correct
+            + struct_shape is correct
+            + the deep shape is correct
+        - if in dm_info_dict
+            + the correct spline slices are given
+            + the correct spline input features are given
+        
+    '''
+    
     def __init__(self,*args,**kwargs):
         super(Testparse_formulas, self).__init__(*args,**kwargs)
         # load data
@@ -158,7 +188,7 @@ class Testparse_formulas(unittest.TestCase):
         
     def test_patsyfreedummytest_parse_formulas(self):
         """
-        Test if parse_formulas without assuming pasty is correct
+        Test dummy formulas with only intercept. Pasty is not used here to compute the ground truth.
         """
         # define formulas
 
@@ -197,7 +227,7 @@ class Testparse_formulas(unittest.TestCase):
         
     def test_structured_parse_formulas(self):
         """
-        Test if linear model is correctly processed in parse_formulas
+        Test if linear model is correctly processed in parse_formulas.
         """
         # define formulas
 
@@ -236,7 +266,7 @@ class Testparse_formulas(unittest.TestCase):
         
     def test_unstructured_parse_formulas(self):
         """
-        Test if parse_formulas is correctly dealing with NNs
+        Test if parse_formulas is correctly dealing with NNs.
         """
         # define formulas
 
@@ -295,7 +325,11 @@ class Testparse_formulas(unittest.TestCase):
         
     def test_smoothingspline_parse_formulas(self):
         """
-        Test if parse_formulas is correctly dealing with smoothingsplines and computes the right P-matrix
+        Test if parse_formulas is correctly dealing with smoothingsplines and computes the right P-matrix.
+        We test here explicitly if parse_formulas deals correcly with
+            - a missing intercept
+            - reordering of the arguments in the spline functions
+            - having explicit interactions between splines and linear terms
         """
         # define formulas
 
