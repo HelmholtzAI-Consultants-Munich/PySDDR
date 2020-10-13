@@ -35,7 +35,7 @@ if __name__ == '__main__':
         target = './example_data/simple_gam/Y.csv'
         output_dir = './outputs'
         mode = 'train'
-        resume = None # ./outputs/model.pth
+        load_model = None # ./outputs/model.pth
 
         distribution  = 'Poisson'
 
@@ -51,24 +51,29 @@ if __name__ == '__main__':
 
         train_parameters = {
         'batch_size': 1000,
-        'epochs': 1000,
+        'epochs': 300,
         'optimizer': optim.SGD,
         'optimizer_params':{'lr': 0.01, 'momentum': 0.9}, 
         'regularization_params': {'rate': 1}
         }
 
-    sddr = SDDR(data=data,
-                mode=mode,
-                target=target,
-                output_dir=output_dir,
-                distribution=distribution,
-                formulas=formulas,
-                deep_models_dict=deep_models_dict,
-                train_parameters=train_parameters)
+        sddr = SDDR(data=data,
+                    mode=mode,
+                    target=target,
+                    output_dir=output_dir,
+                    distribution=distribution,
+                    formulas=formulas,
+                    deep_models_dict=deep_models_dict,
+                    train_parameters=train_parameters)
 
     
-    if resume in locals() and resume:
-        sddr.load(resume)
+    is_local = "load_model" in locals()
+    if is_local:
+        if load_model :
+            sddr.load()
+    elif args.config:
+        if config['load_model']:
+            sddr.load()
     sddr.train(plot=True)
     partial_effects = sddr.eval('rate')
     sddr.save('model.pth')
