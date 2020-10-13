@@ -2,7 +2,7 @@ data: ./example_data/simple_gam/X.csv
 target: ./example_data/simple_gam/Y.csv
 output_dir: ./outputs
 mode: train
-resume: ./outputs/model.pth
+load_model: ./outputs/model.pth
 
 distribution: Poisson
 formulas: {rate: '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)'
@@ -20,7 +20,7 @@ deep_models_dict: {
 train_parameters: {
   batch_size: 1000,
   epochs: 1000,
-  optimizer: ,
-  learning_rate: 0.0001,
+  optimizer: 'optim.SGD',
+  optimizer_params: {lr: 0.01, momentum: 0.9}, 
   regularization_params: {rate: 1}
 }

@@ -103,6 +103,8 @@ class Sddr_Param_Net(nn.Module):
     
     def get_regularization(self):
         P = torch.from_numpy(self.P).float() # should have shape struct_shapes x struct_shapes, numpy array
+        # do this somewhere else in the future?
+        P = P.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
         weights = self.structured_head.weight #should have shape 1 x struct_shapes
         regularization = weights @ P @ weights.T
         return regularization

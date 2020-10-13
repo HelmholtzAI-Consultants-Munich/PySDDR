@@ -1,15 +1,19 @@
-import pandas as pd
 import os
+import yaml
+
+import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt
+# torch imports
 import torch
 from torch import nn
-import numpy as np
 from torch.utils.data import DataLoader
 import torch.optim as optim
+# pysddr imports
 from sddr_network import SddrNet, Sddr_Param_Net
 from dataset import SddrDataset
 from utils import parse_formulas
 from family import Family
-from matplotlib import pyplot as plt
 
 class SDDR(object):
     '''
@@ -79,20 +83,32 @@ class SDDR(object):
         self.net = SddrNet(self.family, self.regularization_params, self.parsed_formula_contents)
         self.net = self.net.to(self.device)
 
-        # check if learning rate and optimizer have been set in dict
+        # if an optimizer hasn't been defined by the user use adam per default
         if 'optimizer' not in self.config['train_parameters'].keys():
-            self.config['train_parameters']['optimizer'] = None
-        # check if user has given an optimizer (current options are adam and sgd only) and if not choose rmsprop as the optimizer
-        if self.config['train_parameters']['optimizer']:
+            self.optimizer = optim.Adam(self.net.parameters())
+            # save these in the config as we want to save training configuration
+            self.config['train_parameters']['optimizer'] = str(self.optimizer)
+            self.config['train_parameters']['optimizer_params'] = {'lr': 0.001,
+                                                                    'betas': (0.9, 0.999),
+                                                                    'eps': 1e-08,
+                                                                    'weight_decay': 0,
+                                                                    'amsgrad': False}
+        else:
+            # check if the optimizer is a string not a class instance - will be the case when reading config from yaml
+            if isinstance(self.config['train_parameters']['optimizer'],str):
+                optimizer = eval(self.config['train_parameters']['optimizer'])
+            else:
+                optimizer = self.config['train_parameters']['optimizer']
             # if optimizer parameters have been given initialize an optimizer with those
             if 'optimizer_params' in self.config['train_parameters'].keys():
-                self.optimizer = self.config['train_parameters']['optimizer'](self.net.parameters(),**self.config['train_parameters']['optimizer_params'])
+                self.optimizer = optimizer(self.net.parameters(),**self.config['train_parameters']['optimizer_params'])
             # else use torch default parameter values
             else:
-                self.optimizer = self.config['train_parameters']['optimizer'](self.net.parameters())
-        # if an optimizer hasn't been defined by the user use adam per default
-        else:
-            self.optimizer = optim.Adam(self.net.parameters())
+                self.optimizer = optimizer(self.net.parameters())
+            # and set the optimizer to a string in the config for saving later
+            self.config['train_parameters']['optimizer'] = str(self.optimizer)
+
+            
         # check if an output directory has been given - if yes check if it already exists and create it if not
         if self.config['output_dir']:
             if not os.path.exists(self.config['output_dir']):
@@ -136,12 +152,11 @@ class SDDR(object):
             plt.ylabel('Loss')
             plt.xlabel('Epochs')
             plt.savefig(os.path.join(self.config['output_dir'], 'train_loss.png'))
-            #plt.show()
+            plt.show()
     
     def eval(self, param, plot=True):
         """
         Evaluates the trained SddrNet for a specific parameter of the distribution.
-
         Parameters
         ----------
             param: string
@@ -156,18 +171,14 @@ class SDDR(object):
                 There will be one item in the list for each spline in the distribution's parameter equation. Each item is a tuple
                 (feature, partial_effect)
         """
-        # get the weights of the linear layer of the structured part
-        structured_head_params = self.net.single_parameter_sddr_list[param].structured_head.weight.detach()
-        
+        # get the weights of the linear layer of the structured part - do this computation on cpu
+        structured_head_params = self.net.single_parameter_sddr_list[param].structured_head.weight.detach().cpu()
         # and the structured data after the smoothing
         smoothed_structured = self.dataset.meta_datadict[param]['structured']
-        
         # get a list of the slice that each spline has in the design matrix
         list_of_spline_slices = self.dataset.dm_info_dict[param]['list_of_spline_slices']
-        
         # get a list of the names of spline terms
         list_of_term_names = self.dataset.dm_info_dict[param]['list_of_term_names']
-        
         # get a list of feature names sent as input to each spline
         list_of_spline_input_features = self.dataset.dm_info_dict[param]['list_of_spline_input_features']
         
@@ -223,8 +234,7 @@ class SDDR(object):
     
     def save(self, name = 'model.pth'):
         """
-        Saves the current model's weights and some training conifgureation in a state_dict
-
+        Saves the current model's weights and some training conifgurations in a state_dict
         Parameters
         ----------
             name: string
@@ -238,16 +248,24 @@ class SDDR(object):
         }
         save_path = os.path.join(self.config['output_dir'], name)
         torch.save(state, save_path)
+        train_config_path = os.path.join(self.config['output_dir'], 'train_config.yaml')
+        # need to improve
+        config = self.config.copy()
+        for net in config['deep_models_dict']:
+            model = config['deep_models_dict'][net]['model']
+            config['deep_models_dict'][net]['model'] = str(model)
+        with open(train_config_path, 'w') as outfile:
+            yaml.dump(config, outfile, default_flow_style=False)
 
-    def load(self, name):
+    def load(self):
         """
-        Loads a pre-trained model
-
+        Loads a pre-trained model and the used training configuration 
         Parameters
         ----------
             name: string
                 The file name from which to load the trained network
         """
+        name = self.config['load_model']
         if not torch.cuda.is_available():
             state_dict = torch.load(name, map_location='cpu')
         else:
@@ -292,6 +310,8 @@ class SDDR(object):
         '''
         return self.net.distribution_layer
     
+    '''
+    Not yet implemented - we need to write a method which can handle unseen data and make predictions on that
     def predict(self, net_path=None, data=None):
         # not implement yet
         if net_path == None:
@@ -304,7 +324,7 @@ class SDDR(object):
         
         #distribution_layer = net(data)
         #return distribution_layer
-    
+    '''
 
 if __name__ == "__main__":
     params = train()
