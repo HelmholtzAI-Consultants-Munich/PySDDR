@@ -329,13 +329,14 @@ class Testparse_formulas(unittest.TestCase):
         We test here explicitly if parse_formulas deals correcly with
             - a missing intercept
             - reordering of the arguments in the spline functions
+            - explicitly adding the return_penalty= False statement
             - having explicit interactions between splines and linear terms
         """
         # define formulas
 
         formulas = dict()
         formulas['loc'] = '~-1 + spline(x1,bs="bs",df=4, degree=3):x2 + x1:spline(x2,bs="bs",df=5, degree=3)'
-        formulas['scale'] = '~1 + x1 + spline(x1,df=10, degree=3,bs="bs")'
+        formulas['scale'] = '~1 + x1 + spline(x1,df=10,return_penalty=False, degree=3,bs="bs")'
 
         # define distributions and network names
         cur_distribution = 'Normal'

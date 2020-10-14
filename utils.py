@@ -146,9 +146,8 @@ def _get_P_from_design_matrix(dm, data):
 
             is_spline = code.split("(")[0] == "spline"
             if is_spline:
-                code.replace(' ','')
-                code.replace(',return_penalty = False','')
-
+                code = code.replace(' ','')
+                code = code.replace(',return_penalty=False','')
                 state['eval_code'] = code[:-1] + ", return_penalty = True)"
 
                 P = factor.eval(state, data)
