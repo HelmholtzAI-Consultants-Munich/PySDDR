@@ -70,9 +70,8 @@ class SDDR(object):
                                 self.config['target'],
                                 self.family,
                                 self.config['formulas'],
-                                self.config['deep_models_dict'])
-
-        self.regularization_params = self.config['train_parameters']['regularization_params']
+                                self.config['deep_models_dict'],
+                                self.config['train_parameters']['regularization_params'])
 
         self.parsed_formula_contents = self.dataset.parsed_formula_content
 
@@ -80,7 +79,7 @@ class SDDR(object):
                                 batch_size=self.config['train_parameters']['batch_size'])
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print('Using device: ', self.device)
-        self.net = SddrNet(self.family, self.regularization_params, self.parsed_formula_contents)
+        self.net = SddrNet(self.family, self.parsed_formula_contents)
         self.net = self.net.to(self.device)
 
         # if an optimizer hasn't been defined by the user use adam per default

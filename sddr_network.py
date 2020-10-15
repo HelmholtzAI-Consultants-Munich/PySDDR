@@ -132,9 +132,6 @@ class SddrNet(nn.Module):
     ----------
         family: string 
             A string describing the given distribution, e.g. "gaussian", "binomial", ...
-        regularization_params: dict
-            A dictionary where keys are the name of the distribution parameter (e.g. eta,scale) and values 
-            are the smoothing parameters 
         #parameter_names: not used
         
         single_parameter_sddr_list: dict
@@ -142,16 +139,13 @@ class SddrNet(nn.Module):
         distribution_layer_type: class object of some type of torch.distributions
             The distribution layer object, defined in the init and depending on the family, e.g. for
             family='normal' the object we will be of type torch.distributions.normal.Normal
-        regularization: Torch
-            The regularization added to the final loss
         distribution_layer: class instance of some type of torch.distributions
             The final layer of the sddr network, which is initiated depending on the type of distribution (as defined 
             in family) and the predicted parameters from the forward pass
     '''
     
-    def __init__(self, family_class, regularization_params, parsed_formula_contents):
+    def __init__(self, family_class, parsed_formula_contents):
         super(SddrNet, self).__init__()
-        self.regularization_params = regularization_params
         self.family_class = family_class
         #self.parameter_names = parsed_formula_contents.keys
         self.single_parameter_sddr_list = dict()
@@ -174,7 +168,6 @@ class SddrNet(nn.Module):
         for parameter_name, data_dict  in meta_datadict.items():
             sddr_net = self.single_parameter_sddr_list[parameter_name]
             pred[parameter_name] = sddr_net(data_dict)
-            self.regularization += sddr_net.get_regularization()*self.regularization_params[parameter_name]
             
         predicted_parameters = self.family_class.get_distribution_trafos(pred)
         
@@ -191,8 +184,7 @@ class SddrNet(nn.Module):
     def get_regularization(self):
     
         regularization = 0
-        for parameter_name  in self.single_parameter_sddr_list.keys():
-            sddr_net = self.single_parameter_sddr_list[parameter_name]
-            regularization += sddr_net.get_regularization()*self.regularization_params[parameter_name]
+        for sddr_net  in self.single_parameter_sddr_list.values():
+            regularization += sddr_net.get_regularization()
         
         return regularization

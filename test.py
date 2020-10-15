@@ -71,10 +71,11 @@ class TestSddrDataset(unittest.TestCase):
         data = pd.concat([self.data, self.target], axis=1, sort=False)
 
         dataset = SddrDataset(data = data, 
-                                target = "y",
-                                family = self.family,
-                                formulas=self.formulas,
-                                deep_models_dict=self.deep_models_dict)
+                              target = "y",
+                              family = self.family,
+                              formulas=self.formulas,
+                              deep_models_dict=self.deep_models_dict,
+                              regularization_params = self.train_parameters['regularization_params'])
 
         feature_names = dataset.get_list_of_feature_names()
         feature_test_value = dataset.get_feature('x2')[11]
@@ -102,10 +103,11 @@ class TestSddrDataset(unittest.TestCase):
         """
         
         dataset = SddrDataset(data = self.data, 
-                                target = self.target,
-                                family = self.family,
-                                formulas=self.formulas,
-                                deep_models_dict=self.deep_models_dict)
+                              target = self.target,
+                              family = self.family,
+                              formulas=self.formulas,
+                              deep_models_dict=self.deep_models_dict,
+                              regularization_params = self.train_parameters['regularization_params'])
 
         feature_names = dataset.get_list_of_feature_names()
         feature_test_value = dataset.get_feature('x2')[11]
@@ -133,10 +135,11 @@ class TestSddrDataset(unittest.TestCase):
         Test if SddrDataset correctly works with file paths as inputs.
         """
         dataset = SddrDataset(self.data_path, 
-                        self.ground_truth_path,
-                        self.family,
-                        self.formulas,
-                        self.deep_models_dict)
+                              self.ground_truth_path,
+                              self.family,
+                              self.formulas,
+                              self.deep_models_dict,
+                              self.train_parameters['regularization_params'])
         
         feature_names = dataset.get_list_of_feature_names()
         feature_test_value = dataset.get_feature('x2')[11]
@@ -196,6 +199,8 @@ class Testparse_formulas(unittest.TestCase):
         formulas['loc'] = '~1'
         formulas['scale'] = '~1'
 
+        regularization_params = {'loc': 1, 'scale': 1}
+        
         # define distributions and network names
         cur_distribution = 'Normal'
         family = Family(cur_distribution)
@@ -203,7 +208,7 @@ class Testparse_formulas(unittest.TestCase):
         deep_models_dict = dict()
 
         #call parse_formulas
-        parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict)       
+        parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict, regularization_params)       
         
         ground_truth = np.ones([len(self.x),1])
         #test if shapes of design matrices and P are as correct
@@ -234,6 +239,7 @@ class Testparse_formulas(unittest.TestCase):
         formulas = dict()
         formulas['loc'] = '~1'
         formulas['scale'] = '~1 + x1'
+        regularization_params = {'loc': 1, 'scale': 1}
 
         # define distributions and network names
         cur_distribution = 'Normal'
@@ -242,7 +248,7 @@ class Testparse_formulas(unittest.TestCase):
         deep_models_dict = dict()
 
         #call parse_formulas
-        parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict)       
+        parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict, regularization_params)       
         
         ground_truth_loc = dmatrix(formulas['loc'], self.x, return_type='dataframe').to_numpy()
         ground_truth_scale = dmatrix(formulas['scale'], self.x, return_type='dataframe').to_numpy()
@@ -273,6 +279,8 @@ class Testparse_formulas(unittest.TestCase):
         formulas = dict()
         formulas['loc'] = '~1 + d1(x2,x1,x3)'
         formulas['scale'] = '~1 + x1 + d2(x1)'
+        
+        regularization_params = {'loc': 1, 'scale': 1}
 
         # define distributions and network names
         cur_distribution = 'Normal'
@@ -283,7 +291,7 @@ class Testparse_formulas(unittest.TestCase):
         deep_models_dict['d2'] = {'model': nn.Sequential(nn.Linear(1,15)), 'output_shape': 42}
 
         #call parse_formulas
-        parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict)       
+        parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict, regularization_params)       
 
         ground_truth_loc = dmatrix('~1', self.x, return_type='dataframe').to_numpy()
         ground_truth_scale = dmatrix('~1 + x1', self.x, return_type='dataframe').to_numpy()
@@ -337,6 +345,8 @@ class Testparse_formulas(unittest.TestCase):
         formulas = dict()
         formulas['loc'] = '~-1 + spline(x1,bs="bs",df=4, degree=3):x2 + x1:spline(x2,bs="bs",df=5, degree=3)'
         formulas['scale'] = '~1 + x1 + spline(x1,df=10,return_penalty=False, degree=3,bs="bs")'
+        
+        regularization_params = {'loc': 1, 'scale': [1]}
 
         # define distributions and network names
         cur_distribution = 'Normal'
@@ -345,7 +355,7 @@ class Testparse_formulas(unittest.TestCase):
         deep_models_dict = dict()
 
         #call parse_formulas
-        parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict)       
+        parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict, regularization_params)       
 
         ground_truth_loc = dmatrix('~-1 + spline(x1,bs="bs",df=4, degree=3):x2 + spline(x2,bs="bs",df=5, degree=3):x1', self.x, return_type='dataframe').to_numpy()
         ground_truth_scale = dmatrix('~1 + x1 + spline(x1,bs="bs",df=10, degree=3)', self.x, return_type='dataframe').to_numpy()

@@ -36,6 +36,11 @@ class SddrDataset(Dataset):
             Formulas must be given in right-sided format only. 
         deep_models_dict: dict
             dictionary where keys are names of the deep models and values are objects that define the deep models
+            
+        regularization_params: dict
+            A dictionary where keys are the name of the distribution parameter (e.g. eta,scale) and values 
+            are either a single smooting parameter for all penalities of all splines for this parameter, or a list of smooting parameters, each for one of the splines that appear in the formula for this parameter
+            
     Attributes
     -------
         data: Pandas.DataFrame
@@ -58,7 +63,7 @@ class SddrDataset(Dataset):
             A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the
             formula has an intercept or not and a list of the degrees of freedom of the splines in the formula
     '''
-    def __init__(self, data, target, family, formulas, deep_models_dict):
+    def __init__(self, data, target, family, formulas, deep_models_dict, regularization_params):
         
         # data loader for csv files
         if isinstance(data,str):
@@ -75,7 +80,7 @@ class SddrDataset(Dataset):
             self._data = data
             self._target = target.values
 
-        self.parsed_formula_content, self.meta_datadict, self.dm_info_dict = parse_formulas(family, formulas, self._data, deep_models_dict)        
+        self.parsed_formula_content, self.meta_datadict, self.dm_info_dict = parse_formulas(family, formulas, self._data, deep_models_dict, regularization_params)        
         for param in self.meta_datadict.keys():
             for data_part in self.meta_datadict[param].keys():
                 self.meta_datadict[param][data_part] = torch.from_numpy(self.meta_datadict[param][data_part]).float()

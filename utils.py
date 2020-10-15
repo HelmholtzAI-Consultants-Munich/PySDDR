@@ -9,6 +9,7 @@ import parser
 
 from statsmodels.gam.api import CyclicCubicSplines, BSplines
 
+
 def _checkups(params, formulas):
     """
     Checks if the user has given an available distribution, too many formulas or wrong parameters for the given distribution
@@ -111,15 +112,19 @@ def spline(x, bs="bs", df=4, degree=3, return_penalty = False):
     else:
         return s.basis
 
-def _get_P_from_design_matrix(dm, data):
+def _get_P_from_design_matrix(dm, data, regularization_param):
     """
-    Computes and returns the penalty matrix that corresponds to a patsy design matrix. The result us a single block diagonal penalty matrix that combines the penalty matrices of each term in the formula that was used to create the design matrix.  Only smooting splines terms have a non-zero penalty matrix. 
+    Computes and returns the penalty matrix that corresponds to a patsy design matrix. The penalties are multiplied by the regularization parameters. The result us a single block diagonal penalty matrix that combines the penalty matrices of each term in the formula that was used to create the design matrix. Only smooting splines terms have a non-zero penalty matrix. 
+    The regularization parameters can eitehr be given as a single value, than all individual penalty matrices are mutliplied with this single value. Or they can be given as a list, then all (non-zero) penalty matrices are mutliplied by different values. The mutliplication is in the order of the terms in the formula.
+    
     Parameters
     ----------
         dm: patsy.dmatrix
             The design matrix for the structured part of the formula - computed by patsy
         data: Pandas.DataFrame
             A data frame holding all features from which the design matrix was created
+        regularization_param: float or list of floats
+            Either a single smooting parameter for all penalities of all splines for this parameter, or a list of smoothing parameters, each for one of the splines that appear in the formula for this parameter
     Returns
     -------
         big_P: numpy array
@@ -131,6 +136,7 @@ def _get_P_from_design_matrix(dm, data):
     big_P = np.zeros((dm.shape[1],dm.shape[1]))
     
     column_counter = 0
+    spline_counter = 0
     
     for term in terms:
         if len(term.factors) != 1: #currently we only use smoothing for 1D, in the future we also want to add smoothing for tensorproducts
@@ -151,7 +157,11 @@ def _get_P_from_design_matrix(dm, data):
                 state['eval_code'] = code[:-1] + ", return_penalty = True)"
 
                 P = factor.eval(state, data)
-                big_P[column_counter:(column_counter+num_columns),column_counter:(column_counter+num_columns)] = P[0]     
+                
+                regularization = regularization_param[spline_counter] if type(regularization_param) == list else regularization_param
+                big_P[column_counter:(column_counter+num_columns),column_counter:(column_counter+num_columns)] = P[0]*regularization  
+                
+                spline_counter += 1
             column_counter += num_columns
 
     return big_P
@@ -244,7 +254,7 @@ def _get_info_from_design_matrix(structured_matrix, feature_names):
             
     return dm_info
 
-def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
+def parse_formulas(family, formulas, data, deep_models_dict, regularization_params, verbose=False):
     """
     Parses the formulas defined by the user and returns a dict of dicts which can be fed into SDDR network
     Parameters
@@ -261,6 +271,10 @@ def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
             The current distribution defined by the user
         deep_models_dict: dictionary 
             A dictionary where keys are model names and values are dicts with model architecture and output shapes
+        regularization_params: dict
+            A dictionary where keys are the name of the distribution parameter (e.g. eta,scale) and values 
+            are either a single smooting parameter for all penalities of all splines for this parameter, or a list of smooting parameters, each for one of the splines that appear in the formula for this parameter
+            
     Returns
     -------
         parsed_formula_contents: dictionary
@@ -287,6 +301,8 @@ def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
         meta_datadict[param] = dict()
         parsed_formula_contents[param] = dict()
         
+        regularization_param = regularization_params[param]
+        
         # split the formula into sructured and unstructured parts
         structured_part, unstructured_terms = _split_formula(formulas[param], list(deep_models_dict.keys()))
         
@@ -307,7 +323,7 @@ def parse_formulas(family, formulas, data, deep_models_dict, verbose=False):
         dm_info_dict[param] = _get_info_from_design_matrix(structured_matrix, feature_names = data.columns)
         
         # compute the penalty matrix
-        P = _get_P_from_design_matrix(structured_matrix, data)
+        P = _get_P_from_design_matrix(structured_matrix, data, regularization_param)
         
         # add content to the dicts to be returned
         meta_datadict[param]['structured'] = structured_matrix.values
