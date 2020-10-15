@@ -10,7 +10,7 @@ from dataset import SddrDataset
 
 from patsy import dmatrix
 import statsmodels.api as sm
-from utils import parse_formulas, spline
+from utils import parse_formulas, spline, _orthogonalize_spline_wrt_non_splines, _get_info_from_design_matrix
 from family import Family
 
 
@@ -377,5 +377,86 @@ class Testparse_formulas(unittest.TestCase):
         self.assertTrue(dm_info_dict['loc']['list_of_spline_input_features'] == [list({'x1','x2'}), list({'x1','x2'})])
         self.assertTrue(dm_info_dict['scale']['list_of_spline_input_features'] == [list({'x1'})])
 
+class Testorthogonalize_spline_wrt_non_splines(unittest.TestCase):
+    '''
+    Tests the orthogonalize_spline_wrt_non_splines function.
+    We test for two cases if the design matrix gets correctly orthogonalized.
+    '''
+    
+    def __init__(self,*args,**kwargs):
+        super(Testorthogonalize_spline_wrt_non_splines, self).__init__(*args,**kwargs)
+
+
+    def test_case_one(self):
+        '''
+        Test with variables x1, x2 and a spline that is only dependent on x1.
+        Orthogonalization should be w.r.t. intercept and x1
+        '''
+        # load data
+        iris = sm.datasets.get_rdataset('iris').data
+        data = iris.rename(columns={'Sepal.Length':'x1','Sepal.Width':'x2','Petal.Length':'x3','Petal.Width':'x4','Species':'y'})
+
+        structured_matrix = dmatrix('~ 1 + x1 + x2 + spline(x1, bs="bs", df=4, return_penalty = False, degree=3)', data, return_type='dataframe')
+
+        spline_info, non_spline_info = _get_info_from_design_matrix(structured_matrix, data.columns)
+        
+        
+        _orthogonalize_spline_wrt_non_splines(structured_matrix, spline_info, non_spline_info)
+
+        test_features_not_zero = abs(structured_matrix).values.max().min() > 0
+        self.assertTrue(test_features_not_zero) #test if features are not just equal to a zero vector
+
+        p=structured_matrix.shape[1]
+
+        correct_orthogonality_pattern = np.array([[1., 1., 1., 0., 0., 0., 0.],
+                                                  [1., 1., 1., 0., 0., 0., 0.],
+                                                  [1., 1., 1., 1., 1., 1., 1.],
+                                                  [0., 0., 1., 1., 1., 1., 1.],
+                                                  [0., 0., 1., 1., 1., 1., 1.],
+                                                  [0., 0., 1., 1., 1., 1., 1.],
+                                                  [0., 0., 1., 1., 1., 1., 1.]])
+
+        for i in range(p):
+            for j in range(p):
+                is_not_orthogonal = abs(np.matmul(structured_matrix.values[:,i], structured_matrix.values[:,j]))>0.01
+                test_orthog = correct_orthogonality_pattern[i,j] == is_not_orthogonal
+                self.assertTrue(test_orthog) #test if orthogonality is correct 
+        
+        
+    def test_case_two(self):
+        '''
+        Test with variables x1, x2 and a spline that dependent on x1 and multiplied with x2.
+        Orthogonalization should be w.r.t. intercept, x1 and x2
+        '''
+        # load data
+        iris = sm.datasets.get_rdataset('iris').data
+        data = iris.rename(columns={'Sepal.Length':'x1','Sepal.Width':'x2','Petal.Length':'x3','Petal.Width':'x4','Species':'y'})
+
+        structured_matrix = dmatrix('~ 1 + x1 + x2 + spline(x1, bs="bs", df=4, return_penalty = False, degree=3):x2', data, return_type='dataframe')
+
+        spline_info, non_spline_info = _get_info_from_design_matrix(structured_matrix, data.columns)
+
+        _orthogonalize_spline_wrt_non_splines(structured_matrix, spline_info, non_spline_info)
+
+        test_features_not_zero = abs(structured_matrix).values.max().min() > 0
+        self.assertTrue(test_features_not_zero) #test if features are not just equal to a zero vector
+
+        p=structured_matrix.shape[1]
+
+        correct_orthogonality_pattern = np.array([[1., 1., 1., 0., 0., 0., 0.],
+                                                  [1., 1., 1., 0., 0., 0., 0.],
+                                                  [1., 1., 1., 0., 0., 0., 0.],
+                                                  [0., 0., 0., 1., 1., 1., 1.],
+                                                  [0., 0., 0., 1., 1., 1., 1.],
+                                                  [0., 0., 0., 1., 1., 1., 1.],
+                                                  [0., 0., 0., 1., 1., 1., 1.]])
+
+        for i in range(p):
+            for j in range(p):
+                is_not_orthogonal = abs(np.matmul(structured_matrix.values[:,i], structured_matrix.values[:,j]))>0.01
+                test_orthog = correct_orthogonality_pattern[i,j] == is_not_orthogonal
+                self.assertTrue(test_orthog) #test if orthogonality is correct 
+        
+        
 if __name__ == '__main__':
     unittest.main()
