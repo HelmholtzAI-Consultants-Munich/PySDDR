@@ -127,23 +127,30 @@ class SDDR(object):
                 # for each batch
                 target = batch['target'].to(self.device)
                 meta_datadict = batch['meta_datadict']          # .to(device) should be improved 
+                
                 # send each input batch to the current device
                 for param in meta_datadict.keys():
                     for data_part in meta_datadict[param].keys():
                         meta_datadict[param][data_part] = meta_datadict[param][data_part].to(self.device)
+                        
                 # get the network output
                 self.optimizer.zero_grad()
                 output = self.net(meta_datadict)
-                # compute the loss
-                loss = torch.mean(self.net.get_loss(target)) # should target not be sent to device to??
+                
+                # compute the loss and add regularization
+                loss = torch.mean(self.net.get_log_loss(target))
+                loss += self.net.get_regularization().squeeze_() 
+                
                 # and backprobagate
                 loss.backward()
                 self.optimizer.step()
                 self.epoch_loss += loss.item()
+                
             # compute the avg loss over all batches in the epoch
             self.epoch_loss = self.epoch_loss/len(self.loader)
             if epoch % 100 == 0:
                 print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, self.epoch_loss))
+                
             # and save it in a list in case we want to print later
             loss_list.append(self.epoch_loss)
         if plot:

@@ -182,9 +182,17 @@ class SddrNet(nn.Module):
         
         return self.distribution_layer
     
-    def get_loss(self, Y):
+    def get_log_loss(self, Y):
     
         log_loss = -self.distribution_layer.log_prob(Y)
-        loss = log_loss + self.regularization
         
-        return loss
+        return log_loss
+    
+    def get_regularization(self):
+    
+        regularization = 0
+        for parameter_name  in self.single_parameter_sddr_list.keys():
+            sddr_net = self.single_parameter_sddr_list[parameter_name]
+            regularization += sddr_net.get_regularization()*self.regularization_params[parameter_name]
+        
+        return regularization
