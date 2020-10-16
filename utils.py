@@ -289,29 +289,61 @@ def _get_info_from_design_matrix(structured_matrix, feature_names):
             A list of lists. Each item in the parent list corresponds to a term that contains a spline and 
             is a list of the names of the features (used to compute the design matrix) sent as input into that spline.
     """
-    list_of_spline_slices = []
-    list_of_spline_input_features = []
-    list_of_term_names = []
+    spline_info = {'list_of_spline_slices': [],
+                   'list_of_spline_input_features': [],
+                   'list_of_term_names' : []}
+    
+    non_spline_info = {'list_of_non_spline_slices': [],
+                       'list_of_non_spline_input_features': [],
+                       'list_of_term_names' : []}
     
     for term in structured_matrix.design_info.terms:
         dm_term_name = term.name()
+
+        # get the feature names sent as input to each spline
+        feature_names_spline = _get_all_input_features_for_term(term, feature_names)
+
+        # get the slice object for this term (corresponding to start and end index in the designmatrix)
+        slice_of_term = structured_matrix.design_info.term_name_slices[dm_term_name] 
+
+        # append to lists
         if 'spline' in dm_term_name:
-            # get the feature names sent as input to each spline
-            feature_names_spline = _get_all_input_features_for_term(term, feature_names)
+            spline_info['list_of_spline_input_features'].append(feature_names_spline)
+            spline_info['list_of_spline_slices'].append(slice_of_term)
+            spline_info['list_of_term_names'].append(dm_term_name)
+        else:
+            non_spline_info['list_of_non_spline_input_features'].append(feature_names_spline)
+            non_spline_info['list_of_non_spline_slices'].append(slice_of_term)
+            non_spline_info['list_of_term_names'].append(dm_term_name)
             
-            # get the slice object for this term (corresponding to start and end index in the designmatrix)
-            slice_of_term = structured_matrix.design_info.term_name_slices[dm_term_name] 
-            
-            # append to lists
-            list_of_spline_input_features.append(feature_names_spline)
-            list_of_spline_slices.append(slice_of_term)
-            list_of_term_names.append(dm_term_name)
-            
-    dm_info = {'list_of_spline_slices': list_of_spline_slices,
-               'list_of_spline_input_features': list_of_spline_input_features,
-               'list_of_term_names' : list_of_term_names}
-            
-    return dm_info
+    return spline_info, non_spline_info
+
+
+def _orthogonalize(constraints, X):
+    
+    Q, _ = np.linalg.qr(constraints) # compute Q
+    Projection_Matrix = np.matmul(Q,Q.T)
+    constrained_X = X - np.matmul(Projection_Matrix,X)
+    
+    return constrained_X
+
+def _orthogonalize_spline_wrt_non_splines(structured_matrix, 
+                                         spline_info, 
+                                         non_spline_info):
+    
+    for spline_slice, spline_input_features in zip(spline_info['list_of_spline_slices'], 
+                                                   spline_info['list_of_spline_input_features']):
+        
+        X = structured_matrix.iloc[:,spline_slice]
+        # construct constraint matrix
+        constraints = []
+        for non_spline_slice, non_spline_input_features in zip(non_spline_info['list_of_non_spline_slices'], non_spline_info['list_of_non_spline_input_features']):
+            if set(non_spline_input_features).issubset(set(spline_input_features)):
+                constraints.append(structured_matrix.iloc[:,non_spline_slice].values)
+
+        constraints = np.concatenate(constraints,axis=1)
+        constrained_X = _orthogonalize(constraints, X)
+        structured_matrix.iloc[:,spline_slice] = constrained_X
 
 def parse_formulas(family, formulas, data, deep_models_dict, regularization_params, verbose=False):
     """
@@ -379,10 +411,16 @@ def parse_formulas(family, formulas, data, deep_models_dict, regularization_para
         structured_matrix = dmatrix(structured_part, data, return_type='dataframe')
         
         # get bool depending on if formula has intercept or not and degrees of freedom and input feature names for each spline
-        dm_info_dict[param] = _get_info_from_design_matrix(structured_matrix, feature_names = data.columns)
+        spline_info, non_spline_info = _get_info_from_design_matrix(structured_matrix, feature_names = data.columns)
+        dm_info_dict[param] = spline_info
         
         # compute the penalty matrix
         P = _get_P_from_design_matrix(structured_matrix, data, regularization_param)
+        
+        #orthogonalize splines with respect to non-splines (including an intercept if it is there)
+        _orthogonalize_spline_wrt_non_splines(structured_matrix, 
+                                         spline_info, 
+                                         non_spline_info)
         
         # add content to the dicts to be returned
         meta_datadict[param]['structured'] = structured_matrix.values

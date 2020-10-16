@@ -35,7 +35,7 @@ def integration_test_simple_gam():
     #define SDDR parameters
     distribution  = 'Poisson'
 
-    formulas = {'rate': '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)'}
+    formulas = {'rate': '~1 + spline(x1, bs="bs",df=9) + spline(x2, bs="bs",df=9) + d1(x1) + d2(x2)'}
     deep_models_dict = {
     'd1': {
         'model': nn.Sequential(nn.Linear(1,15)),
@@ -47,7 +47,7 @@ def integration_test_simple_gam():
 
     train_parameters = {
         'batch_size': 1000,
-        'epochs': 200,
+        'epochs': 300,
         'regularization_params': {'rate': 1},
         'optimizer' : optim.RMSprop
     }
@@ -74,6 +74,7 @@ def integration_test_simple_gam():
     y_target = normalize(x**2) # ground truth: quadratic effect
 
     RMSE = (y-y_target).std()
+    
     assert RMSE<0.1, "Partial effect not properly estimated in simple GAM."
     
     x = partial_effects_rate[1][0]
@@ -82,7 +83,8 @@ def integration_test_simple_gam():
     y_target = normalize(-x) # ground truth: linear effect
 
     RMSE = (y-y_target).std()
-    assert RMSE<0.1, "Partial effect not properly estimated in simple GAM."
+    
+    assert RMSE<0.02, "Partial effect not properly estimated in simple GAM."
 
     
 def integration_test_gamlss():
@@ -181,7 +183,8 @@ def integration_test_gamlss():
     
     assert RMSE<0.4, "Partial effect not properly estimated in GAMLSS."
 
-
+    
+  
         
         
 if __name__ == '__main__':
