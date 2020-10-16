@@ -361,7 +361,7 @@ class Testparse_formulas(unittest.TestCase):
         ground_truth_scale = dmatrix('~1 + x1 + spline(x1,bs="bs",df=10, degree=3)', self.x, return_type='dataframe').to_numpy()
         #test if shapes of design matrices and P are as correct
         self.assertTrue((meta_datadict['loc']['structured'] == ground_truth_loc).all())
-        self.assertTrue((meta_datadict['scale']['structured'] == ground_truth_scale).all())
+        self.assertFalse((meta_datadict['scale']['structured'] == ground_truth_scale).all()) #unqual is due to orthogonalization
         self.assertTrue((meta_datadict['loc']['structured'].shape == ground_truth_loc.shape),'shape missmatch')
         self.assertTrue((meta_datadict['scale']['structured'].shape == ground_truth_scale.shape),'shape missmatch')
         self.assertEqual(parsed_formula_content["loc"]['struct_shapes'], 9)

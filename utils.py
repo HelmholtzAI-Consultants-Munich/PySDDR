@@ -341,9 +341,10 @@ def _orthogonalize_spline_wrt_non_splines(structured_matrix,
             if set(non_spline_input_features).issubset(set(spline_input_features)):
                 constraints.append(structured_matrix.iloc[:,non_spline_slice].values)
 
-        constraints = np.concatenate(constraints,axis=1)
-        constrained_X = _orthogonalize(constraints, X)
-        structured_matrix.iloc[:,spline_slice] = constrained_X
+        if len(constraints)>0:
+            constraints = np.concatenate(constraints,axis=1)
+            constrained_X = _orthogonalize(constraints, X)
+            structured_matrix.iloc[:,spline_slice] = constrained_X
 
 def parse_formulas(family, formulas, data, deep_models_dict, regularization_params, verbose=False):
     """
