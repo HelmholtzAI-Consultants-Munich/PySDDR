@@ -327,6 +327,8 @@ class SDDR(object):
             net.eval()
         if data == None:
             data = self.dataset
+            
+        newdm = build_design_matrices([structured_matrix.design_info], val, return_type='dataframe')[0]  # for prediction (new data) using the same specification of the spline basis.
         
         #distribution_layer = net(data)
         #return distribution_layer
