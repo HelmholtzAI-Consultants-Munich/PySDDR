@@ -6,6 +6,8 @@ import os
 from torch import nn
 import torch
 import parser
+from patsy.util import have_pandas, no_pickling, assert_no_pickling
+from patsy.state import stateful_transform
 
 from statsmodels.gam.api import CyclicCubicSplines, BSplines
 
@@ -77,40 +79,94 @@ def _split_formula(formula, net_names_list):
     structured_part = '+'.join(structured_terms)    
     return structured_part, unstructured_terms
 
-def spline(x, bs="bs", df=4, degree=3, return_penalty = False):
-    """
-    Computes basis functions and smooting penalty matrix for differents types of splines (BSplines, Cyclic cubic splines).
-    
-    Parameters
-    ----------
-        x: Pandas.DataFrame
-            A data frame holding all the data 
-        bs: string, default is 'bs'
-            The type of splines to use - default is b splines, but can also use cyclic cubic splines if bs='cc'
-        df: int, default is 4
-            Number of degrees of freedom (equals the number of columns in s.basis)
-        degree: int, default is 3
-            degree of polynomial e.g. 3 -> cubic, 2-> quadratic
-        return_penalty: bool, default is False
-            If False s.basis is returned, else s.penalty_matrices is returned
-    Returns
-    -------
-        The function returns one of:
-        s.basis: The basis functions of the spline
-        s.penalty_matrices: The penalty matrices of the splines 
-    """
-    if bs == "bs":
-        s = BSplines(x, df=[df], degree=[degree], include_intercept=True)
-    elif bs == "cc":
-        s = CyclicCubicSplines(x, df=[df])
-    else:
-        print("Spline basis not defined!")
 
-    #return either basis or penalty
-    if return_penalty:
-        return s.penalty_matrices
-    else:
-        return s.basis
+class BS(object):
+    """
+     Computes basis functions and smooting penalty matrix for differents types of splines (BSplines, Cyclic cubic splines).
+    
+     Parameters
+     ----------
+         x: Pandas.DataFrame
+             A data frame holding all the data 
+         bs: string, default is 'bs'
+             The type of splines to use - default is b splines, but can also use cyclic cubic splines if bs='cc'
+         df: int, default is 4
+             Number of degrees of freedom (equals the number of columns in s.basis)
+         degree: int, default is 3
+             degree of polynomial e.g. 3 -> cubic, 2-> quadratic
+         return_penalty: bool, default is False
+             If False s.basis is returned, else s.penalty_matrices is returned
+     Returns
+     -------
+         The function returns one of:
+         s.basis: The basis functions of the spline
+         s.penalty_matrices: The penalty matrices of the splines 
+     """
+    def __init__(self):
+        pass
+
+    def memorize_chunk(self, x, bs, return_penalty = False, df=4, degree=3,
+                  include_intercept=False):
+        assert bs == "bs" or bs == "cc", "Spline basis not defined!"
+        if bs == "bs":
+            self.s = BSplines(x, df=[df], degree=[degree], include_intercept=True)
+        elif bs == "cc":
+            self.s = CyclicCubicSplines(x, df=[df])
+        
+        self.p = self.s.penalty_matrices
+
+    def memorize_finish(self):
+        pass
+
+
+    def transform(self, x, bs, return_penalty = False, df=None, degree=3,
+                  include_intercept=False):
+        
+        if return_penalty:
+            return self.p
+        else:
+            return self.s.transform(np.expand_dims(x.to_numpy(),axis=1)) 
+            
+
+    __getstate__ = no_pickling
+
+spline = stateful_transform(BS)
+
+
+# def spline(x, bs="bs", df=4, degree=3, return_penalty = False):
+#     """
+#     Computes basis functions and smooting penalty matrix for differents types of splines (BSplines, Cyclic cubic splines).
+    
+#     Parameters
+#     ----------
+#         x: Pandas.DataFrame
+#             A data frame holding all the data 
+#         bs: string, default is 'bs'
+#             The type of splines to use - default is b splines, but can also use cyclic cubic splines if bs='cc'
+#         df: int, default is 4
+#             Number of degrees of freedom (equals the number of columns in s.basis)
+#         degree: int, default is 3
+#             degree of polynomial e.g. 3 -> cubic, 2-> quadratic
+#         return_penalty: bool, default is False
+#             If False s.basis is returned, else s.penalty_matrices is returned
+#     Returns
+#     -------
+#         The function returns one of:
+#         s.basis: The basis functions of the spline
+#         s.penalty_matrices: The penalty matrices of the splines 
+#     """
+#     if bs == "bs":
+#         s = BSplines(x, df=[df], degree=[degree], include_intercept=True)
+#     elif bs == "cc":
+#         s = CyclicCubicSplines(x, df=[df])
+#     else:
+#         print("Spline basis not defined!")
+
+#     #return either basis or penalty
+#     if return_penalty:
+#         return s.penalty_matrices
+#     else:
+#         return s.basis
 
 def _get_P_from_design_matrix(dm, data, regularization_param):
     """
@@ -149,8 +205,11 @@ def _get_P_from_design_matrix(dm, data, regularization_param):
 
             #here the hack starts
             code = state['eval_code']
-
-            is_spline = code.split("(")[0] == "spline"
+            if "spline" in code.split("(")[0]:
+                is_spline = True
+            else:
+                is_spline = False
+            #is_spline = code.split("(")[0] == "transform"
             if is_spline:
                 code = code.replace(' ','')
                 code = code.replace(',return_penalty=False','')
