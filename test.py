@@ -10,7 +10,7 @@ from dataset import SddrDataset
 
 from patsy import dmatrix
 import statsmodels.api as sm
-from utils import parse_formulas, spline, _orthogonalize_spline_wrt_non_splines, _get_info_from_design_matrix
+from utils import parse_formulas, Spline, spline, _orthogonalize_spline_wrt_non_splines, _get_info_from_design_matrix
 from family import Family
 
 
@@ -361,7 +361,7 @@ class Testparse_formulas(unittest.TestCase):
         ground_truth_scale = dmatrix('~1 + x1 + spline(x1,bs="bs",df=10, degree=3)', self.x, return_type='dataframe').to_numpy()
         #test if shapes of design matrices and P are as correct
         self.assertTrue((meta_datadict['loc']['structured'] == ground_truth_loc).all())
-        self.assertFalse((meta_datadict['scale']['structured'] == ground_truth_scale).all()) #unqual is due to orthogonalization
+        self.assertFalse((meta_datadict['scale']['structured'] == ground_truth_scale).all()) #assertFalse is due to orthogonalization
         self.assertTrue((meta_datadict['loc']['structured'].shape == ground_truth_loc.shape),'shape missmatch')
         self.assertTrue((meta_datadict['scale']['structured'].shape == ground_truth_scale.shape),'shape missmatch')
         self.assertEqual(parsed_formula_content["loc"]['struct_shapes'], 9)
@@ -369,7 +369,12 @@ class Testparse_formulas(unittest.TestCase):
         self.assertTrue((parsed_formula_content["loc"]['P']==0).all())
         self.assertEqual(parsed_formula_content["scale"]['struct_shapes'], 12)
         self.assertEqual(parsed_formula_content["scale"]['P'].shape, (12, 12))
-        self.assertTrue((parsed_formula_content["scale"]['P'][2:,2:]==spline(self.x.x1,bs="bs",df=10, degree=3,return_penalty = True)).all())
+        
+        sp = Spline()
+        sp.memorize_chunk(self.x.x1,bs="bs",df=10, degree=3,return_penalty = True)
+        ground_truth_P = sp.penalty_matrices
+        
+        self.assertTrue((parsed_formula_content["scale"]['P'][2:,2:]==ground_truth_P).all())
         
         # test if dm_info_dict is correct
         self.assertTrue(dm_info_dict['loc']['list_of_spline_slices'] == [slice(0,4), slice(4,9)])

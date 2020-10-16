@@ -80,7 +80,7 @@ def _split_formula(formula, net_names_list):
     return structured_part, unstructured_terms
 
 
-class BS(object):
+class Spline(object):
     """
      Computes basis functions and smooting penalty matrix for differents types of splines (BSplines, Cyclic cubic splines).
     
@@ -105,32 +105,27 @@ class BS(object):
     def __init__(self):
         pass
 
-    def memorize_chunk(self, x, bs, return_penalty = False, df=4, degree=3,
-                  include_intercept=False):
+    def memorize_chunk(self, x, bs, df=4, degree=3, return_penalty = False):
         assert bs == "bs" or bs == "cc", "Spline basis not defined!"
         if bs == "bs":
             self.s = BSplines(x, df=[df], degree=[degree], include_intercept=True)
         elif bs == "cc":
             self.s = CyclicCubicSplines(x, df=[df])
         
-        self.p = self.s.penalty_matrices
+        self.penalty_matrices = self.s.penalty_matrices
 
     def memorize_finish(self):
         pass
 
 
-    def transform(self, x, bs, return_penalty = False, df=None, degree=3,
-                  include_intercept=False):
+    def transform(self, x, bs, df=4, degree=3, return_penalty = False):
         
-        if return_penalty:
-            return self.p
-        else:
-            return self.s.transform(np.expand_dims(x.to_numpy(),axis=1)) 
+        return self.s.transform(np.expand_dims(x.to_numpy(),axis=1)) 
             
 
     __getstate__ = no_pickling
 
-spline = stateful_transform(BS)
+spline = stateful_transform(Spline)
 
 
 # def spline(x, bs="bs", df=4, degree=3, return_penalty = False):
@@ -168,6 +163,29 @@ spline = stateful_transform(BS)
 #     else:
 #         return s.basis
 
+
+def _get_penalty_matrix_from_factor_info(factor_info):
+    '''
+    Extracts the penalty matrix from a factor_info object.
+    '''
+
+
+    factor = factor_info.factor
+    
+    #ToDo: Dominik should document this...
+    if 'spline' not in factor.name():
+        return False
+    
+    outer_objects_in_factor = factor_info.state['pass_bins'][-1]
+    obj_name = next(iter(outer_objects_in_factor)) #use last=outermost object in factor. should only have a single element in the set.
+    obj = factor_info.state['transforms'][obj_name]
+
+    if (len(outer_objects_in_factor)==1) and isinstance(obj, Spline):
+        return obj.penalty_matrices
+
+    else:
+        return False #factor is not a spline, so there is not penalty matrix
+
 def _get_P_from_design_matrix(dm, data, regularization_param):
     """
     Computes and returns the penalty matrix that corresponds to a patsy design matrix. The penalties are multiplied by the regularization parameters. The result us a single block diagonal penalty matrix that combines the penalty matrices of each term in the formula that was used to create the design matrix. Only smooting splines terms have a non-zero penalty matrix. 
@@ -195,28 +213,17 @@ def _get_P_from_design_matrix(dm, data, regularization_param):
     spline_counter = 0
     
     for term in terms:
+        
         if len(term.factors) != 1: #currently we only use smoothing for 1D, in the future we also want to add smoothing for tensorproducts
             column_counter += 1
+            
         else:
             factor_info = factor_infos[term.factors[0]]
-            factor = factor_info.factor
-            state = factor_info.state.copy()
             num_columns = factor_info.num_columns
-
-            #here the hack starts
-            code = state['eval_code']
-            if "spline" in code.split("(")[0]:
-                is_spline = True
-            else:
-                is_spline = False
-            #is_spline = code.split("(")[0] == "transform"
-            if is_spline:
-                code = code.replace(' ','')
-                code = code.replace(',return_penalty=False','')
-                state['eval_code'] = code[:-1] + ", return_penalty = True)"
-
-                P = factor.eval(state, data)
+            
+            P = _get_penalty_matrix_from_factor_info(factor_info)
                 
+            if P is not False:
                 regularization = regularization_param[spline_counter] if type(regularization_param) == list else regularization_param
                 big_P[column_counter:(column_counter+num_columns),column_counter:(column_counter+num_columns)] = P[0]*regularization  
                 
