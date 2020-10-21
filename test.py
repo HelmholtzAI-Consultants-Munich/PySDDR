@@ -45,7 +45,7 @@ class TestSddrDataset(unittest.TestCase):
         self.train_parameters = {
         'batch_size': 1000,
         'epochs': 2500,
-        'regularization_params': {'rate': 1} 
+        'regularization_params': {'rate': 4}
         }
 
         self.family = Family(self.current_distribution)
@@ -199,7 +199,7 @@ class Testparse_formulas(unittest.TestCase):
         formulas['loc'] = '~1'
         formulas['scale'] = '~1'
 
-        regularization_params = {'loc': 1, 'scale': 1}
+        regularization_params = {'loc': 4, 'scale': 4}
         
         # define distributions and network names
         cur_distribution = 'Normal'
@@ -239,7 +239,7 @@ class Testparse_formulas(unittest.TestCase):
         formulas = dict()
         formulas['loc'] = '~1'
         formulas['scale'] = '~1 + x1'
-        regularization_params = {'loc': 1, 'scale': 1}
+        regularization_params = {'loc': 4, 'scale': 4}
 
         # define distributions and network names
         cur_distribution = 'Normal'
@@ -280,7 +280,7 @@ class Testparse_formulas(unittest.TestCase):
         formulas['loc'] = '~1 + d1(x2,x1,x3)'
         formulas['scale'] = '~1 + x1 + d2(x1)'
         
-        regularization_params = {'loc': 1, 'scale': 1}
+        regularization_params = {'loc': 4, 'scale': 4}
 
         # define distributions and network names
         cur_distribution = 'Normal'
@@ -346,7 +346,7 @@ class Testparse_formulas(unittest.TestCase):
         formulas['loc'] = '~-1 + spline(x1,bs="bs",df=4, degree=3):x2 + x1:spline(x2,bs="bs",df=5, degree=3)'
         formulas['scale'] = '~1 + x1 + spline(x1,df=10,return_penalty=False, degree=3,bs="bs")'
         
-        regularization_params = {'loc': 1, 'scale': [1]}
+        regularization_params = {'loc': 4, 'scale': [4]}
 
         # define distributions and network names
         cur_distribution = 'Normal'
@@ -369,12 +369,14 @@ class Testparse_formulas(unittest.TestCase):
         self.assertTrue((parsed_formula_content["loc"]['P']==0).all())
         self.assertEqual(parsed_formula_content["scale"]['struct_shapes'], 12)
         self.assertEqual(parsed_formula_content["scale"]['P'].shape, (12, 12))
-        
+
+        # get original P and penalized P (by lambda) and check if both are proportional
         sp = Spline()
         sp.memorize_chunk(self.x.x1,bs="bs",df=10, degree=3,return_penalty = True)
-        ground_truth_P = sp.penalty_matrices
-        
-        self.assertTrue((parsed_formula_content["scale"]['P'][2:,2:]==ground_truth_P).all())
+        ground_truth_P = sp.penalty_matrices[0]
+        P = parsed_formula_content["scale"]['P'][2:,2:]
+        lambdas = np.divide(P,ground_truth_P,out=np.zeros_like(P), where=ground_truth_P!=0).flatten()
+        self.assertTrue(len(np.unique(lambdas[lambdas != 0])) == 1)
         
         # test if dm_info_dict is correct
         self.assertTrue(dm_info_dict['loc']['list_of_spline_slices'] == [slice(0,4), slice(4,9)])

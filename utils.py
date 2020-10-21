@@ -2,6 +2,8 @@ import numpy as np
 from patsy import dmatrix
 import statsmodels.api as sm
 import pandas as pd
+import scipy as sp
+import warnings
 import os
 from torch import nn
 import torch
@@ -164,6 +166,96 @@ spline = stateful_transform(Spline)
 #         return s.basis
 
 
+def make_matrix_positive_semi_definite(A,machine_epsilon):
+
+    #get smallest eigenvalue for a symmetric matrix
+    #and use some additional tolerance to ensure semipositive definite matrices
+    min_eigen = min(np.linalg.eigh(A)[0]) - np.sqrt(machine_epsilon)
+
+    # smallest eigenvalue negative = not semipositive definit
+    if min_eigen < -1e-10:
+        rho = 1 / (1 - min_eigen)
+        A = rho * A + (1 - rho) * np.identity(A.shape[0])
+
+        ## now check if it is really positive definite by recursively calling
+        A = make_matrix_positive_semi_definite(A)
+
+    return (A)
+
+def dfFun(lam, d, hat1):
+    if hat1:
+        res = sum(1 / (1 + lam * d))
+    else:
+        res = 2 * sum(1 / (1 + lam * d)) - sum(1 / (1 + lam * d) ^ 2)
+    return res
+
+def df2lambda(dm, P, df, lam = None, hat1 = True, lam_max = 1e+15):
+
+    #dm = dm.to_numpy()
+    machine_epsilon = np.finfo(float).eps * 2
+
+    # throw exception if neither df nor lambda is given
+    if df == None and lam == None:
+        raise Exception('Either degrees of freedom or lambda has to be provided.')
+
+    # check if rank of design matrix is large enough for given df
+    if df != None:
+        rank_dm = np.linalg.matrix_rank(dm)
+        if df >= rank_dm:
+            warnings.simplefilter('error')
+            warnings.warn("""df too large: Degrees of freedom (df = {0}) cannot be larger than the rank of the design matrix (rank = {1}). Unpenalized base-learner with df = {1} used. Re-consider model specification.""".format(df,rank_dm))
+            lam = 0
+            return df, lam
+
+    # if lambda is given, but equal 0, return rank of design matrix as df
+    if lam != None:
+        if lam == 0:
+            df = np.linalg.matrix_rank(dm)
+            return df, lam
+
+
+    # otherwise compute df or lambda
+    XtX = dm.T @ dm
+
+    ## avoid that XtX matrix is not (numerically) singular and make sure that A is also numerically positiv semi-definit
+    A = XtX + P * 1e-15
+    A = make_matrix_positive_semi_definite(A,machine_epsilon)
+
+    #make sure that A is also numerically symmetric
+    #A = np.triu(A) + np.triu(A).T - np.diag(np.diag(A))
+    Rm = sp.linalg.solve_triangular(sp.linalg.cholesky(A, lower=False), np.identity(XtX.shape[1]))
+
+    # singular value decomposition --> might be possible to speed up if set 'hermitian = True'
+    try:
+        # try compuattion without computing u and vh
+        d = np.linalg.svd((Rm.T @ P) @ Rm, compute_uv = False)
+    except:
+        ## if unsucessfull try the same computation but compute u and vh as well
+        d = np.linalg.svd((Rm.T @ P) @ Rm, compute_uv=True)[1] # vector with singular values
+
+    if lam != None:
+        df = dfFun(lam,d,hat1)
+        return df, lam
+
+    if df >= len(d):
+        lam = 0
+        return df, lam
+
+    df_for_lam_max = dfFun(lam_max, d, hat1)
+    if (df_for_lam_max - df) > 0 and (df_for_lam_max - df) > np.sqrt(machine_epsilon):
+        warnings.simplefilter('error')
+        warnings.warn("""lambda needs to be larger than lambda_max = {0} for given df. Settign lambda to {0} leeds to an deviation from your df of {1}. You can increase lambda_max in parameters. """.format(lam_max,df_for_lam_max - df))
+        lam = lam_max
+        return df, lam
+
+    lam = sp.optimize.brentq(lambda l: dfFun(l, d, hat1) - df, 0, lam_max)
+    if abs(dfFun(lam, d, hat1) - df) > np.sqrt(machine_epsilon):
+        warnings.simplefilter('error')
+        warnings.warn("""estimated df differ from given df by {0} """.format(dfFun(lam, d, hat1) - df))
+
+    return df, lam
+
+
 def _get_penalty_matrix_from_factor_info(factor_info):
     '''
     Extracts the penalty matrix from a factor_info object.
@@ -213,7 +305,7 @@ def _get_P_from_design_matrix(dm, data, regularization_param):
     spline_counter = 0
     
     for term in terms:
-        
+
         if len(term.factors) != 1: #currently we only use smoothing for 1D, in the future we also want to add smoothing for tensorproducts
             column_counter += 1
             
@@ -225,7 +317,10 @@ def _get_P_from_design_matrix(dm, data, regularization_param):
                 
             if P is not False:
                 regularization = regularization_param[spline_counter] if type(regularization_param) == list else regularization_param
-                big_P[column_counter:(column_counter+num_columns),column_counter:(column_counter+num_columns)] = P[0]*regularization  
+                dm_spline = dm.iloc[:,column_counter:(column_counter+num_columns)]
+                lam = df2lambda(dm_spline, P[0], regularization)[1]
+                print(lam)
+                big_P[column_counter:(column_counter+num_columns),column_counter:(column_counter+num_columns)] = P[0]*lam
                 
                 spline_counter += 1
             column_counter += num_columns
