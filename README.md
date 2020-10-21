@@ -26,22 +26,27 @@ _How data can be inputted_
 _List of available distributions and params_
 ## Deep Neural Networks
 _How a NN can be defined, e.g. by torch instances directly, loaded from script_
-...
+
+.
+
+.
+
+.
 
 ## Features
 ### Scientific features
 _Here discuss the scientific features available to the user, e.g. w or w/o orthogonolization, optimizer options etc._
 ### Run/training features
-%find a better name for run and training features:P
+<find a better name for run and training features:P>
 _Here discuss the options available to the user while training, e.g. loading pretrained weights_
 
-## Examples of using scientific features**
+## Examples of using scientific features
 ```
 this is an example, here we can link also to test_run.ipynb
 ```
 _We should however add more content than currently in jupyter notebook_
 
- ## Examples of training features**
+ ## Examples of training features
 ```
 this is an example, here we can link also to example_usage.ipynb
 ```
