@@ -278,10 +278,10 @@ def _get_penalty_matrix_from_factor_info(factor_info):
     else:
         return False #factor is not a spline, so there is not penalty matrix
 
-def _get_P_from_design_matrix(dm, data, regularization_param):
+def _get_P_from_design_matrix(dm, data, dfs):
     """
-    Computes and returns the penalty matrix that corresponds to a patsy design matrix. The penalties are multiplied by the regularization parameters. The result us a single block diagonal penalty matrix that combines the penalty matrices of each term in the formula that was used to create the design matrix. Only smooting splines terms have a non-zero penalty matrix. 
-    The regularization parameters can eitehr be given as a single value, than all individual penalty matrices are mutliplied with this single value. Or they can be given as a list, then all (non-zero) penalty matrices are mutliplied by different values. The mutliplication is in the order of the terms in the formula.
+    Computes and returns the penalty matrix that corresponds to a patsy design matrix. The penalties are multiplied by the regularization parameters lambda computed from given degrees of freedom. The result us a single block diagonal penalty matrix that combines the penalty matrices of each term in the formula that was used to create the design matrix. Only smooting splines terms have a non-zero penalty matrix.
+    The degrees of freedom can either be given as a single value, then all individual penalty matrices are mutliplied with a single lambda. Or they can be given as a list, then all (non-zero) penalty matrices are mutliplied by different lambdas. The mutliplication is in the order of the terms in the formula.
     
     Parameters
     ----------
@@ -289,7 +289,7 @@ def _get_P_from_design_matrix(dm, data, regularization_param):
             The design matrix for the structured part of the formula - computed by patsy
         data: Pandas.DataFrame
             A data frame holding all features from which the design matrix was created
-        regularization_param: float or list of floats
+        dfs: float or list of floats
             Either a single smooting parameter for all penalities of all splines for this parameter, or a list of smoothing parameters, each for one of the splines that appear in the formula for this parameter
     Returns
     -------
@@ -316,11 +316,10 @@ def _get_P_from_design_matrix(dm, data, regularization_param):
             P = _get_penalty_matrix_from_factor_info(factor_info)
                 
             if P is not False:
-                regularization = regularization_param[spline_counter] if type(regularization_param) == list else regularization_param
+                df = dfs[spline_counter] if type(dfs) == list else dfs
                 dm_spline = dm.iloc[:,column_counter:(column_counter+num_columns)]
-                lam = df2lambda(dm_spline, P[0], regularization)[1]
-                print(lam)
-                big_P[column_counter:(column_counter+num_columns),column_counter:(column_counter+num_columns)] = P[0]*lam
+                df_lam = df2lambda(dm_spline, P[0], df)
+                big_P[column_counter:(column_counter+num_columns),column_counter:(column_counter+num_columns)] = P[0]*df_lam[1]
                 
                 spline_counter += 1
             column_counter += num_columns
@@ -448,7 +447,7 @@ def _orthogonalize_spline_wrt_non_splines(structured_matrix,
             constrained_X = _orthogonalize(constraints, X)
             structured_matrix.iloc[:,spline_slice] = constrained_X
 
-def parse_formulas(family, formulas, data, deep_models_dict, regularization_params, verbose=False):
+def parse_formulas(family, formulas, data, deep_models_dict, degrees_of_freedom, verbose=False):
     """
     Parses the formulas defined by the user and returns a dict of dicts which can be fed into SDDR network
     Parameters
@@ -465,7 +464,7 @@ def parse_formulas(family, formulas, data, deep_models_dict, regularization_para
             The current distribution defined by the user
         deep_models_dict: dictionary 
             A dictionary where keys are model names and values are dicts with model architecture and output shapes
-        regularization_params: dict
+        degrees_of_freedom: dict
             A dictionary where keys are the name of the distribution parameter (e.g. eta,scale) and values 
             are either a single smooting parameter for all penalities of all splines for this parameter, or a list of smooting parameters, each for one of the splines that appear in the formula for this parameter
             
@@ -495,7 +494,7 @@ def parse_formulas(family, formulas, data, deep_models_dict, regularization_para
         meta_datadict[param] = dict()
         parsed_formula_contents[param] = dict()
         
-        regularization_param = regularization_params[param]
+        dfs = degrees_of_freedom[param]
         
         # split the formula into sructured and unstructured parts
         structured_part, unstructured_terms = _split_formula(formulas[param], list(deep_models_dict.keys()))
@@ -518,7 +517,7 @@ def parse_formulas(family, formulas, data, deep_models_dict, regularization_para
         dm_info_dict[param] = spline_info
         
         # compute the penalty matrix
-        P = _get_P_from_design_matrix(structured_matrix, data, regularization_param)
+        P = _get_P_from_design_matrix(structured_matrix, data, dfs)
         
         #orthogonalize splines with respect to non-splines (including an intercept if it is there)
         _orthogonalize_spline_wrt_non_splines(structured_matrix, 

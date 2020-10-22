@@ -63,7 +63,7 @@ class SddrDataset(Dataset):
             A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the
             formula has an intercept or not and a list of the degrees of freedom of the splines in the formula
     '''
-    def __init__(self, data, target, family, formulas, deep_models_dict, regularization_params):
+    def __init__(self, data, target, family, formulas, deep_models_dict, degrees_of_freedom):
         
         # data loader for csv files
         if isinstance(data,str):
@@ -80,7 +80,7 @@ class SddrDataset(Dataset):
             self._data = data
             self._target = target.values
 
-        self.parsed_formula_content, self.meta_datadict, self.dm_info_dict = parse_formulas(family, formulas, self._data, deep_models_dict, regularization_params)        
+        self.parsed_formula_content, self.meta_datadict, self.dm_info_dict = parse_formulas(family, formulas, self._data, deep_models_dict, degrees_of_freedom)
         for param in self.meta_datadict.keys():
             for data_part in self.meta_datadict[param].keys():
                 self.meta_datadict[param][data_part] = torch.from_numpy(self.meta_datadict[param][data_part]).float()

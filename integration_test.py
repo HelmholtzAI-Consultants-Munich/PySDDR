@@ -48,7 +48,7 @@ def integration_test_simple_gam():
     train_parameters = {
         'batch_size': 1000,
         'epochs': 300,
-        'regularization_params': {'rate': 1},
+        'degrees_of_freedom': {'rate': 1},
         'optimizer' : optim.RMSprop
     }
 
@@ -126,7 +126,7 @@ def integration_test_gamlss():
     train_parameters = {
         'batch_size': 1000,
         'epochs': 200,
-        'regularization_params': {'loc':0.0, 'scale':0.0},
+        'degrees_of_freedom': {'loc':0.0, 'scale':0.0},
         'optimizer' : optim.RMSprop
     }
 

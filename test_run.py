@@ -54,7 +54,7 @@ if __name__ == '__main__':
         'epochs': 300,
         'optimizer': optim.SGD,
         'optimizer_params':{'lr': 0.01, 'momentum': 0.9}, 
-        'regularization_params': {'rate': 1}
+        'degrees_of_freedom': {'rate': 1}
         }
 
         sddr = SDDR(data=data,

@@ -35,8 +35,8 @@ class SDDR(object):
         dataset: SddrDataset (inherets torch.utils.data.Dataset)
             An instance that loads the data on initialization, parses the formulas given by the user, splits the data into
             structured and unstructured parts and prepares it for training by the PySSDDR network
-        regularization_params: dictionary
-            A dictionary where keys are the current distribution's parameters' names and values are the regularization terms
+        degrees_of_freedom: dictionary
+            A dictionary where keys are the current distribution's parameters' names and values are the degrees of freedom
             for each sub-network created for each parameters of the distribution
         parsed_formula_contents: dictionary
             A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts 
@@ -71,7 +71,7 @@ class SDDR(object):
                                 self.family,
                                 self.config['formulas'],
                                 self.config['deep_models_dict'],
-                                self.config['train_parameters']['regularization_params'])
+                                self.config['train_parameters']['degrees_of_freedom'])
 
         self.parsed_formula_contents = self.dataset.parsed_formula_content
 

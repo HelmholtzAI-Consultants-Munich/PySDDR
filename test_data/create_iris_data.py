@@ -1,4 +1,5 @@
 import statsmodels.api as sm
+import pandas as pd
 
 def load_data():
     ###import iris data set, which is commonly used in R
