@@ -167,7 +167,7 @@ def df2lambda(dm, P, df, lam = None, hat1 = True, lam_max = 1e+15):
     if df != None:
         rank_dm = np.linalg.matrix_rank(dm)
         if df >= rank_dm:
-            warnings.simplefilter('error')
+            warnings.simplefilter('always')
             warnings.warn("""df too large: Degrees of freedom (df = {0}) cannot be larger than the rank of the design matrix (rank = {1}). Unpenalized base-learner with df = {1} used. Re-consider model specification.""".format(df,rank_dm))
             lam = 0
             return df, lam
@@ -208,14 +208,14 @@ def df2lambda(dm, P, df, lam = None, hat1 = True, lam_max = 1e+15):
 
     df_for_lam_max = dfFun(lam_max, d, hat1)
     if (df_for_lam_max - df) > 0 and (df_for_lam_max - df) > np.sqrt(machine_epsilon):
-        warnings.simplefilter('error')
+        warnings.simplefilter('always')
         warnings.warn("""lambda needs to be larger than lambda_max = {0} for given df. Settign lambda to {0} leeds to an deviation from your df of {1}. You can increase lambda_max in parameters. """.format(lam_max,df_for_lam_max - df))
         lam = lam_max
         return df, lam
 
     lam = sp.optimize.brentq(lambda l: dfFun(l, d, hat1) - df, 0, lam_max)
     if abs(dfFun(lam, d, hat1) - df) > np.sqrt(machine_epsilon):
-        warnings.simplefilter('error')
+        warnings.simplefilter('always')
         warnings.warn("""estimated df differ from given df by {0} """.format(dfFun(lam, d, hat1) - df))
 
     return df, lam

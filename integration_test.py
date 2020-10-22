@@ -47,8 +47,8 @@ def integration_test_simple_gam():
 
     train_parameters = {
         'batch_size': 1000,
-        'epochs': 300,
-        'degrees_of_freedom': {'rate': 1},
+        'epochs': 500,
+        'degrees_of_freedom': {'rate': 6},
         'optimizer' : optim.RMSprop
     }
 
@@ -126,7 +126,7 @@ def integration_test_gamlss():
     train_parameters = {
         'batch_size': 1000,
         'epochs': 200,
-        'degrees_of_freedom': {'loc':0.0, 'scale':0.0},
+        'degrees_of_freedom': {'loc':4, 'scale':4},
         'optimizer' : optim.RMSprop
     }
 
@@ -153,6 +153,7 @@ def integration_test_gamlss():
     y_target = normalize(x**2) # ground truth: quadratic effect
 
     RMSE = (y-y_target).std()
+    print(RMSE)
     
     assert RMSE<0.1, "Partial effect not properly estimated in GAMLSS."
     
@@ -162,6 +163,7 @@ def integration_test_gamlss():
     y_target = normalize(-x) # ground truth: linear effect
 
     RMSE = (y-y_target).std()
+    print(RMSE)
     
     assert RMSE<0.1, "Partial effect not properly estimated in GAMLSS."
     
