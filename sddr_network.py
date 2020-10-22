@@ -125,7 +125,7 @@ class SddrNet(nn.Module):
             A string describing the given distribution, e.g. "gaussian", "binomial", ...
         regularization_params: 
             The smoothing parameters 
-        parsed_formula_contents: dict
+        network_info_dict: dict
             A dictionary with keys being parameters of the distribution, e.g. "eta" and "scale"
             and values being dicts with keys deep_models_dict, struct_shapes and P (as used in Sddr_Param_Net)
     Attributes
@@ -144,12 +144,12 @@ class SddrNet(nn.Module):
             in family) and the predicted parameters from the forward pass
     '''
     
-    def __init__(self, family_class, parsed_formula_contents):
+    def __init__(self, family_class, network_info_dict):
         super(SddrNet, self).__init__()
         self.family_class = family_class
-        #self.parameter_names = parsed_formula_contents.keys
+        #self.parameter_names = network_info_dict.keys
         self.single_parameter_sddr_list = dict()
-        for key, value in parsed_formula_contents.items():
+        for key, value in network_info_dict.items():
             deep_models_dict = value["deep_models_dict"]
             deep_shapes = value["deep_shapes"]
             struct_shapes = value["struct_shapes"]
@@ -160,14 +160,14 @@ class SddrNet(nn.Module):
             self.add_module(key,self.single_parameter_sddr_list[key])
                 
         self.distribution_layer_type = family_class.get_distribution_layer_type()
-    
-    def forward(self,meta_datadict):
+        
+    def forward(self,datadict):
         
         self.regularization = 0
         pred = dict()
-        for parameter_name, data_dict  in meta_datadict.items():
+        for parameter_name, data_dict_param  in datadict.items():
             sddr_net = self.single_parameter_sddr_list[parameter_name]
-            pred[parameter_name] = sddr_net(data_dict)
+            pred[parameter_name] = sddr_net(data_dict_param)
             
         predicted_parameters = self.family_class.get_distribution_trafos(pred)
         

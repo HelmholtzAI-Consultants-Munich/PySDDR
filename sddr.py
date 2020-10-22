@@ -39,7 +39,7 @@ class SDDR(object):
         degrees_of_freedom: dictionary
             A dictionary where keys are the current distribution's parameters' names and values are the degrees of freedom
             for each sub-network created for each parameters of the distribution
-        parsed_formula_contents: dictionary
+        network_info_dict: dictionary
             A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts 
             will be: 'struct_shapes', 'P', 'deep_models_dict' and 'deep_shapes' with corresponding values for each distribution
             paramter, i.e. given formula (shapes of structured parts, penalty matrix, a dictionary of the deep models' arcitectures
@@ -76,15 +76,15 @@ class SDDR(object):
         
         # create dataset
         self.dataset = SddrDataset(self.config['data'],self.config['target'], self.prepare_data)
-
-        self.parsed_formula_contents = self.prepare_data.parsed_formula_content
+        
+        self.network_info_dict = self.prepare_data.network_info_dict
 
         self.loader = DataLoader(self.dataset,
                                 batch_size=self.config['train_parameters']['batch_size'])
         
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print('Using device: ', self.device)
-        self.net = SddrNet(self.family, self.parsed_formula_contents)
+        self.net = SddrNet(self.family, self.network_info_dict)
         self.net = self.net.to(self.device)
 
         # if an optimizer hasn't been defined by the user use adam per default
@@ -130,17 +130,17 @@ class SDDR(object):
             for batch in self.loader:
                 # for each batch
                 target = batch['target'].float().to(self.device)
-                meta_datadict = batch['meta_datadict']
+                datadict = batch['datadict']
                 
                 
                 # send each input batch to the current device
-                for param in meta_datadict.keys():
-                    for data_part in meta_datadict[param].keys():
-                        meta_datadict[param][data_part] = meta_datadict[param][data_part].float().to(self.device)
+                for param in datadict.keys():
+                    for data_part in datadict[param].keys():
+                        datadict[param][data_part] = datadict[param][data_part].float().to(self.device)
                         
                 # get the network output
                 self.optimizer.zero_grad()
-                output = self.net(meta_datadict)
+                output = self.net(datadict)
                 
                 # compute the loss and add regularization
                 loss = torch.mean(self.net.get_log_loss(target))
@@ -186,7 +186,7 @@ class SDDR(object):
         # get the weights of the linear layer of the structured part - do this computation on cpu
         structured_head_params = self.net.single_parameter_sddr_list[param].structured_head.weight.detach().cpu()
         # and the structured data after the smoothing
-        smoothed_structured = self.prepare_data.meta_datadict[param]['structured']
+        smoothed_structured = self.prepare_data.structured_part_data[param]
         smoothed_structured = torch.from_numpy(smoothed_structured).float()
         
         # get a list of the slice that each spline has in the design matrix

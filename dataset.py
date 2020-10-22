@@ -93,7 +93,7 @@ class SddrDataset(Dataset):
 
         
         gt = self._target[index]
-        return {'meta_datadict': batch_data, 'target': gt}        
+        return {'datadict': batch_data, 'target': gt}        
     
     def __len__(self):
         return len(self._target)
