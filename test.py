@@ -10,9 +10,9 @@ from dataset import SddrDataset
 
 from patsy import dmatrix
 import statsmodels.api as sm
-from utils import parse_formulas, Spline, spline, _orthogonalize_spline_wrt_non_splines, _get_info_from_design_matrix, df2lambda
+from utils import parse_formulas, _orthogonalize_spline_wrt_non_splines, _get_info_from_design_matrix, df2lambda
 from family import Family
-
+from splines import spline, Spline
 
 class TestSddrDataset(unittest.TestCase):
     '''
