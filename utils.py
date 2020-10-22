@@ -12,7 +12,7 @@ from splines import spline, Spline
 
 
 
-def _checkups(params, formulas):
+def checkups(params, formulas):
     """
     Checks if the user has given an available distribution, too many formulas or wrong parameters for the given distribution
     Parameters
@@ -378,7 +378,7 @@ def _orthogonalize_spline_wrt_non_splines(structured_matrix,
             constrained_X = _orthogonalize(constraints, X)
             structured_matrix.iloc[:,spline_slice] = constrained_X
 
-def parse_formulas(family, formulas, data, deep_models_dict, degrees_of_freedom, verbose=False):
+def parse_formulas(formulas, data, deep_models_dict, degrees_of_freedom, verbose=False):
     """
     Parses the formulas defined by the user and returns a dict of dicts which can be fed into SDDR network
     Parameters
@@ -413,13 +413,11 @@ def parse_formulas(family, formulas, data, deep_models_dict, degrees_of_freedom,
             A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the
             formula has an intercept or not and a list of the degrees of freedom of the splines in the formula and a list of the inputs features for each spline
     """
-    # perform checks on given distribution name, parameter names and number of formulas given
-    formulas = _checkups(family.get_params(), formulas)
+    
     meta_datadict = dict()
     parsed_formula_contents = dict()
     struct_list = []
     dm_info_dict = dict()
-    
     # for each parameter of the distribution
     for param in formulas.keys():
         meta_datadict[param] = dict()

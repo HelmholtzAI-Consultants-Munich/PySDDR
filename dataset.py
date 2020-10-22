@@ -1,7 +1,6 @@
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
-from utils import parse_formulas
 
 class SddrDataset(Dataset):
     '''
@@ -63,7 +62,7 @@ class SddrDataset(Dataset):
             A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the
             formula has an intercept or not and a list of the degrees of freedom of the splines in the formula
     '''
-    def __init__(self, data, target, family, formulas, deep_models_dict, degrees_of_freedom):
+    def __init__(self, data, target, prepare_data):
         
         # data loader for csv files
         if isinstance(data,str):
@@ -79,14 +78,26 @@ class SddrDataset(Dataset):
         elif isinstance(data,pd.core.frame.DataFrame) and isinstance(target,pd.core.frame.DataFrame):
             self._data = data
             self._target = target.values
+            
+            
+        prepare_data.fit(self._data)
+        self.prepare_data = prepare_data
+        
+        
+    def __getitem__(self,index):
+        #unstructured_data = self._data.loc[index,:] #load_unstructured_data(index) -> for later
+        
+        unstructured_data = False
+        
+        batch_data = self.prepare_data.get_batch_train(structured_index = index, unstructured_data = unstructured_data)
 
-        self.parsed_formula_content, self.meta_datadict, self.dm_info_dict = parse_formulas(family, formulas, self._data, deep_models_dict, degrees_of_freedom)
-        for param in self.meta_datadict.keys():
-            for data_part in self.meta_datadict[param].keys():
-                self.meta_datadict[param][data_part] = torch.from_numpy(self.meta_datadict[param][data_part]).float()
         
-        self.y = torch.from_numpy(self._target).float()
-        
+        gt = self._target[index]
+        return {'meta_datadict': batch_data, 'target': gt}        
+    
+    def __len__(self):
+        return len(self._target)
+    
     def get_feature(self, feature_column):
         """
         For a given feature name, extract the respective column from the input matrix (data - without target columns)
@@ -98,16 +109,3 @@ class SddrDataset(Dataset):
         Get the names of all input features (column names of input matrix (data - without target columns)).
         """
         return list(self._data.columns)
-        
-    def __getitem__(self,index):
-        batch_data = {}
-        for param in self.meta_datadict.keys():
-            batch_data[param]={}
-            for key in self.meta_datadict[param].keys():
-                batch_data[param][key] = self.meta_datadict[param][key][index]
-        
-        gt = self.y[index]
-        return {'meta_datadict': batch_data, 'target': gt}        
-    
-    def __len__(self):
-        return len(self.y)

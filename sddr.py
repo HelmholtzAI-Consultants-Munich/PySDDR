@@ -12,7 +12,8 @@ import torch.optim as optim
 # pysddr imports
 from sddr_network import SddrNet, Sddr_Param_Net
 from dataset import SddrDataset
-from utils import parse_formulas
+from utils import checkups
+from prepare_data import Prepare_Data
 from family import Family
 
 class SDDR(object):
@@ -65,18 +66,22 @@ class SDDR(object):
         
         # create a family instance
         self.family = Family(self.config['distribution'])
+        
+        # perform checks on given distribution name, parameter names and number of formulas given
+        formulas = checkups(self.family.get_params(), self.config['formulas'])
+        
+        self.prepare_data = Prepare_Data(self.config['formulas'],
+                                         self.config['deep_models_dict'],
+                                         self.config['train_parameters']['degrees_of_freedom'])
+        
         # create dataset
-        self.dataset = SddrDataset(self.config['data'], 
-                                self.config['target'],
-                                self.family,
-                                self.config['formulas'],
-                                self.config['deep_models_dict'],
-                                self.config['train_parameters']['degrees_of_freedom'])
+        self.dataset = SddrDataset(self.config['data'],self.config['target'], self.prepare_data)
 
-        self.parsed_formula_contents = self.dataset.parsed_formula_content
+        self.parsed_formula_contents = self.prepare_data.parsed_formula_content
 
         self.loader = DataLoader(self.dataset,
                                 batch_size=self.config['train_parameters']['batch_size'])
+        
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print('Using device: ', self.device)
         self.net = SddrNet(self.family, self.parsed_formula_contents)
@@ -124,13 +129,14 @@ class SDDR(object):
             self.epoch_loss = 0
             for batch in self.loader:
                 # for each batch
-                target = batch['target'].to(self.device)
-                meta_datadict = batch['meta_datadict']          # .to(device) should be improved 
+                target = batch['target'].float().to(self.device)
+                meta_datadict = batch['meta_datadict']
+                
                 
                 # send each input batch to the current device
                 for param in meta_datadict.keys():
                     for data_part in meta_datadict[param].keys():
-                        meta_datadict[param][data_part] = meta_datadict[param][data_part].to(self.device)
+                        meta_datadict[param][data_part] = meta_datadict[param][data_part].float().to(self.device)
                         
                 # get the network output
                 self.optimizer.zero_grad()
@@ -180,13 +186,15 @@ class SDDR(object):
         # get the weights of the linear layer of the structured part - do this computation on cpu
         structured_head_params = self.net.single_parameter_sddr_list[param].structured_head.weight.detach().cpu()
         # and the structured data after the smoothing
-        smoothed_structured = self.dataset.meta_datadict[param]['structured']
+        smoothed_structured = self.prepare_data.meta_datadict[param]['structured']
+        smoothed_structured = torch.from_numpy(smoothed_structured).float()
+        
         # get a list of the slice that each spline has in the design matrix
-        list_of_spline_slices = self.dataset.dm_info_dict[param]['list_of_spline_slices']
+        list_of_spline_slices = self.prepare_data.dm_info_dict[param]['list_of_spline_slices']
         # get a list of the names of spline terms
-        list_of_term_names = self.dataset.dm_info_dict[param]['list_of_term_names']
+        list_of_term_names = self.prepare_data.dm_info_dict[param]['list_of_term_names']
         # get a list of feature names sent as input to each spline
-        list_of_spline_input_features = self.dataset.dm_info_dict[param]['list_of_spline_input_features']
+        list_of_spline_input_features = self.prepare_data.dm_info_dict[param]['list_of_spline_input_features']
         
         partial_effects = []
         can_plot = []

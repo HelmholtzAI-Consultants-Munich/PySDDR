@@ -153,7 +153,6 @@ def integration_test_gamlss():
     y_target = normalize(x**2) # ground truth: quadratic effect
 
     RMSE = (y-y_target).std()
-    print(RMSE)
     
     assert RMSE<0.1, "Partial effect not properly estimated in GAMLSS."
     
@@ -163,7 +162,6 @@ def integration_test_gamlss():
     y_target = normalize(-x) # ground truth: linear effect
 
     RMSE = (y-y_target).std()
-    print(RMSE)
     
     assert RMSE<0.1, "Partial effect not properly estimated in GAMLSS."
     
