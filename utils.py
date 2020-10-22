@@ -84,7 +84,8 @@ def _split_formula(formula, net_names_list):
 
 class Spline(object):
     """
-     Computes basis functions and smooting penalty matrix for differents types of splines (BSplines, Cyclic cubic splines).
+     Class for computation of spline basis functions and and smooting penalty matrix for differents types of splines (BSplines, Cyclic cubic splines).
+     Compatible with patsy statefull transform.
     
      Parameters
      ----------
@@ -97,7 +98,7 @@ class Spline(object):
          degree: int, default is 3
              degree of polynomial e.g. 3 -> cubic, 2-> quadratic
          return_penalty: bool, default is False
-             If False s.basis is returned, else s.penalty_matrices is returned
+             has no function - necessary for backwards compatibility with the tests. Should be cleaned up at some point.
      Returns
      -------
          The function returns one of:
@@ -127,43 +128,7 @@ class Spline(object):
 
     __getstate__ = no_pickling
 
-spline = stateful_transform(Spline)
-
-
-# def spline(x, bs="bs", df=4, degree=3, return_penalty = False):
-#     """
-#     Computes basis functions and smooting penalty matrix for differents types of splines (BSplines, Cyclic cubic splines).
-    
-#     Parameters
-#     ----------
-#         x: Pandas.DataFrame
-#             A data frame holding all the data 
-#         bs: string, default is 'bs'
-#             The type of splines to use - default is b splines, but can also use cyclic cubic splines if bs='cc'
-#         df: int, default is 4
-#             Number of degrees of freedom (equals the number of columns in s.basis)
-#         degree: int, default is 3
-#             degree of polynomial e.g. 3 -> cubic, 2-> quadratic
-#         return_penalty: bool, default is False
-#             If False s.basis is returned, else s.penalty_matrices is returned
-#     Returns
-#     -------
-#         The function returns one of:
-#         s.basis: The basis functions of the spline
-#         s.penalty_matrices: The penalty matrices of the splines 
-#     """
-#     if bs == "bs":
-#         s = BSplines(x, df=[df], degree=[degree], include_intercept=True)
-#     elif bs == "cc":
-#         s = CyclicCubicSplines(x, df=[df])
-#     else:
-#         print("Spline basis not defined!")
-
-#     #return either basis or penalty
-#     if return_penalty:
-#         return s.penalty_matrices
-#     else:
-#         return s.basis
+spline = stateful_transform(Spline) #conversion of Spline class to patsy statefull transform
 
 
 def make_matrix_positive_semi_definite(A,machine_epsilon):
@@ -258,25 +223,38 @@ def df2lambda(dm, P, df, lam = None, hat1 = True, lam_max = 1e+15):
 
 def _get_penalty_matrix_from_factor_info(factor_info):
     '''
-    Extracts the penalty matrix from a factor_info object.
+    Extracts the penalty matrix from a factor_info object if the factor infor object is a spline.
+    Explanation: "spline" is a statefull pasty transform. After computation of the design matrix these statefull transforms are stored in the factor infos of the design matrix. In this function we extract this object and obtain the penalty matrix that corresponds to this spline.
+    
+     Parameters
+     ----------
+         factor_info: patsy factor info object
+             
+     Returns
+     -------
+         P: numpy-array or False
+             Penalty matrix of the spline term or False
+        
     '''
 
 
     factor = factor_info.factor
     
-    #ToDo: Dominik should document this...
     if 'spline' not in factor.name():
-        return False
+        P = False #factor is not a spline, so there is not penalty matrix
+        return P
     
-    outer_objects_in_factor = factor_info.state['pass_bins'][-1]
-    obj_name = next(iter(outer_objects_in_factor)) #use last=outermost object in factor. should only have a single element in the set.
-    obj = factor_info.state['transforms'][obj_name]
+    outer_objects_in_factor = factor_info.state['pass_bins'][-1] #a factor can be nested e.g. Spline(center(x)). The outer objects (e.g. Spline) are the last in the list 'pass_bins'
+    obj_name = next(iter(outer_objects_in_factor)) #use last=outermost object in factor. should only have a single element in the set. Explanation: the 'pass_bins' list contains tuples. e.g. if an object is Spline(center(x1)+center(x2)) then 'pass_bins' is a list with two tuples, where the first tuple containts the name of the two center objects. There should only be one element in the outer tuple and this is extracted here(we will check later, that this tuple contains indeed only one element)
+    obj = factor_info.state['transforms'][obj_name] #obtain the actal statefull transform object that corresponds to the extracted object name
 
-    if (len(outer_objects_in_factor)==1) and isinstance(obj, Spline):
-        return obj.penalty_matrices
+    if (len(outer_objects_in_factor)==1) and isinstance(obj, Spline): #check if the tuple indeed contained only one element and that the obtained object is a spline. If both is true obatain and return the penalty matrix of this spline.
+        P = obj.penalty_matrices
+        return P
 
     else:
-        return False #factor is not a spline, so there is not penalty matrix
+        P = False #factor is not a spline, so there is not penalty matrix
+        return P 
 
 def _get_P_from_design_matrix(dm, data, regularization_param):
     """
@@ -305,11 +283,12 @@ def _get_P_from_design_matrix(dm, data, regularization_param):
     spline_counter = 0
     
     for term in terms:
+        dm_term_name = term.name()
+        # get the slice object for this term (corresponding to start and end index in the designmatrix)
+        slice_of_term = dm.design_info.term_name_slices[dm_term_name] 
+        
 
-        if len(term.factors) != 1: #currently we only use smoothing for 1D, in the future we also want to add smoothing for tensorproducts
-            column_counter += 1
-            
-        else:
+        if len(term.factors) == 1: #currently we only use smoothing for 1D, in the future we also want to add smoothing for tensorproducts
             factor_info = factor_infos[term.factors[0]]
             num_columns = factor_info.num_columns
             
@@ -317,10 +296,10 @@ def _get_P_from_design_matrix(dm, data, regularization_param):
                 
             if P is not False:
                 regularization = regularization_param[spline_counter] if type(regularization_param) == list else regularization_param
-                dm_spline = dm.iloc[:,column_counter:(column_counter+num_columns)]
-                lam = df2lambda(dm_spline, P[0], regularization)[1]
-                print(lam)
-                big_P[column_counter:(column_counter+num_columns),column_counter:(column_counter+num_columns)] = P[0]*lam
+                dm_spline = dm.iloc[:,slice_of_term]
+                lam = df2lambda(dm_spline, P[0], regularization)[1] # regularization parameters are given in degrees of freedom. Here they are converted to lambda.
+                
+                big_P[slice_of_term,slice_of_term] = P[0]*lam
                 
                 spline_counter += 1
             column_counter += num_columns
