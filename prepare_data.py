@@ -1,5 +1,6 @@
 from utils import _split_formula, _get_info_from_design_matrix, _get_P_from_design_matrix, _orthogonalize_spline_wrt_non_splines, spline
-from patsy import dmatrix
+from patsy import dmatrix, build_design_matrices
+import torch
 
 class Prepare_Data(object):
 
@@ -72,27 +73,24 @@ class Prepare_Data(object):
             dfs = self.degrees_of_freedom[param]
 
             # create the structured matrix from the structured part of the formula - based on patsy
-            structured_matrix = dmatrix(self.formula_terms_dict[param]["structured_part"], data, return_type='dataframe')
+            self.structured_matrix = dmatrix(self.formula_terms_dict[param]["structured_part"], data, return_type='dataframe')
 
             # get bool depending on if formula has intercept or not and degrees of freedom and input feature names for each spline
-            spline_info, non_spline_info = _get_info_from_design_matrix(structured_matrix, feature_names=data.columns)
+            spline_info, non_spline_info = _get_info_from_design_matrix(self.structured_matrix, feature_names=data.columns)
             self.dm_info_dict[param] = spline_info
 
             # compute the penalty matrix
-            P = _get_P_from_design_matrix(structured_matrix, data, dfs)
+            P = _get_P_from_design_matrix(self.structured_matrix, data, dfs)
 
             # orthogonalize splines with respect to non-splines (including an intercept if it is there)
-            _orthogonalize_spline_wrt_non_splines(structured_matrix, spline_info, non_spline_info)
+            _orthogonalize_spline_wrt_non_splines(self.structured_matrix, spline_info, non_spline_info)
 
             # add content to the dicts to be returned
-            self.structured_part_data[param] = structured_matrix.values
-            self.network_info_dict[param]['struct_shapes'] = structured_matrix.shape[1]
+            self.structured_part_data[param] = self.structured_matrix.values
+            self.network_info_dict[param]['struct_shapes'] = self.structured_matrix.shape[1]
             self.network_info_dict[param]['P'] = P
-            
-            
-        
-        self.unstructured_part_data = dict()
-        
+                               
+        self.unstructured_part_data = dict()       
         for param in self.formulas.keys():
             self.unstructured_part_data[param] = dict()
             
@@ -118,4 +116,33 @@ class Prepare_Data(object):
         #use:
         #from patsy import dmatrix, build_design_matrices
         # build_design_matrices([mat.design_info], new_data)[0]
-        pass
+        
+        structured_part_data_predict = dict()
+        
+        for param in self.formulas.keys():
+            structured_part_data_predict[param] = dict()
+            
+            # create the structured matrix using the same specification of the spline basis
+            structured_matrix_predict = build_design_matrices([self.structured_matrix.design_info],data,return_type='dataframe')[0]
+            
+            # get bool depending on if formula has intercept or not and degrees of freedom and input feature names for each spline
+            spline_info, non_spline_info = _get_info_from_design_matrix(structured_matrix_predict, feature_names=data.columns)
+            
+            # orthogonalize splines with respect to non-splines (including an intercept if it is there)
+            _orthogonalize_spline_wrt_non_splines(structured_matrix_predict, spline_info, non_spline_info)
+
+            # add content to the dicts to be returned
+            structured_part_data_predict[param] = structured_matrix_predict.values
+                
+                
+        pred_data = dict()
+        for param in self.formulas.keys():
+            pred_data[param] = dict()
+            pred_data[param]["structured"] = torch.from_numpy(structured_part_data_predict[param]).float()
+
+            for net_name in self.formula_terms_dict[param]['net_feature_names'].keys():
+                net_feature_names = self.formula_terms_dict[param]['net_feature_names'][net_name]
+                pred_data[param][net_name] = torch.from_numpy(data[net_feature_names].to_numpy()).float()
+
+        return pred_data
+        

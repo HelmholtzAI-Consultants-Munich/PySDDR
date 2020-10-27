@@ -324,23 +324,22 @@ class SDDR(object):
         '''
         return self.net.distribution_layer
     
-    '''
-    Not yet implemented - we need to write a method which can handle unseen data and make predictions on that
-    def predict(self, net_path=None, data=None):
+    
+    #we need to write a method which can handle unseen data and make predictions on that
+    def predict(self, data, net_path=None):
         # not implement yet
         if net_path == None:
             net = self.net
         else:
             net = torch.load(net_path)
             net.eval()
-        if data == None:
-            data = self.dataset
             
-        newdm = build_design_matrices([structured_matrix.design_info], val, return_type='dataframe')[0]  # for prediction (new data) using the same specification of the spline basis.
+        pred_data = self.prepare_data.get_batch_predict(data)
         
-        #distribution_layer = net(data)
-        #return distribution_layer
-    '''
+        with torch.no_grad():
+            distribution_layer = net(pred_data)            
+            return distribution_layer
+    
 
 if __name__ == "__main__":
     params = train()
