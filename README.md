@@ -55,12 +55,19 @@ There are a number of inputs which need to be defined by the user before trainin
 A list of all inputs the user needs to give can be seen next:
 
 data: the input data
+
 target: the target data, i.e. our ground truth
+
 output_dir: the path of the output directory in which to save training results, such as loss figures or checkpoints  **-> do we need it or is it optional?**
+
 mode: either 'train' or 'test' depending on what we wish to do
+
 distribution: the assumed distribution of the data
+
 formulas: a dictionary with a list of formulas for each parameters of the distribution, see [Examples of training features](#Examples of training features) for more examples
+
 deep_models_dict: a dictionary where keys are the deep models and values are also dictionaries. In turn, their keys are 'model' with values been the model arcitectures and 'output_shape' with values been the output size of the model. Again see [Examples of training features](#Examples of training features) for examples.
+
 train_parameters: A dictionary where the training parameters are defined. There are: batch size, epochs, optimizer, optimizer parameters and degrees of freedom of each parameter
 
 ### Data
