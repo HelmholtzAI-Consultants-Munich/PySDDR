@@ -65,6 +65,7 @@ class Prepare_Data(object):
 
     def fit(self,data):
         
+        self.data_info = [data.min(level=0),data.max(level=0)] # used in predict function
         self.structured_part_data = dict()
         
         for param in self.formulas.keys():
@@ -117,13 +118,19 @@ class Prepare_Data(object):
         #from patsy import dmatrix, build_design_matrices
         # build_design_matrices([mat.design_info], new_data)[0]
         
+        train_data_min,train_data_max = self.data_info
         structured_part_data_predict = dict()
         
         for param in self.formulas.keys():
             structured_part_data_predict[param] = dict()
             
             # create the structured matrix using the same specification of the spline basis
-            structured_matrix_predict = build_design_matrices([self.structured_matrix.design_info],data,return_type='dataframe')[0]
+            
+            try:
+                structured_matrix_predict = build_design_matrices([self.structured_matrix.design_info], data, return_type='dataframe')[0]
+            except Exception as e:
+                structured_matrix_predict = build_design_matrices([self.structured_matrix.design_info], data.clip(train_data_min,train_data_max), return_type='dataframe')[0]
+                print('Data should stay within the range of the training data, they are clipped here.')
             
             # get bool depending on if formula has intercept or not and degrees of freedom and input feature names for each spline
             spline_info, non_spline_info = _get_info_from_design_matrix(structured_matrix_predict, feature_names=data.columns)
