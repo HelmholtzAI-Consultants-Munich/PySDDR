@@ -3,6 +3,7 @@ import unittest
 import numpy as np
 from torch import nn
 import pandas as pd
+import torch
 
 import unittest
 
@@ -10,9 +11,12 @@ from dataset import SddrDataset
 
 from patsy import dmatrix
 import statsmodels.api as sm
-from utils import parse_formulas, _orthogonalize_spline_wrt_non_splines, _get_info_from_design_matrix, df2lambda
+from utils import orthogonalize_spline_wrt_non_splines, get_info_from_design_matrix, df2lambda
 from family import Family
 from splines import spline, Spline
+
+from utils import checkups
+from prepare_data import Prepare_Data
 
 class TestSddrDataset(unittest.TestCase):
     '''
@@ -21,10 +25,10 @@ class TestSddrDataset(unittest.TestCase):
     It is tested 
         - if get_list_of_feature_names() returns the correct list of feature names of the features from the input dataset.
         - if get_feature(feature_name) returns the correct features (shape and value)
-        - if the structured part and the input to the deep network are in meta_datadict are correct (shape and value)
+        - if the structured part and the input to the deep network are in datadict are correct (shape and value)
         - if the correct target (shape and value) are returned)
         
-    We do not check parsed_formula_content and dm_info_dict herem as they are tested by Testparse_formulas.
+    We do not check network_info_dict and dm_info_dict herem as they are tested by Testparse_formulas.
     '''
 
 
@@ -39,7 +43,7 @@ class TestSddrDataset(unittest.TestCase):
 
 
         #define formulas and network shape
-        self.formulas = {'rate': '~1 + x1 + x2 + spline(x1, bs="bs",df=9) + spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)'}
+        formulas = {'rate': '~1 + x1 + x2 + spline(x1, bs="bs",df=9) + spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)'}
 
         self.deep_models_dict = {
             'd1': {
@@ -67,6 +71,13 @@ class TestSddrDataset(unittest.TestCase):
         self.true_feature_names = ["x1", "x2", "x3", "x4"]
         self.true_x2_11 = np.float32(self.data.x2[11])
         self.true_target_11 = self.target.values[11]
+        
+        # perform checks on given distribution name, parameter names and number of formulas given
+        self.formulas = checkups(self.family.get_params(), formulas)
+        
+        self.prepare_data = Prepare_Data(self.formulas,
+                                         self.deep_models_dict,
+                                         self.train_parameters['degrees_of_freedom'])
 
 
     def test_pandasinput(self):
@@ -77,18 +88,12 @@ class TestSddrDataset(unittest.TestCase):
 
         # load data
         data = pd.concat([self.data, self.target], axis=1, sort=False)
-
-        dataset = SddrDataset(data = data, 
-                              target = "y",
-                              family = self.family,
-                              formulas=self.formulas,
-                              deep_models_dict=self.deep_models_dict,
-                              degrees_of_freedom = self.train_parameters['degrees_of_freedom'])
+        dataset = SddrDataset(data,"y", self.prepare_data)
 
         feature_names = dataset.get_list_of_feature_names()
         feature_test_value = dataset.get_feature('x2')[11]
-        linear_input_test_value = dataset[11]["meta_datadict"]["rate"]["structured"].numpy()[2]
-        deep_input_test_value = dataset[11]["meta_datadict"]["rate"]["d2"].numpy()[0]
+        linear_input_test_value = dataset[11]["datadict"]["rate"]["structured"].numpy()[2]
+        deep_input_test_value = dataset[11]["datadict"]["rate"]["d2"].numpy()[0]
         target_test_value = dataset[11]["target"].numpy()
 
 
@@ -114,17 +119,12 @@ class TestSddrDataset(unittest.TestCase):
 
 
         # load data
-        dataset = SddrDataset(data = self.data, 
-                              target = self.target,
-                              family = self.family,
-                              formulas=self.formulas,
-                              deep_models_dict=self.deep_models_dict,
-                              degrees_of_freedom = self.train_parameters['degrees_of_freedom'])
+        dataset = SddrDataset(self.data,self.target, self.prepare_data)
 
         feature_names = dataset.get_list_of_feature_names()
         feature_test_value = dataset.get_feature('x2')[11]
-        linear_input_test_value = dataset[11]["meta_datadict"]["rate"]["structured"].numpy()[2]
-        deep_input_test_value = dataset[11]["meta_datadict"]["rate"]["d2"].numpy()[0]
+        linear_input_test_value = dataset[11]["datadict"]["rate"]["structured"].numpy()[2]
+        deep_input_test_value = dataset[11]["datadict"]["rate"]["d2"].numpy()[0]
         target_test_value = dataset[11]["target"].numpy()
 
 
@@ -147,20 +147,14 @@ class TestSddrDataset(unittest.TestCase):
         """
         Test if SddrDataset correctly works with file paths as inputs.
         """
-
-
-        #load data
-        dataset = SddrDataset(self.data_path, 
-                              self.ground_truth_path,
-                              self.family,
-                              self.formulas,
-                              self.deep_models_dict,
-                              self.train_parameters['degrees_of_freedom'])
+        
+        # create dataset
+        dataset = SddrDataset(self.data_path,self.ground_truth_path, self.prepare_data)
         
         feature_names = dataset.get_list_of_feature_names()
         feature_test_value = dataset.get_feature('x2')[11]
-        linear_input_test_value = dataset[11]["meta_datadict"]["rate"]["structured"].numpy()[2]
-        deep_input_test_value = dataset[11]["meta_datadict"]["rate"]["d2"].numpy()[0]
+        linear_input_test_value = dataset[11]["datadict"]["rate"]["structured"].numpy()[2]
+        deep_input_test_value = dataset[11]["datadict"]["rate"]["d2"].numpy()[0]
         target_test_value = dataset[11]["target"].numpy()
 
 
@@ -179,15 +173,15 @@ class TestSddrDataset(unittest.TestCase):
         self.assertEqual(self.true_x2_11.shape,feature_test_value.shape)
 
 
-class Testparse_formulas(unittest.TestCase):
+class TestPrepare_Data(unittest.TestCase):
     '''
     Test parse_formulas function for different formulas with the iris dataset.
     
     It is tested (for all parameters of the distribution)
-        - if in meta_datadict
+        - if in datadict
             + the structured part is correct and has correct shape
             + the inputs for the neural networks is correct (values and shape)
-        - if in parsed_formula_content
+        - if in network_info_dict
             + the penatly matrix is correct
             + struct_shape is correct
             + the deep shape is correct
@@ -202,7 +196,7 @@ class Testparse_formulas(unittest.TestCase):
 
     def __init__(self,*args,**kwargs):
 
-        super(Testparse_formulas, self).__init__(*args,**kwargs)
+        super(TestPrepare_Data, self).__init__(*args,**kwargs)
 
 
         # load data
@@ -235,31 +229,34 @@ class Testparse_formulas(unittest.TestCase):
 
         deep_models_dict = dict()
 
-
+        prepare_data = Prepare_Data(formulas, deep_models_dict, degrees_of_freedom)
+        prepare_data.fit(self.x)
+        datadict = prepare_data.transform(self.x)
+        dm_info_dict = prepare_data.dm_info_dict
+        network_info_dict = prepare_data.network_info_dict
         #call parse_formulas
-        parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict, degrees_of_freedom)
         ground_truth = np.ones([len(self.x),1])
-
-
+        ground_truth = torch.from_numpy(ground_truth).float()
+        
         #test if shapes of design matrices and P are as correct
-        self.assertTrue((meta_datadict['loc']['structured'] == ground_truth).all())
-        self.assertTrue((meta_datadict['loc']['structured'].shape == ground_truth.shape),'shape missmatch')
-        self.assertEqual(parsed_formula_content["loc"]['struct_shapes'], 1)
-        self.assertEqual(parsed_formula_content["loc"]['P'].shape, (1, 1))
-        self.assertEqual(parsed_formula_content["loc"]['P'], 0)
+        self.assertTrue((datadict['loc']['structured'] == ground_truth).all())
+        self.assertTrue((datadict['loc']['structured'].shape == ground_truth.shape),'shape missmatch')
+        self.assertEqual(network_info_dict["loc"]['struct_shapes'], 1)
+        self.assertEqual(network_info_dict["loc"]['P'].shape, (1, 1))
+        self.assertEqual(network_info_dict["loc"]['P'], 0)
 
-        self.assertTrue((meta_datadict['scale']['structured'].shape == ground_truth.shape), 'shape missmatch')
-        self.assertTrue((meta_datadict['scale']['structured'] == ground_truth).all())
-        self.assertEqual(parsed_formula_content["scale"]['struct_shapes'], 1)
-        self.assertEqual(parsed_formula_content["scale"]['P'].shape, (1, 1))
-        self.assertEqual(parsed_formula_content["scale"]['P'], 0)
+        self.assertTrue((datadict['scale']['structured'].shape == ground_truth.shape), 'shape missmatch')
+        self.assertTrue((datadict['scale']['structured'] == ground_truth).all())
+        self.assertEqual(network_info_dict["scale"]['struct_shapes'], 1)
+        self.assertEqual(network_info_dict["scale"]['P'].shape, (1, 1))
+        self.assertEqual(network_info_dict["scale"]['P'], 0)
 
 
         # test if dm_info_dict is correct
-        self.assertTrue(dm_info_dict['loc']['list_of_spline_slices'] == [])
-        self.assertTrue(dm_info_dict['scale']['list_of_spline_slices'] == [])
-        self.assertTrue(dm_info_dict['loc']['list_of_spline_input_features'] == [])
-        self.assertTrue(dm_info_dict['scale']['list_of_spline_input_features'] == [])
+        self.assertTrue(dm_info_dict['loc']['spline_info']['list_of_spline_slices'] == [])
+        self.assertTrue(dm_info_dict['scale']['spline_info']['list_of_spline_slices'] == [])
+        self.assertTrue(dm_info_dict['loc']['spline_info']['list_of_spline_input_features'] == [])
+        self.assertTrue(dm_info_dict['scale']['spline_info']['list_of_spline_input_features'] == [])
 
 
     def test_structured_parse_formulas(self):
@@ -284,30 +281,37 @@ class Testparse_formulas(unittest.TestCase):
 
 
         #call parse_formulas
-        parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict, degrees_of_freedom)
+        prepare_data = Prepare_Data(formulas, deep_models_dict, degrees_of_freedom)
+        prepare_data.fit(self.x)
+        datadict = prepare_data.transform(self.x)
+        dm_info_dict = prepare_data.dm_info_dict
+        network_info_dict = prepare_data.network_info_dict
+        
         ground_truth_loc = dmatrix(formulas['loc'], self.x, return_type='dataframe').to_numpy()
         ground_truth_scale = dmatrix(formulas['scale'], self.x, return_type='dataframe').to_numpy()
+        ground_truth_loc = torch.from_numpy(ground_truth_loc).float()
+        ground_truth_scale = torch.from_numpy(ground_truth_scale).float()
 
 
         #test if shapes of design matrices and P are as correct
-        self.assertTrue((meta_datadict['loc']['structured'] == ground_truth_loc).all())
-        self.assertTrue((meta_datadict['loc']['structured'].shape == ground_truth_loc.shape),'shape missmatch')
-        self.assertEqual(parsed_formula_content["loc"]['struct_shapes'], 1)
-        self.assertEqual(parsed_formula_content["loc"]['P'].shape, (1, 1))
-        self.assertTrue((parsed_formula_content["loc"]['P']==0).all())
+        self.assertTrue((datadict['loc']['structured'] == ground_truth_loc).all())
+        self.assertTrue((datadict['loc']['structured'].shape == ground_truth_loc.shape),'shape missmatch')
+        self.assertEqual(network_info_dict["loc"]['struct_shapes'], 1)
+        self.assertEqual(network_info_dict["loc"]['P'].shape, (1, 1))
+        self.assertTrue((network_info_dict["loc"]['P']==0).all())
 
-        self.assertTrue((meta_datadict['scale']['structured'].shape == ground_truth_scale.shape), 'shape missmatch')
-        self.assertTrue((meta_datadict['scale']['structured'] == ground_truth_scale).all())
-        self.assertEqual(parsed_formula_content["scale"]['struct_shapes'], 2)
-        self.assertEqual(parsed_formula_content["scale"]['P'].shape, (2, 2))
-        self.assertTrue((parsed_formula_content["scale"]['P']==0).all())
+        self.assertTrue((datadict['scale']['structured'].shape == ground_truth_scale.shape), 'shape missmatch')
+        self.assertTrue((datadict['scale']['structured'] == ground_truth_scale).all())
+        self.assertEqual(network_info_dict["scale"]['struct_shapes'], 2)
+        self.assertEqual(network_info_dict["scale"]['P'].shape, (2, 2))
+        self.assertTrue((network_info_dict["scale"]['P']==0).all())
 
 
         # test if dm_info_dict is correct
-        self.assertTrue(dm_info_dict['loc']['list_of_spline_slices'] == [])
-        self.assertTrue(dm_info_dict['scale']['list_of_spline_slices'] == [])
-        self.assertTrue(dm_info_dict['loc']['list_of_spline_input_features'] == [])
-        self.assertTrue(dm_info_dict['scale']['list_of_spline_input_features'] == [])
+        self.assertTrue(dm_info_dict['loc']['spline_info']['list_of_spline_slices'] == [])
+        self.assertTrue(dm_info_dict['scale']['spline_info']['list_of_spline_slices'] == [])
+        self.assertTrue(dm_info_dict['loc']['spline_info']['list_of_spline_input_features'] == [])
+        self.assertTrue(dm_info_dict['scale']['spline_info']['list_of_spline_input_features'] == [])
 
 
     def test_unstructured_parse_formulas(self):
@@ -334,40 +338,50 @@ class Testparse_formulas(unittest.TestCase):
 
 
         #call parse_formulas
-        parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict, degrees_of_freedom)
+        prepare_data = Prepare_Data(formulas, deep_models_dict, degrees_of_freedom)
+        prepare_data.fit(self.x)
+        datadict = prepare_data.transform(self.x)
+        dm_info_dict = prepare_data.dm_info_dict
+        network_info_dict = prepare_data.network_info_dict
+        
         ground_truth_loc = dmatrix('~1', self.x, return_type='dataframe').to_numpy()
         ground_truth_scale = dmatrix('~1 + x1', self.x, return_type='dataframe').to_numpy()
+        ground_truth_loc = torch.from_numpy(ground_truth_loc).float()
+        ground_truth_scale = torch.from_numpy(ground_truth_scale).float()
+        
+        x2x1x3 = torch.from_numpy(self.x[['x2','x1','x3']].to_numpy()).float()
+        x1 = torch.from_numpy(self.x[['x1']].to_numpy()).float()
 
 
         #test if shapes of design matrices and P are as correct
-        self.assertTrue((meta_datadict['loc']['structured'] == ground_truth_loc).all())
-        self.assertTrue((meta_datadict['loc']['structured'].shape == ground_truth_loc.shape),'shape missmatch')
-        self.assertTrue((meta_datadict['loc']['d1'] == self.x[['x2','x1','x3']].to_numpy()).all())
-        self.assertTrue((meta_datadict['loc']['d1'].shape == self.x[['x2','x1','x3']].shape),'shape missmatch for neural network input')
-        self.assertEqual(parsed_formula_content["loc"]['struct_shapes'], 1)
-        self.assertEqual(parsed_formula_content["loc"]['P'].shape, (1, 1))
-        self.assertTrue((parsed_formula_content["loc"]['P']==0).all())
-        self.assertEqual(list(parsed_formula_content['loc']['deep_models_dict'].keys()), ['d1'])
-        self.assertEqual(parsed_formula_content['loc']['deep_models_dict']['d1'], deep_models_dict['d1']['model'])
-        self.assertEqual(parsed_formula_content['loc']['deep_shapes']['d1'], deep_models_dict['d1']['output_shape'])
+        self.assertTrue((datadict['loc']['structured'] == ground_truth_loc).all())
+        self.assertTrue((datadict['loc']['structured'].shape == ground_truth_loc.shape),'shape missmatch')
+        self.assertTrue((datadict['loc']['d1'] == x2x1x3).all())
+        self.assertTrue((datadict['loc']['d1'].shape == self.x[['x2','x1','x3']].shape),'shape missmatch for neural network input')
+        self.assertEqual(network_info_dict["loc"]['struct_shapes'], 1)
+        self.assertEqual(network_info_dict["loc"]['P'].shape, (1, 1))
+        self.assertTrue((network_info_dict["loc"]['P']==0).all())
+        self.assertEqual(list(network_info_dict['loc']['deep_models_dict'].keys()), ['d1'])
+        self.assertEqual(network_info_dict['loc']['deep_models_dict']['d1'], deep_models_dict['d1']['model'])
+        self.assertEqual(network_info_dict['loc']['deep_shapes']['d1'], deep_models_dict['d1']['output_shape'])
 
-        self.assertTrue((meta_datadict['scale']['structured'] == ground_truth_scale).all())
-        self.assertTrue((meta_datadict['scale']['structured'].shape == ground_truth_scale.shape), 'shape missmatch')
-        self.assertTrue((meta_datadict['scale']['d2'] == self.x[['x1']].to_numpy()).all())
-        self.assertTrue((meta_datadict['scale']['d2'].shape == self.x[['x1']].shape),'shape missmatch for neural network input')
-        self.assertEqual(parsed_formula_content["scale"]['struct_shapes'], 2)
-        self.assertEqual(parsed_formula_content["scale"]['P'].shape, (2, 2))
-        self.assertTrue((parsed_formula_content["scale"]['P']==0).all())
-        self.assertEqual(list(parsed_formula_content['scale']['deep_models_dict'].keys()), ['d2'])
-        self.assertEqual(parsed_formula_content['scale']['deep_models_dict']['d2'],deep_models_dict['d2']['model'])
-        self.assertEqual(parsed_formula_content['scale']['deep_shapes']['d2'], deep_models_dict['d2']['output_shape'])
+        self.assertTrue((datadict['scale']['structured'] == ground_truth_scale).all())
+        self.assertTrue((datadict['scale']['structured'].shape == ground_truth_scale.shape), 'shape missmatch')
+        self.assertTrue((datadict['scale']['d2'] == x1).all())
+        self.assertTrue((datadict['scale']['d2'].shape == self.x[['x1']].shape),'shape missmatch for neural network input')
+        self.assertEqual(network_info_dict["scale"]['struct_shapes'], 2)
+        self.assertEqual(network_info_dict["scale"]['P'].shape, (2, 2))
+        self.assertTrue((network_info_dict["scale"]['P']==0).all())
+        self.assertEqual(list(network_info_dict['scale']['deep_models_dict'].keys()), ['d2'])
+        self.assertEqual(network_info_dict['scale']['deep_models_dict']['d2'],deep_models_dict['d2']['model'])
+        self.assertEqual(network_info_dict['scale']['deep_shapes']['d2'], deep_models_dict['d2']['output_shape'])
 
 
         # test if dm_info_dict is correct
-        self.assertTrue(dm_info_dict['loc']['list_of_spline_slices'] == [])
-        self.assertTrue(dm_info_dict['scale']['list_of_spline_slices'] == [])
-        self.assertTrue(dm_info_dict['loc']['list_of_spline_input_features'] == [])
-        self.assertTrue(dm_info_dict['scale']['list_of_spline_input_features'] == [])
+        self.assertTrue(dm_info_dict['loc']['spline_info']['list_of_spline_slices'] == [])
+        self.assertTrue(dm_info_dict['scale']['spline_info']['list_of_spline_slices'] == [])
+        self.assertTrue(dm_info_dict['loc']['spline_info']['list_of_spline_input_features'] == [])
+        self.assertTrue(dm_info_dict['scale']['spline_info']['list_of_spline_input_features'] == [])
         
         
     def test_smoothingspline_parse_formulas(self):
@@ -396,29 +410,36 @@ class Testparse_formulas(unittest.TestCase):
 
 
         #call parse_formulas
-        parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict, degrees_of_freedom)
+        prepare_data = Prepare_Data(formulas, deep_models_dict, degrees_of_freedom)
+        prepare_data.fit(self.x)
+        datadict = prepare_data.transform(self.x)
+        dm_info_dict = prepare_data.dm_info_dict
+        network_info_dict = prepare_data.network_info_dict
+        
         ground_truth_loc = dmatrix('~-1 + spline(x1,bs="bs",df=4, degree=3):x2 + spline(x2,bs="bs",df=5, degree=3):x1', self.x, return_type='dataframe').to_numpy()
         ground_truth_scale = dmatrix('~1 + x1 + spline(x1,bs="bs",df=10, degree=3)', self.x, return_type='dataframe').to_numpy()
+        ground_truth_loc = torch.from_numpy(ground_truth_loc).float()
+        ground_truth_scale = torch.from_numpy(ground_truth_scale).float()
 
 
         #test if shapes of design matrices and P are as correct
-        self.assertTrue((meta_datadict['loc']['structured'] == ground_truth_loc).all())
-        self.assertTrue((meta_datadict['loc']['structured'].shape == ground_truth_loc.shape),'shape missmatch')
-        self.assertEqual(parsed_formula_content["loc"]['struct_shapes'], 9)
-        self.assertEqual(parsed_formula_content["loc"]['P'].shape, (9, 9))
-        self.assertTrue((parsed_formula_content["loc"]['P']==0).all())
+        self.assertTrue((datadict['loc']['structured'] == ground_truth_loc).all())
+        self.assertTrue((datadict['loc']['structured'].shape == ground_truth_loc.shape),'shape missmatch')
+        self.assertEqual(network_info_dict["loc"]['struct_shapes'], 9)
+        self.assertEqual(network_info_dict["loc"]['P'].shape, (9, 9))
+        self.assertTrue((network_info_dict["loc"]['P']==0).all())
 
-        self.assertFalse((meta_datadict['scale']['structured'] == ground_truth_scale).all())  # assertFalse is due to orthogonalization
-        self.assertTrue((meta_datadict['scale']['structured'].shape == ground_truth_scale.shape), 'shape missmatch')
-        self.assertEqual(parsed_formula_content["scale"]['struct_shapes'], 12)
-        self.assertEqual(parsed_formula_content["scale"]['P'].shape, (12, 12))
+        self.assertFalse((datadict['scale']['structured'] == ground_truth_scale).all())  # assertFalse is due to orthogonalization
+        self.assertTrue((datadict['scale']['structured'].shape == ground_truth_scale.shape), 'shape missmatch')
+        self.assertEqual(network_info_dict["scale"]['struct_shapes'], 12)
+        self.assertEqual(network_info_dict["scale"]['P'].shape, (12, 12))
 
 
         # test if dm_info_dict is correct
-        self.assertTrue(dm_info_dict['loc']['list_of_spline_slices'] == [slice(0,4), slice(4,9)])
-        self.assertTrue(dm_info_dict['scale']['list_of_spline_slices'] == [slice(2,12)])
-        self.assertTrue(dm_info_dict['loc']['list_of_spline_input_features'] == [list({'x1','x2'}), list({'x1','x2'})])
-        self.assertTrue(dm_info_dict['scale']['list_of_spline_input_features'] == [list({'x1'})])
+        self.assertTrue(dm_info_dict['loc']['spline_info']['list_of_spline_slices'] == [slice(0,4), slice(4,9)])
+        self.assertTrue(dm_info_dict['scale']['spline_info']['list_of_spline_slices'] == [slice(2,12)])
+        self.assertTrue(dm_info_dict['loc']['spline_info']['list_of_spline_input_features'] == [list({'x1','x2'}), list({'x1','x2'})])
+        self.assertTrue(dm_info_dict['scale']['spline_info']['list_of_spline_input_features'] == [list({'x1'})])
 
 
     def test_spline_penaltymatrix_lambda(self):
@@ -446,14 +467,18 @@ class Testparse_formulas(unittest.TestCase):
 
 
         # call parse_formulas
-        parsed_formula_content, meta_datadict, dm_info_dict = parse_formulas(family, formulas, self.x, deep_models_dict, degrees_of_freedom)
+        prepare_data = Prepare_Data(formulas, deep_models_dict, degrees_of_freedom)
+        prepare_data.fit(self.x)
+        datadict = prepare_data.transform(self.x)
+        dm_info_dict = prepare_data.dm_info_dict
+        network_info_dict = prepare_data.network_info_dict
 
 
         # get original P and get penalized P (by lambda)
         sp = Spline()
         sp.memorize_chunk(self.x.x1, bs="bs", df=9, degree=3, return_penalty=True)
         P_original = sp.penalty_matrices[0]
-        P_penalized = parsed_formula_content["rate"]['P']
+        P_penalized = network_info_dict["rate"]['P']
 
 
         # calculate regularization parameter lambda
@@ -498,10 +523,10 @@ class Testorthogonalize_spline_wrt_non_splines(unittest.TestCase):
 
         structured_matrix = dmatrix('~ 1 + x1 + x2 + spline(x1, bs="bs", df=4, return_penalty = False, degree=3)', data, return_type='dataframe')
 
-        spline_info, non_spline_info = _get_info_from_design_matrix(structured_matrix, data.columns)
+        spline_info, non_spline_info = get_info_from_design_matrix(structured_matrix, data.columns)
         
         
-        _orthogonalize_spline_wrt_non_splines(structured_matrix, spline_info, non_spline_info)
+        orthogonalize_spline_wrt_non_splines(structured_matrix, spline_info, non_spline_info)
 
         test_features_not_zero = abs(structured_matrix).values.max().min() > 0
         self.assertTrue(test_features_not_zero) #test if features are not just equal to a zero vector
@@ -536,9 +561,9 @@ class Testorthogonalize_spline_wrt_non_splines(unittest.TestCase):
 
         structured_matrix = dmatrix('~ 1 + x1 + x2 + spline(x1, bs="bs", df=4, return_penalty = False, degree=3):x2', data, return_type='dataframe')
 
-        spline_info, non_spline_info = _get_info_from_design_matrix(structured_matrix, data.columns)
+        spline_info, non_spline_info = get_info_from_design_matrix(structured_matrix, data.columns)
 
-        _orthogonalize_spline_wrt_non_splines(structured_matrix, spline_info, non_spline_info)
+        orthogonalize_spline_wrt_non_splines(structured_matrix, spline_info, non_spline_info)
 
         test_features_not_zero = abs(structured_matrix).values.max().min() > 0
         self.assertTrue(test_features_not_zero) #test if features are not just equal to a zero vector

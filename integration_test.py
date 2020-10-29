@@ -154,6 +154,8 @@ def integration_test_gamlss():
 
     RMSE = (y-y_target).std()
     
+    print(RMSE)
+    
     assert RMSE<0.1, "Partial effect not properly estimated in GAMLSS."
     
     x = partial_effects_loc[1][0]
@@ -191,7 +193,7 @@ if __name__ == '__main__':
     
     # run integration tests
     print("Test simple GAM")
-    integration_test_simple_gam()  
+    #integration_test_simple_gam()  
     print("---------------------------")
     print("passed tests for simple GAM")
     

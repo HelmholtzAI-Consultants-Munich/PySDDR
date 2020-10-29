@@ -42,7 +42,7 @@ def checkups(params, formulas):
             new_formulas[param] = '~0'
     return new_formulas
 
-def _split_formula(formula, net_names_list):
+def split_formula(formula, net_names_list):
     """
     Splits the formula into two parts - the structured and unstructured part
     Parameters
@@ -207,7 +207,7 @@ def _get_penalty_matrix_from_factor_info(factor_info):
         P = False #factor is not a spline, so there is not penalty matrix
         return P 
 
-def _get_P_from_design_matrix(dm, data, dfs):
+def get_P_from_design_matrix(dm, data, dfs):
     """
     Computes and returns the penalty matrix that corresponds to a patsy design matrix. The penalties are multiplied by the regularization parameters lambda computed from given degrees of freedom. The result us a single block diagonal penalty matrix that combines the penalty matrices of each term in the formula that was used to create the design matrix. Only smooting splines terms have a non-zero penalty matrix.
     The degrees of freedom can either be given as a single value, then all individual penalty matrices are mutliplied with a single lambda. Or they can be given as a list, then all (non-zero) penalty matrices are mutliplied by different lambdas. The mutliplication is in the order of the terms in the formula.
@@ -306,7 +306,7 @@ def _get_all_input_features_for_term(term, feature_names):
     input_features_term = list(input_features_term)
     return input_features_term
 
-def _get_info_from_design_matrix(structured_matrix, feature_names):
+def get_info_from_design_matrix(structured_matrix, feature_names):
     """
     Parses the formulas defined by the user and returns a dict of dicts which can be fed into SDDR network
     Parameters
@@ -359,7 +359,7 @@ def _orthogonalize(constraints, X):
     
     return constrained_X
 
-def _orthogonalize_spline_wrt_non_splines(structured_matrix, 
+def orthogonalize_spline_wrt_non_splines(structured_matrix, 
                                          spline_info, 
                                          non_spline_info):
     
@@ -377,116 +377,3 @@ def _orthogonalize_spline_wrt_non_splines(structured_matrix,
             constraints = np.concatenate(constraints,axis=1)
             constrained_X = _orthogonalize(constraints, X)
             structured_matrix.iloc[:,spline_slice] = constrained_X
-
-def parse_formulas(formulas, data, deep_models_dict, degrees_of_freedom, verbose=False):
-    """
-    Parses the formulas defined by the user and returns a dict of dicts which can be fed into SDDR network
-    Parameters
-    ----------
-        family: dictionary
-            A dictionary holding all the available distributions as keys and values are again dictionaries with the 
-            parameters as keys and values the formula which applies for each parameter 
-        formulas: dictionary
-            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values
-            to strings defining the formula for each distribution, e.g. formulas['loc'] = '~ 1 + spline(x1, bs="bs", df=9) + dm1(x2)'
-        data: Pandas.DataFrame
-            A data frame holding all the data 
-        cur_distribution : string
-            The current distribution defined by the user
-        deep_models_dict: dictionary 
-            A dictionary where keys are model names and values are dicts with model architecture and output shapes
-        degrees_of_freedom: dict
-            A dictionary where keys are the name of the distribution parameter (e.g. eta,scale) and values 
-            are either a single smooting parameter for all penalities of all splines for this parameter, or a list of smooting parameters, each for one of the splines that appear in the formula for this parameter
-            
-    Returns
-    -------
-        parsed_formula_contents: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts 
-            will be: 'struct_shapes', 'P', 'deep_models_dict' and 'deep_shapes' with corresponding values
-        meta_datadict: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts 
-            will be: 'structured' and neural network names if defined in the formula of the parameter (e.g. 'dm1'). Their values 
-            are the data for the structured part (after smoothing for the non-linear terms) and unstructured part(s) of the SDDR 
-            model 
-         dm_info_dict: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the
-            formula has an intercept or not and a list of the degrees of freedom of the splines in the formula and a list of the inputs features for each spline
-    """
-    
-    meta_datadict = dict()
-    parsed_formula_contents = dict()
-    struct_list = []
-    dm_info_dict = dict()
-    # for each parameter of the distribution
-    for param in formulas.keys():
-        meta_datadict[param] = dict()
-        parsed_formula_contents[param] = dict()
-        
-        dfs = degrees_of_freedom[param]
-        
-        # split the formula into sructured and unstructured parts
-        structured_part, unstructured_terms = _split_formula(formulas[param], list(deep_models_dict.keys()))
-        
-        # print the results of the splitting if verbose is set
-        if verbose:
-            print('results from split formula')
-            print(structured_part)
-            print(unstructured_terms)
-            
-        # if there is not structured part create a null model
-        if not structured_part:
-            structured_part='~0'
-            
-        # create the structured matrix from the structured part of the formula - based on patsy
-        structured_matrix = dmatrix(structured_part, data, return_type='dataframe')
-        
-        # get bool depending on if formula has intercept or not and degrees of freedom and input feature names for each spline
-        spline_info, non_spline_info = _get_info_from_design_matrix(structured_matrix, feature_names = data.columns)
-        dm_info_dict[param] = spline_info
-        
-        # compute the penalty matrix
-        P = _get_P_from_design_matrix(structured_matrix, data, dfs)
-        
-        #orthogonalize splines with respect to non-splines (including an intercept if it is there)
-        _orthogonalize_spline_wrt_non_splines(structured_matrix, 
-                                         spline_info, 
-                                         non_spline_info)
-        
-        # add content to the dicts to be returned
-        meta_datadict[param]['structured'] = structured_matrix.values
-        parsed_formula_contents[param]['struct_shapes'] = structured_matrix.shape[1]
-        parsed_formula_contents[param]['P'] = P
-        parsed_formula_contents[param]['deep_models_dict'] = dict()
-        parsed_formula_contents[param]['deep_shapes'] = dict()
-        
-        # if there are unstructured terms in the formula (returned from split_formula)
-        if unstructured_terms:
-            
-            # for each unstructured term of the unstructured part of the formula
-            for term in unstructured_terms:
-                
-                # get the feature name as input to each term
-                term_split = term.split('(')
-                net_name = term_split[0]
-                feature_names = term_split[1].split(')')[0]
-                
-                # create a list of feature names if there are multiple inputs in term
-                feature_names_list = feature_names.split(',')
-                
-                # and create the unstructured data
-                unstructured_data = data[feature_names_list]
-                unstructured_data = unstructured_data.to_numpy()
-                meta_datadict[param][net_name] = unstructured_data
-                
-                #store deep models given by the user in a deep model dict that corresponds to the parameter in which this deep model is used
-                # if the deeps models are given as string, evaluate the expression first
-                if isinstance(deep_models_dict[net_name]['model'],str):
-                    parsed_formula_contents[param]['deep_models_dict'][net_name]= eval(deep_models_dict[net_name]['model'])
-                else:
-                    parsed_formula_contents[param]['deep_models_dict'][net_name]= deep_models_dict[net_name]['model']
-                    
-                parsed_formula_contents[param]['deep_shapes'][net_name] = deep_models_dict[net_name]['output_shape']
-                
-    return parsed_formula_contents, meta_datadict,  dm_info_dict
-

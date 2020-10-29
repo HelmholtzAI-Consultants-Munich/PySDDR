@@ -70,7 +70,7 @@ class SDDR(object):
         # perform checks on given distribution name, parameter names and number of formulas given
         formulas = checkups(self.family.get_params(), self.config['formulas'])
         
-        self.prepare_data = Prepare_Data(self.config['formulas'],
+        self.prepare_data = Prepare_Data(formulas,
                                          self.config['deep_models_dict'],
                                          self.config['train_parameters']['degrees_of_freedom'])
         
@@ -186,15 +186,15 @@ class SDDR(object):
         # get the weights of the linear layer of the structured part - do this computation on cpu
         structured_head_params = self.net.single_parameter_sddr_list[param].structured_head.weight.detach().cpu()
         # and the structured data after the smoothing
-        smoothed_structured = self.prepare_data.structured_part_data[param]
-        smoothed_structured = torch.from_numpy(smoothed_structured).float()
+        smoothed_structured = self.dataset[:]["datadict"][param]["structured"]
         
         # get a list of the slice that each spline has in the design matrix
-        list_of_spline_slices = self.prepare_data.dm_info_dict[param]['list_of_spline_slices']
+        list_of_spline_slices = self.prepare_data.dm_info_dict[param]['spline_info']['list_of_spline_slices']
         # get a list of the names of spline terms
-        list_of_term_names = self.prepare_data.dm_info_dict[param]['list_of_term_names']
+        list_of_term_names = self.prepare_data.dm_info_dict[param]['spline_info']['list_of_term_names']
+        
         # get a list of feature names sent as input to each spline
-        list_of_spline_input_features = self.prepare_data.dm_info_dict[param]['list_of_spline_input_features']
+        list_of_spline_input_features = self.prepare_data.dm_info_dict[param]['spline_info']['list_of_spline_input_features']
         
         partial_effects = []
         can_plot = []
@@ -325,16 +325,14 @@ class SDDR(object):
         return self.net.distribution_layer
     
     
-    #we need to write a method which can handle unseen data and make predictions on that
     def predict(self, data, net_path=None):
-        # not implement yet
         if net_path == None:
             net = self.net
         else:
             net = torch.load(net_path)
             net.eval()
             
-        pred_data = self.prepare_data.get_batch_predict(data)
+        pred_data = self.prepare_data.transform(data)
         
         with torch.no_grad():
             distribution_layer = net(pred_data)            

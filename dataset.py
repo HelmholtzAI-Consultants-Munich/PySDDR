@@ -81,18 +81,14 @@ class SddrDataset(Dataset):
             
             
         prepare_data.fit(self._data)
+        self.preloaded_data = prepare_data.transform(self._data)
         self.prepare_data = prepare_data
         
         
     def __getitem__(self,index):
-        #unstructured_data = self._data.loc[index,:] #load_unstructured_data(index) -> for later
         
-        unstructured_data = False
-        
-        batch_data = self.prepare_data.get_batch_train(structured_index = index, unstructured_data = unstructured_data)
-
-        
-        gt = self._target[index]
+        batch_data = self.prepare_data.get_item_from_data(index, self.preloaded_data)
+        gt = torch.from_numpy(self._target[index]).float()
         return {'datadict': batch_data, 'target': gt}        
     
     def __len__(self):
