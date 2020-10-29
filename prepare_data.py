@@ -68,6 +68,9 @@ class Prepare_Data(object):
 
     def fit(self,data):
         self.structured_matrix_design_info = dict()
+        
+        self.data_info = [data.min(level=0),data.max(level=0)] # used in predict function
+        
         for param in self.formulas.keys():
 
             dfs = self.degrees_of_freedom[param]
@@ -90,12 +93,17 @@ class Prepare_Data(object):
     def transform(self,data):
         
         prepared_data = dict()
+        train_data_min,train_data_max = self.data_info
         
         for param in self.formulas.keys():
             prepared_data[param] = dict()
             
-            # create the structured matrix using the same specification of the spline basis
-            structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]],data,return_type='dataframe')[0]
+            # create the structured matrix using the same specification of the spline basis 
+            try:
+                structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]], data, return_type='dataframe')[0]
+            except Exception as e:
+                structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]], data.clip(train_data_min,train_data_max), return_type='dataframe')[0]
+                print('Data should stay within the range of the training data, they are clipped here.')
             
             spline_info = self.dm_info_dict[param]['spline_info']
             non_spline_info = self.dm_info_dict[param]['non_spline_info']
