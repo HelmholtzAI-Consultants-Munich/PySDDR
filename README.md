@@ -38,17 +38,51 @@ As mentioned, each SDDR_Param_Net predicts a parameter of the distribution. Depe
 ![image](https://github.com/davidruegamer/PySDDR/blob/prepare_data_feature_branch/sddr_param_net.jpg)
 
 
-## User inputs
+## User Interface
+ 
+The user interacts with the package through the SDDR class. For training two simple steps are required by the user:
 
-_Here discuss and explain all the inputs the user must give_
+* Initialize an SDDR instance, e.g. ```sddr = SDDR(config=config) ```
+* Train by ```sddr.train() ```
+
+The user can then perform an evalutation of the training on any of the parameter's distribution, e.g. for a Poisson distribution: ```sddr.eval('rate') ```
+
+
+### User inputs
+
+There are a number of inputs which need to be defined by the user before training, or testing can be performed. The user can either directly define these in their run script or define all the parameters in a config file - for more information see [Training features](#Training features). 
+
+A list of all inputs the user needs to give can be seen next:
+
+data: the input data
+target: the target data, i.e. our ground truth
+output_dir: the path of the output directory in which to save training results, such as loss figures or checkpoints  **-> do we need it or is it optional?**
+mode: either 'train' or 'test' depending on what we wish to do
+distribution: the assumed distribution of the data
+formulas: a dictionary with a list of formulas for each parameters of the distribution, see [Examples of training features](#Examples of training features) for more examples
+deep_models_dict: a dictionary where keys are the deep models and values are also dictionaries. In turn, their keys are 'model' with values been the model arcitectures and 'output_shape' with values been the output size of the model. Again see [Examples of training features](#Examples of training features) for examples.
+train_parameters: A dictionary where the training parameters are defined. There are: batch size, epochs, optimizer, optimizer parameters and degrees of freedom of each parameter
 
 ### Data
 
-_How data can be inputted_ 
+Their are two parameters required regarding the data, that is data and target. For both parameters two options are available:
+* The user can give a local path which corresponds to csv files storing the data. The SDDR data will then load the data.
+* The user has already loaded the data manually and sets data and target to two pandas data frames corresponding to the input data and targert data.
 
 ### Distributions
 
-_List of available distributions and params_
+Currently, the available distribution in PySDDR are:
+
+* Normal: bernoulli distribution with logits (identity)
+* Poisson: poisson with rate (exp)
+* Bernoulli: bernoulli distribution with logits (identity)
+* Bernoulli_prob: bernoulli distribution with probabilities (sigmoid)
+* Multinomial: multinomial distribution parameterized by total_count(=1) and logits **-->is it implemented?**
+* Multinomial_prob: multinomial distribution parameterized by total_count(=1) and probs
+* Logistic: multinomial distribution parameterized by loc and scale
+
+Note that when setting the distribution parameter the distribution names should be given exactly as above, as well as their parameters (which are required when defining formulas and degrees of freedom of each parameter).
+
 
 ### Deep Neural Networks
 _How a NN can be defined, e.g. by torch instances directly, loaded from script_
@@ -65,7 +99,7 @@ _How a NN can be defined, e.g. by torch instances directly, loaded from script_
 
 _Here discuss the scientific features available to the user, e.g. w or w/o orthogonolization, optimizer options etc._
 
-### Run/training features
+### Training features
 
 <find a better name for run and training features:P>
 _Here discuss the options available to the user while training, e.g. loading pretrained weights_
