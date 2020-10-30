@@ -81,15 +81,20 @@ class SddrDataset(Dataset):
             
             
         prepare_data.fit(self._data)
-        self.preloaded_data = prepare_data.transform(self._data)
-        self.prepare_data = prepare_data
+        self.prepared_data = prepare_data.transform(self._data) #for the case that there is not so much data it makes sense to preload it here. When we have a lot of batches the transform can also happen in the __getitem__ function.
         
         
     def __getitem__(self,index):
         
-        batch_data = self.prepare_data.get_item_from_data(index, self.preloaded_data)
+        datadict = dict()
+        for param in self.prepared_data.keys():
+            datadict[param] = dict()
+            
+            for structured_or_net_name in self.prepared_data[param].keys():
+                datadict[param][structured_or_net_name] = self.prepared_data[param][structured_or_net_name][index] 
         gt = torch.from_numpy(self._target[index]).float()
-        return {'datadict': batch_data, 'target': gt}        
+        
+        return {'datadict': datadict, 'target': gt}        
     
     def __len__(self):
         return len(self._target)

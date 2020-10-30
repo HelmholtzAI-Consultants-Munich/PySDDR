@@ -119,19 +119,6 @@ class Prepare_Data(object):
                 prepared_data[param][net_name] = torch.from_numpy(data[net_feature_names].to_numpy()).float()
 
         return prepared_data
-        
-    def get_item_from_data(self,index, data):
-
-        item = dict()
-        for param in self.formulas.keys():
-            item[param] = dict()
-            item[param]["structured"] = data[param]['structured'][index]
-
-            for net_name in self.formula_terms_dict[param]['net_feature_names'].keys():
-                net_feature_names = self.formula_terms_dict[param]['net_feature_names'][net_name]
-                item[param][net_name] = data[param][net_name][index] 
-
-        return item
     
     
 """

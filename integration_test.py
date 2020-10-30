@@ -193,7 +193,7 @@ if __name__ == '__main__':
     
     # run integration tests
     print("Test simple GAM")
-    #integration_test_simple_gam()  
+    integration_test_simple_gam()  
     print("---------------------------")
     print("passed tests for simple GAM")
     
