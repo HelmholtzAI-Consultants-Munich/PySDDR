@@ -496,7 +496,65 @@ class TestPrepare_Data(unittest.TestCase):
         self.assertTrue(lam == df_lam[1])
         self.assertTrue(df_lam[0] == degrees_of_freedom['rate'])
         self.assertTrue((P_original == (P_penalized / df_lam[1])).all())
+        
+        
+    def test_orthogonalization_of_unstructured_part_in_parse_formulas(self):
+        """
+        Test if parse_formulas is correctly computing the orthogonalization pattern of the unstructured part.
+        """
 
+
+        # define distributions
+        cur_distribution = 'Normal'
+        family = Family(cur_distribution)
+
+
+        # define formulas and network shape
+        formulas = dict()
+        formulas['loc'] = "~1 + x1 + x2 + spline(x3, bs='bs', df=9, degree=3) + d1(x1) + d2(x1,x3)"
+        formulas['scale'] = '~1 + x1 + d1(x1)'
+        
+        degrees_of_freedom = {'loc': 4, 'scale': 4}
+
+        deep_models_dict = dict()
+        deep_models_dict['d1'] = {'model': nn.Sequential(nn.Linear(1, 15)), 'output_shape': 42}
+        deep_models_dict['d2'] = {'model': nn.Sequential(nn.Linear(2, 15)), 'output_shape': 42}
+
+
+        #call parse_formulas
+        prepare_data = Prepare_Data(formulas, deep_models_dict, degrees_of_freedom)
+        prepare_data.fit(self.x)
+        datadict = prepare_data.transform(self.x)
+        dm_info_dict = prepare_data.dm_info_dict
+        network_info_dict = prepare_data.network_info_dict
+        
+        X=dmatrix("~1 + x1 + x2 + spline(x3, bs='bs', df=9, degree=3)", self.x, return_type='dataframe')
+        
+        orthogonalization_pattern = network_info_dict['loc']['orthogonalization_pattern']['d1']
+        true_column_names = []
+        true_column_names.append('Intercept')
+        true_column_names.append('x1')
+        column_names = set([list(X.iloc[:,sl].columns)[-1] for sl in orthogonalization_pattern])
+        self.assertTrue(len(column_names.symmetric_difference(set(true_column_names))) == 0) #test if column names and true_column_names are identical
+        
+        orthogonalization_pattern = network_info_dict['loc']['orthogonalization_pattern']['d2']
+        true_column_names = []
+        true_column_names.append('Intercept')
+        true_column_names.append('x1')
+        true_column_names.append("spline(x3, bs='bs', df=9, degree=3)[8]")
+        column_names = set([list(X.iloc[:,sl].columns)[-1] for sl in orthogonalization_pattern])
+        self.assertTrue(len(column_names.symmetric_difference(set(true_column_names))) == 0)  #test if column names and true_column_names are identical
+        
+        X=dmatrix("~1 + x1", self.x, return_type='dataframe')
+        
+        orthogonalization_pattern = network_info_dict['loc']['orthogonalization_pattern']['d1']
+        true_column_names = []
+        true_column_names.append('Intercept')
+        true_column_names.append('x1')
+        column_names = set([list(X.iloc[:,sl].columns)[-1] for sl in orthogonalization_pattern])
+        self.assertTrue(len(column_names.symmetric_difference(set(true_column_names))) == 0) #test if column names and true_column_names are identical
+        
+        
 
 
 class Testorthogonalize_spline_wrt_non_splines(unittest.TestCase):

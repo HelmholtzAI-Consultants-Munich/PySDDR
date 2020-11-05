@@ -1,10 +1,48 @@
-from utils import split_formula, get_info_from_design_matrix, get_P_from_design_matrix, orthogonalize_spline_wrt_non_splines, spline
+from utils import split_formula, get_info_from_design_matrix, get_P_from_design_matrix, orthogonalize_spline_wrt_non_splines, spline, compute_orthogonalization_pattern_deepnets
 from patsy import dmatrix, build_design_matrices
 import torch
 import pandas as pd
 
 class Prepare_Data(object):
+    '''
+    The Prepare_Data class parses the formulas defined by the user. This class includes fit and transform functions, which parses all information necessary to initialize the sddr network and
+    also prepares the data by calculating penalty matrices (multiplied by the smoothing parameters lambda, which are computed from degrees of freedom) and orthogonalizing the non-linear (e.g. splines) wrt to the linear part of the formula.
+    Parameters
+    ----------
+        formulas: dictionary
+            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values
+            to strings defining the formula for each distribution, e.g. formulas['loc'] = '~ 1 + spline(x1, bs="bs", df=9) + dm1(x2)'.
+        deep_models_dict: dictionary
+            A dictionary where keys are model names and values are dicts with model architecture and output shapes.
+        degrees_of_freedom: int or list of ints
+            Degrees from freedom from which the smoothing parameter lambda is computed.
+            Either a single value for all penalities of all splines, or a list of values, each for one of the splines that appear in the formula.
 
+    Attributes
+    -------
+        formulas: dictionary
+            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values
+            to strings defining the formula for each distribution, e.g. formulas['loc'] = '~ 1 + spline(x1, bs="bs", df=9) + dm1(x2)'.
+        deep_models_dict: dictionary
+            A dictionary where keys are model names and values are dicts with model architecture and output shapes.
+        degrees_of_freedom: int or list of ints
+            Degrees from freedom from which the smoothing parameter lambda is computed.
+            Either a single value for all penalities of all splines, or a list of values, each for one of the splines that appear in the formula.
+        network_info_dict: dictionary
+            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts
+            will be: 'struct_shapes', 'P', 'deep_models_dict' and 'deep_shapes' with corresponding values for each distribution
+            paramter, i.e. given formula (shapes of structured parts, penalty matrix, a dictionary of the deep models' arcitectures
+            used in the current formula and the output shapes of these deep models)
+        formula_terms_dict: dictionary
+            A dictionary where keys are the distribution's parameter names and values are dicts containing the structured term of the formula (e.g. x1 + s(x2)), the list of unstructured terms (e.g. [d(x1),d(x2)])
+            as well as a dictionary which maps the feature names to the unstructured terms (e.g. {"d(x1,x2):[x1,x2]"}).
+        dm_info_dict: dictionary
+            A dictionary where keys are the distribution's parameter names and values are dictionaries containing information of spline and non-spline terms (information: the corresponding slice in the formula, the term name and its input features).
+        structured_matrix_design_info: dictionary
+            A dictionary where keys are the distribution's parameter names and value is the design info of the patsy design matrix constructed for the structured part of the formula.
+        data_info: list of integers
+            Stored the maximum and minimum values of the input data set.
+    '''
     def __init__(self, formulas, deep_models_dict, degrees_of_freedom, verbose=False):
         
         self.formulas = formulas
@@ -12,39 +50,40 @@ class Prepare_Data(object):
         self.degrees_of_freedom = degrees_of_freedom
 
         self.network_info_dict = dict()
-        self.dm_info_dict = dict()
         self.formula_terms_dict = dict()
 
         #parse the content of the formulas for each parameter
         for param in formulas.keys():
 
             # split the formula into structured and unstructured parts
-            structured_part, unstructured_terms = split_formula(self.formulas[param], list(self.deep_models_dict.keys()))
+            structured_term, unstructured_terms = split_formula(self.formulas[param], list(self.deep_models_dict.keys()))
 
             # if there is not structured part create a null model
-            if not structured_part:
+            if not structured_term:
                 structured_part = '~0'
 
             # print the results of the splitting if verbose is set
             if verbose:
                 print('results from split formula')
-                print(structured_part)
+                print(structured_term)
                 print(unstructured_terms)
 
-            # initialize dictionaries
             # initialize network_info_dict contains all information necessary to initialize the sddr_net
             self.network_info_dict[param] = dict()
             self.network_info_dict[param]['deep_models_dict'] = dict()
             self.network_info_dict[param]['deep_shapes'] = dict()
+            self.network_info_dict[param]['orthogonalization_pattern'] = dict()
             
-            # formula_terms_dict contains the splitted formula of structured and unstructured part as well as the nemaes of the features are input to the different neural networks
+            
+            # formula_terms_dict contains the splitted formula of structured and unstructured part as well as the names of the features are input to the different neural networks
             self.formula_terms_dict[param] = dict()
-            self.formula_terms_dict[param]["structured_part"] = structured_part
+            self.formula_terms_dict[param]["structured_term"] = structured_term
             self.formula_terms_dict[param]["unstructured_terms"] = unstructured_terms
             self.formula_terms_dict[param]['net_feature_names'] = dict()
             
             # if there are unstructured terms in the formula (returned from split_formula)
             if unstructured_terms:
+
                 # for each unstructured term of the unstructured part of the formula
                 for term in unstructured_terms:
 
@@ -52,7 +91,6 @@ class Prepare_Data(object):
                     term_split = term.split('(')
                     net_name = term_split[0]
                     net_feature_names = term_split[1].split(')')[0].split(',')
-
 
                     # store deep models given by the user in a deep model dict that corresponds to the parameter in which this deep model is used
                     # if the deeps models are given as string, evaluate the expression first
@@ -62,22 +100,37 @@ class Prepare_Data(object):
                         self.network_info_dict[param]['deep_models_dict'][net_name] = self.deep_models_dict[net_name]['model']
 
                     self.network_info_dict[param]['deep_shapes'][net_name] = self.deep_models_dict[net_name]['output_shape']
+                    
+                    
                     self.formula_terms_dict[param]['net_feature_names'][net_name] = net_feature_names
 
             
 
 
     def fit(self,data):
+        """
+        Compute the penalty matrix, fits splines and stores information on the data, e.g. information on spline and non-spline terms.
+        Computes orthogonalization pattern that defines which deep network features are orthogonalized w.r.t which structured terms.
+
+        Parameters
+        ----------
+            data: Pandas.DataFrame
+                input data (X)
+
+        Returns
+        -------
+
+        """
+        self.dm_info_dict = dict()
         self.structured_matrix_design_info = dict()
-        
         self.data_info = [data.min(),data.max()] # used in predict function
-        
+      
         for param in self.formulas.keys():
 
             dfs = self.degrees_of_freedom[param]
 
             # create the structured matrix from the structured part of the formula - based on patsy
-            structured_matrix = dmatrix(self.formula_terms_dict[param]["structured_part"], data, return_type='dataframe')
+            structured_matrix = dmatrix(self.formula_terms_dict[param]["structured_term"], data, return_type='dataframe')
             self.structured_matrix_design_info[param] = structured_matrix.design_info
 
             # get bool depending on if formula has intercept or not and degrees of freedom and input feature names for each spline
@@ -85,14 +138,37 @@ class Prepare_Data(object):
             self.dm_info_dict[param] = {'spline_info': spline_info, 'non_spline_info': non_spline_info }
 
             # compute the penalty matrix
-            P = get_P_from_design_matrix(structured_matrix, data, dfs)
+            P = get_P_from_design_matrix(structured_matrix, dfs)
             
             # add content to the dicts to be returned
             self.network_info_dict[param]['struct_shapes'] = structured_matrix.shape[1]
             self.network_info_dict[param]['P'] = P    
             
+            #compute the orthogonalization patterns for the deep neural networks
+            for net_name in self.network_info_dict[param]['deep_models_dict'].keys():
+                net_feature_names = self.formula_terms_dict[param]['net_feature_names'][net_name]
+                orthogonalization_pattern = compute_orthogonalization_pattern_deepnets(net_feature_names, 
+                                                                                       spline_info, 
+                                                                                       non_spline_info) 
+                
+                self.network_info_dict[param]['orthogonalization_pattern'][net_name] = orthogonalization_pattern
+
     def transform(self,data,clipping=False):
-        
+        """
+        Build patsy design matrix for input data and orthogonalize structured non-linear (e.g. splines) part wrt linear part.
+
+        Parameters
+        ----------
+            data: Pandas.DataFrame
+                input data (X)
+
+        Returns
+        -------
+            prepared_data: dictionary
+                A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts
+                will be: 'structured' and neural network names if defined in the formula of the parameter (e.g. 'dm1'). Their values
+                are the data for the structured part (after orthogonalization) and unstructured terms of the SDDR model.
+        """
         prepared_data = dict()
         
         for param in self.formulas.keys():
@@ -127,43 +203,3 @@ class Prepare_Data(object):
                 prepared_data[param][net_name] = torch.from_numpy(data[net_feature_names].to_numpy()).float()
 
         return prepared_data
-    
-    
-"""
-    Documentation of old parse_formulas function:
-    =============================================
-    
-    
-    Parses the formulas defined by the user and returns a dict of dicts which can be fed into SDDR network
-    Parameters
-    ----------
-        family: dictionary
-            A dictionary holding all the available distributions as keys and values are again dictionaries with the 
-            parameters as keys and values the formula which applies for each parameter 
-        formulas: dictionary
-            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values
-            to strings defining the formula for each distribution, e.g. formulas['loc'] = '~ 1 + spline(x1, bs="bs", df=9) + dm1(x2)'
-        data: Pandas.DataFrame
-            A data frame holding all the data 
-        cur_distribution : string
-            The current distribution defined by the user
-        deep_models_dict: dictionary 
-            A dictionary where keys are model names and values are dicts with model architecture and output shapes
-        degrees_of_freedom: dict
-            A dictionary where keys are the name of the distribution parameter (e.g. eta,scale) and values 
-            are either a single smooting parameter for all penalities of all splines for this parameter, or a list of smooting parameters, each for one of the splines that appear in the formula for this parameter
-            
-    Returns
-    -------
-        parsed_formula_contents: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts 
-            will be: 'struct_shapes', 'P', 'deep_models_dict' and 'deep_shapes' with corresponding values
-        meta_datadict: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts 
-            will be: 'structured' and neural network names if defined in the formula of the parameter (e.g. 'dm1'). Their values 
-            are the data for the structured part (after smoothing for the non-linear terms) and unstructured part(s) of the SDDR 
-            model 
-         dm_info_dict: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the
-            formula has an intercept or not and a list of the degrees of freedom of the splines in the formula and a list of the inputs features for each spline
-    """

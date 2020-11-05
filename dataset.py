@@ -79,7 +79,6 @@ class SddrDataset(Dataset):
             self._data = data
             self._target = target.values
             
-            
         prepare_data.fit(self._data)
         self.prepared_data = prepare_data.transform(self._data) #for the case that there is not so much data it makes sense to preload it here. When we have a lot of batches the transform can also happen in the __getitem__ function.
         
