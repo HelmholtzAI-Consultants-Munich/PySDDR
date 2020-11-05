@@ -5,6 +5,8 @@ import yaml
 import torch.optim as optim
 import torch.nn as nn
 
+from model import TestNet
+
 # get configs
 def get_config(config):
     with open(config, 'r') as stream:
@@ -42,7 +44,7 @@ if __name__ == '__main__':
         formulas = {'rate': '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)'}
         deep_models_dict = {
         'd1': {
-            'model': nn.Sequential(nn.Linear(1,15)),
+            'model': TestNet(n_channels=1, n_classes=15),
             'output_shape': 15},
         'd2': {
             'model': nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,8)),
@@ -51,10 +53,10 @@ if __name__ == '__main__':
 
         train_parameters = {
         'batch_size': 1000,
-        'epochs': 300,
+        'epochs': 1000,
         'optimizer': optim.SGD,
         'optimizer_params':{'lr': 0.01, 'momentum': 0.9}, 
-        'degrees_of_freedom': {'rate': 1}
+        'degrees_of_freedom': {'rate': 100}
         }
 
         sddr = SDDR(data=data,
