@@ -166,7 +166,7 @@ class SDDR(object):
             plt.savefig(os.path.join(self.config['output_dir'], 'train_loss.png'))
             plt.show()
     
-    def eval(self, param, plot=True):
+    def eval(self, param, plot=True, data=None, get_feature=None):
         """
         Evaluates the trained SddrNet for a specific parameter of the distribution.
         Parameters
@@ -183,10 +183,14 @@ class SDDR(object):
                 There will be one item in the list for each spline in the distribution's parameter equation. Each item is a tuple
                 (feature, partial_effect)
         """
+        if data == None:
+            data = self.dataset[:]["datadict"]
+        if get_feature == None:
+            get_feature = self.dataset.get_feature
         # get the weights of the linear layer of the structured part - do this computation on cpu
         structured_head_params = self.net.single_parameter_sddr_list[param].structured_head.weight.detach().cpu()
         # and the structured data after the smoothing
-        smoothed_structured = self.dataset[:]["datadict"][param]["structured"]
+        smoothed_structured = data[param]["structured"]
         
         # get a list of the slice that each spline has in the design matrix
         list_of_spline_slices = self.prepare_data.dm_info_dict[param]['spline_info']['list_of_spline_slices']
@@ -208,7 +212,7 @@ class SDDR(object):
             # if only one feature was sent as input to spline
             if len(spline_input_features) == 1:
                 # get that feature
-                feature = self.dataset.get_feature(spline_input_features[0])
+                feature = get_feature(spline_input_features[0])
                 # and keep track so that the partial effect of this spline can be plotted later on
                 can_plot.append(True)
                 ylabels.append(term_name)
@@ -216,7 +220,7 @@ class SDDR(object):
             else:
                 feature = []
                 for feature_name in spline_input_features:
-                    feature.append(self.dataset.get_feature(feature_name))
+                    feature.append(get_feature(feature_name))
                 # the partial effect of this spline cannot be plotted later on - too complicated for now as not 2d
                 can_plot.append(False)
             partial_effects.append((feature, structured_pred.numpy()))
@@ -325,18 +329,44 @@ class SDDR(object):
         return self.net.distribution_layer
     
     
-    def predict(self, data, net_path=None):
+    def predict(self, data, clipping=False, net_path=None, param = None, plot=False):
+        """
+        Predict and eval on unseen data.
+        Parameters
+        ----------
+            data: Pandas.DataFrame
+                The unseen data
+            clipping: boolean, default False
+                If true then when the unseen data is out of the range of the training data, they will be clipped.
+                If false then when the unseen data is out of range, an error will be thown.
+            param: string
+                The parameter of the distribution for which the evaluation is performed
+            plot: boolean, default True
+                If true then a figure for each spline defined in the formula of the distribution's parameter is plotted.
+                This is only true for the splines which take only one feature as input.
+                If false then nothing is plotted.
+        Returns
+        -------
+            distribution_layer: trained distribution
+                The output of the SDDR network, could be applied .mean/.variance ...
+            partial_effects: list of tuples
+                There will be one item in the list for each spline in the distribution's parameter equation. Each item is a tuple
+                (feature, partial_effect)
+        """
         if net_path == None:
             net = self.net
         else:
             net = torch.load(net_path)
             net.eval()
-            
-        pred_data = self.prepare_data.transform(data)
-        
+        pred_data = self.prepare_data.transform(data,clipping)     
         with torch.no_grad():
-            distribution_layer = net(pred_data)            
-            return distribution_layer
+            distribution_layer = net(pred_data) 
+         
+        get_feature = lambda feature_name: data.loc[:,feature_name].values
+        partial_effects = self.eval(param, plot, data=pred_data, get_feature=get_feature)
+        
+        return distribution_layer,partial_effects
+        
     
 
 if __name__ == "__main__":

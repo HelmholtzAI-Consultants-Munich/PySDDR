@@ -1,6 +1,7 @@
 from utils import split_formula, get_info_from_design_matrix, get_P_from_design_matrix, orthogonalize_spline_wrt_non_splines, spline
 from patsy import dmatrix, build_design_matrices
 import torch
+import pandas as pd
 
 class Prepare_Data(object):
 
@@ -69,7 +70,7 @@ class Prepare_Data(object):
     def fit(self,data):
         self.structured_matrix_design_info = dict()
         
-        self.data_info = [data.min(level=0),data.max(level=0)] # used in predict function
+        self.data_info = [data.min(),data.max()] # used in predict function
         
         for param in self.formulas.keys():
 
@@ -90,10 +91,9 @@ class Prepare_Data(object):
             self.network_info_dict[param]['struct_shapes'] = structured_matrix.shape[1]
             self.network_info_dict[param]['P'] = P    
             
-    def transform(self,data):
+    def transform(self,data,clipping=False):
         
         prepared_data = dict()
-        train_data_min,train_data_max = self.data_info
         
         for param in self.formulas.keys():
             prepared_data[param] = dict()
@@ -102,8 +102,16 @@ class Prepare_Data(object):
             try:
                 structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]], data, return_type='dataframe')[0]
             except Exception as e:
-                structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]], data.clip(train_data_min,train_data_max), return_type='dataframe')[0]
-                print('Data should stay within the range of the training data, they are clipped here.')
+                if clipping == True:
+                    train_data_min = {}
+                    train_data_max = {}
+                    for name in self.data_info[0].index:
+                        train_data_min[name]=self.data_info[0][name]
+                        train_data_max[name]=self.data_info[1][name]
+                    clipped_data = data.clip(lower=pd.Series(train_data_min),upper=pd.Series(train_data_max),axis=1)
+                    structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]], clipped_data, return_type='dataframe')[0]
+                else:
+                    raise Exception("Data should stay within the range of the training data. Please try clipping or manually set knots.")
             
             spline_info = self.dm_info_dict[param]['spline_info']
             non_spline_info = self.dm_info_dict[param]['non_spline_info']

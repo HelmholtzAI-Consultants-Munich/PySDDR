@@ -21,6 +21,8 @@ class Spline(object):
              degree of polynomial e.g. 3 -> cubic, 2-> quadratic
          return_penalty: bool, default is False
              has no function - necessary for backwards compatibility with the tests. Should be cleaned up at some point.
+         knot_kwds: None or list of dict, default is None
+             option for the knot selection
      Returns
      -------
          The function returns one of:
@@ -30,10 +32,10 @@ class Spline(object):
     def __init__(self):
         pass
 
-    def memorize_chunk(self, x, bs, df=4, degree=3, return_penalty = False):
+    def memorize_chunk(self, x, bs, df=4, degree=3, return_penalty = False, knot_kwds = None):
         assert bs == "bs" or bs == "cc", "Spline basis not defined!"
         if bs == "bs":
-            self.s = BSplines(x, df=[df], degree=[degree], include_intercept=True)
+            self.s = BSplines(x, df=[df], degree=[degree], include_intercept=True, knot_kwds=None)
         elif bs == "cc":
             self.s = CyclicCubicSplines(x, df=[df])
         
@@ -43,7 +45,7 @@ class Spline(object):
         pass
 
 
-    def transform(self, x, bs, df=4, degree=3, return_penalty = False):
+    def transform(self, x, bs, df=4, degree=3, return_penalty = False,knot_kwds = None):
         
         return self.s.transform(np.expand_dims(x.to_numpy(),axis=1)) 
             
