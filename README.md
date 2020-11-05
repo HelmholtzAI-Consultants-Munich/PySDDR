@@ -50,31 +50,33 @@ The user can then perform an evalutation of the training on any of the parameter
 
 ### User inputs
 
-There are a number of inputs which need to be defined by the user before training, or testing can be performed. The user can either directly define these in their run script or define all the parameters in a config file - for more information see [Training features](#Training features). 
+There are a number of inputs which need to be defined by the user before training, or testing can be performed. The user can either directly define these in their run script or give all the parameters through a config file - for more information see [Training features](#Training features). 
 
 A list of all inputs the user needs to give can be seen next:
 
-data: the input data
+**data:** the input data
 
-target: the target data, i.e. our ground truth
+**target:** the target data, i.e. our ground truth
 
-output_dir: the path of the output directory in which to save training results, such as loss figures or checkpoints  **-> do we need it or is it optional?**
+**output_dir:** the path of the output directory in which to save training results, such as loss figures or checkpoints  **-> do we need it or is it optional?**
 
-mode: either 'train' or 'test' depending on what we wish to do
+**mode:** either 'train' or 'test' depending on what we wish to do
 
-distribution: the assumed distribution of the data
+**distribution:** the assumed distribution of the data
 
-formulas: a dictionary with a list of formulas for each parameters of the distribution, see [Examples of training features](#Examples of training features) for more examples
+**formulas:** a dictionary with a list of formulas for each parameters of the distribution, see [Examples of training features](#Examples of training features) for more examples
 
-deep_models_dict: a dictionary where keys are the deep models and values are also dictionaries. In turn, their keys are 'model' with values been the model arcitectures and 'output_shape' with values been the output size of the model. Again see [Examples of training features](#Examples of training features) for examples.
+**deep_models_dict:** a dictionary where keys are names of deep models and values are also dictionaries. In turn, their keys are 'model' with values been the model arcitectures and 'output_shape' with values been the output size of the model. Again see [Examples of training features](#Examples of training features) for examples.
 
-train_parameters: A dictionary where the training parameters are defined. There are: batch size, epochs, optimizer, optimizer parameters and degrees of freedom of each parameter
+**train_parameters:** A dictionary where the training parameters are defined. There are: batch size, epochs, optimizer, optimizer parameters and degrees of freedom of each parameter
 
 ### Data
 
-Their are two parameters required regarding the data, that is data and target. For both parameters two options are available:
-* The user can give a local path which corresponds to csv files storing the data. The SDDR data will then load the data.
-* The user has already loaded the data manually and sets data and target to two pandas data frames corresponding to the input data and targert data.
+There are two parameters required regarding the data, namely data and target. For both parameters two options are available:
+* The user can give a local path which corresponds to a csv files storing the data. The SDDRDataset class will then load the data.
+* The user has already loaded the data manually and sets data and target to two Pandas Data Frames corresponding to the input data and targert data.
+
+A combination of the above options is also possible, i.e. have data as a dataframe and load target from a file and vice versa. 
 
 ### Distributions
 
@@ -92,13 +94,48 @@ Note that when setting the distribution parameter the distribution names should 
 
 
 ### Deep Neural Networks
-_How a NN can be defined, e.g. by torch instances directly, loaded from script_
 
-.
+The neural network or networks to be used in the SDDR package are defined by the user. These user gives a name for each and this will be the corresponding key of the deep_models_dict input. Each value of the dictionary is of itself a dictionary with keys: model, where the neural network architecture is defined, and output_shape where the user should specify the output size of the neural network. This will help build the SDDR_Param_Net. The architecture can be either directly given, defined in a local script, or a pytorch model can be used.
+ 
+#### Examples
 
-.
+1. Define two neural networks directly:
+```
+deep_models_dict = {
+        'd1': {
+            'model': nn.Sequential(nn.Linear(1,64)), nn.ReLU(), nn.Linear(64,8))
+            'output_shape': 8},
+        'd2': {
+            'model': nn.Sequential(nn.Linear(1,32), nn.ReLU(), nn.Linear(32,4)),
+            'output_shape': 4}
+        }
+```
+Note that the correct imports will also need to be specified in your script, so for this case ``` import torch.nn as nn```
 
-.
+2. Use a model architecture saved in a script to define a network:
+```
+deep_models_dict = {
+        'd1': {
+            'model': myCNN(n_channels=1, n_outputs=8),
+            'output_shape': 8},
+        'd2': {
+            'model': nn.Sequential(nn.Linear(1,32), nn.ReLU(), nn.Linear(32,4)),
+            'output_shape': 4}
+        }
+```
+Note that also here the correct import needs to be given, e.g. ``` from model import myCNN```
+
+3. Use a pytorch model:
+_This case we still need to test but i think it will work out of the box_
+```
+deep_models_dict = {
+        'd0': {
+            'model': models.resnet18(),
+            'output_shape': 1}
+        }
+```
+
+Note that also here the correct import needs to be given, e.g. ```import torchvision.models as models```
 
 ## Features
 
