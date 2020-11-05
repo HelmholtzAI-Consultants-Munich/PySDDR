@@ -1,4 +1,4 @@
-from utils import split_formula, get_info_from_design_matrix, get_P_from_design_matrix, orthogonalize_spline_wrt_non_splines, spline
+from utils import split_formula, get_info_from_design_matrix, get_P_from_design_matrix, orthogonalize_spline_wrt_non_splines, spline, compute_orthogonalization_pattern_deepnets
 from patsy import dmatrix, build_design_matrices
 import torch
 
@@ -35,6 +35,8 @@ class Prepare_Data(object):
             self.network_info_dict[param] = dict()
             self.network_info_dict[param]['deep_models_dict'] = dict()
             self.network_info_dict[param]['deep_shapes'] = dict()
+            self.network_info_dict[param]['orthogonalization_pattern'] = dict()
+            
             
             # formula_terms_dict contains the splitted formula of structured and unstructured part as well as the nemaes of the features are input to the different neural networks
             self.formula_terms_dict[param] = dict()
@@ -61,6 +63,8 @@ class Prepare_Data(object):
                         self.network_info_dict[param]['deep_models_dict'][net_name] = self.deep_models_dict[net_name]['model']
 
                     self.network_info_dict[param]['deep_shapes'][net_name] = self.deep_models_dict[net_name]['output_shape']
+                    
+                    
                     self.formula_terms_dict[param]['net_feature_names'][net_name] = net_feature_names
 
             
@@ -90,6 +94,15 @@ class Prepare_Data(object):
             self.network_info_dict[param]['struct_shapes'] = structured_matrix.shape[1]
             self.network_info_dict[param]['P'] = P    
             
+            #compute the orthogonalization patterns for the deep neural networks
+            for net_name in self.network_info_dict[param]['deep_models_dict'].keys():
+                net_feature_names = self.formula_terms_dict[param]['net_feature_names'][net_name]
+                orthogonalization_pattern = compute_orthogonalization_pattern_deepnets(net_feature_names, 
+                                                                                       spline_info, 
+                                                                                       non_spline_info) 
+                
+                self.network_info_dict[param]['orthogonalization_pattern'][net_name] = orthogonalization_pattern
+
     def transform(self,data):
         
         prepared_data = dict()

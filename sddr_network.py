@@ -42,7 +42,7 @@ class Sddr_Param_Net(nn.Module):
         This value is true if deep models have been used on init of the ssdr_single network, otherwise it is false
     '''
     
-    def __init__(self, deep_models_dict, deep_shapes, struct_shapes, P):
+    def __init__(self, deep_models_dict, deep_shapes, struct_shapes, orthogonalization_pattern, P):
         
         super(Sddr_Param_Net, self).__init__()
         self.P = P
@@ -52,7 +52,7 @@ class Sddr_Param_Net(nn.Module):
         for key, value in deep_models_dict.items():
             self.add_module(key,value)
         
-        
+        self.orthogonalization_pattern = orthogonalization_pattern
         self.structured_head = nn.Linear(struct_shapes,1, bias = False)
         
         if len(deep_models_dict) != 0:
@@ -75,21 +75,25 @@ class Sddr_Param_Net(nn.Module):
     
     
     def forward(self, datadict):
-        """Comment 6.8.2020 We checked that we can actually have a dictionary as an input here. that should work fine"""
-        # check if dataframe in structired is empty!!
         X = datadict["structured"]
         
         if self._deep_models_exist:
-            Q, R = torch.qr(X)
 
-            Uhat_list = []
+            Utilde_list = []
             for key in self.deep_models_dict.keys(): #assume that the input for the NN has the name of the NN as key
                 net = self.deep_models_dict[key]
-                Uhat_list.append(net(datadict[key]))
+                
+                Uhat_net = net(datadict[key])
+                
+                # orthogonalize the output of the neural network with respect to the parts of the structured part,
+                # that contain the same input as the neural network
+                X_sliced_with_orthogonalization_pattern = torch.cat([X[:,sl] for sl in self.orthogonalization_pattern[key]],1)
+                Q, R = torch.qr(X_sliced_with_orthogonalization_pattern)
+                Utilde_net = self._orthog_layer(Q, Uhat_net)
+                
+                Utilde_list.append(Utilde_net)
             
-            Uhat = torch.cat(Uhat_list, dim = 1) #concatenate the outputs of the deep NNs
-
-            Utilde = self._orthog_layer(Q, Uhat)
+            Utilde = torch.cat(Utilde_list, dim = 1) #concatenate the orthogonalized outputs of the deep NNs
             
             deep_pred = self.deep_head(Utilde)
         else:
@@ -153,8 +157,13 @@ class SddrNet(nn.Module):
             deep_models_dict = value["deep_models_dict"]
             deep_shapes = value["deep_shapes"]
             struct_shapes = value["struct_shapes"]
+            orthogonalization_pattern = value["orthogonalization_pattern"]
             P = value["P"]
-            self.single_parameter_sddr_list[key] = Sddr_Param_Net(deep_models_dict, deep_shapes, struct_shapes, P)
+            self.single_parameter_sddr_list[key] = Sddr_Param_Net(deep_models_dict, 
+                                                                  deep_shapes, 
+                                                                  struct_shapes, 
+                                                                  orthogonalization_pattern,
+                                                                  P)
             
             #register the Sddr_Param_Net network
             self.add_module(key,self.single_parameter_sddr_list[key])

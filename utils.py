@@ -362,6 +362,20 @@ def _orthogonalize(constraints, X):
 def orthogonalize_spline_wrt_non_splines(structured_matrix, 
                                          spline_info, 
                                          non_spline_info):
+    '''
+    Changes the structured matrix by orthogonalizing all spline terms with respect to all non spline terms.
+    Orthogonalization of spline term is only with respect to the non-spline terms that contain a subset of the features that are input to the spline (inlcuding the intercept). E.g. spline(x3, bs='bs', df=9, degree=3) is orthogonalized with respect to the intercept and x3. If any terms x2, x4 ... appear they are ignored in this orthogonalization.
+    
+    The change on the structured matrix is done inplace!
+    
+    Parameters
+    ----------
+        structured_matrix: patsy.dmatrix
+            The design matrix for the structured part of the formula - computed by patsy
+
+        spline_info: dict
+            dictionary with keys list_of_spline_slices and list_of_spline_input_features. As produced by get_info_from_design_matrix
+    '''
     
     for spline_slice, spline_input_features in zip(spline_info['list_of_spline_slices'], 
                                                    spline_info['list_of_spline_input_features']):
@@ -377,3 +391,40 @@ def orthogonalize_spline_wrt_non_splines(structured_matrix,
             constraints = np.concatenate(constraints,axis=1)
             constrained_X = _orthogonalize(constraints, X)
             structured_matrix.iloc[:,spline_slice] = constrained_X
+            
+            
+def compute_orthogonalization_pattern_deepnets(net_feature_names, 
+                                               spline_info, 
+                                               non_spline_info):
+    '''
+    Computes the orthogonalization pattern that tells with respect to which structured terms the features of a deep neural network should be orthogonalized. Returned is a list of slices which is then used in the orthogonalization to slice the design matrix for the strucutred part of the formula.
+    Orthogonalization of deep net term is only with respect to the structured terms that contain a subset of the features that are input to the deep neural network (inlcuding the intercept). E.g. d1(x3) is orthogonalized with respect to the intercept,x3 and a spline that has as only input x3. If any terms x2, x4 or a spline with another input than x2 e.g. spline(x1,x3) or spline(x1) appear they are ignored in this orthogonalization.
+    
+    Parameters
+    ----------
+        net_feature_names: list of strings
+            list of names of input features to the deep neural network
+
+        spline_info: dict
+            dictionary with keys list_of_spline_slices and list_of_spline_input_features. As produced by get_info_from_design_matrix
+            
+    Returns
+    -------
+        orthogonalization_pattern: list of slice objects
+            For each term in the design matrix wrt that the deep neural network should be orthogonalized there is a slice in the list.
+    '''
+    
+    
+    orthogonalization_pattern = []
+    for non_spline_slice, non_spline_input_features in zip(non_spline_info['list_of_non_spline_slices'],
+                                                           non_spline_info['list_of_non_spline_input_features']):
+        
+        if set(non_spline_input_features).issubset(set(net_feature_names)):
+            orthogonalization_pattern.append(non_spline_slice)
+            
+    for spline_slice, spline_input_features in zip(spline_info['list_of_spline_slices'],
+                                                   spline_info['list_of_spline_input_features']):
+        
+        if set(spline_input_features).issubset(set(net_feature_names)):
+            orthogonalization_pattern.append(spline_slice)
+    return orthogonalization_pattern
