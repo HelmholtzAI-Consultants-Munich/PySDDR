@@ -86,7 +86,6 @@ class Sddr_Param_Net(nn.Module):
             for key in self.deep_models_dict.keys(): #assume that the input for the NN has the name of the NN as key
                 net = self.deep_models_dict[key]
                 Uhat_list.append(net(datadict[key]))
-            
             Uhat = torch.cat(Uhat_list, dim = 1) #concatenate the outputs of the deep NNs
 
             Utilde = self._orthog_layer(Q, Uhat)

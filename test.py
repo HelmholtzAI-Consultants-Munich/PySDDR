@@ -5,8 +5,6 @@ from torch import nn
 import pandas as pd
 import torch
 
-import unittest
-
 from dataset import SddrDataset
 
 from patsy import dmatrix
@@ -349,14 +347,13 @@ class TestPrepare_Data(unittest.TestCase):
         ground_truth_loc = torch.from_numpy(ground_truth_loc).float()
         ground_truth_scale = torch.from_numpy(ground_truth_scale).float()
         
-        x2x1x3 = torch.from_numpy(self.x[['x2','x1','x3']].to_numpy()).float()
-        x1 = torch.from_numpy(self.x[['x1']].to_numpy()).float()
-
+        x2x1x3 = self.x[['x2','x1','x3']] 
+        x1 = self.x[['x1']] 
 
         #test if shapes of design matrices and P are as correct
         self.assertTrue((datadict['loc']['structured'] == ground_truth_loc).all())
         self.assertTrue((datadict['loc']['structured'].shape == ground_truth_loc.shape),'shape missmatch')
-        self.assertTrue((datadict['loc']['d1'] == x2x1x3).all())
+        self.assertTrue((datadict['loc']['d1'].to_numpy() == x2x1x3.to_numpy()).all())
         self.assertTrue((datadict['loc']['d1'].shape == self.x[['x2','x1','x3']].shape),'shape missmatch for neural network input')
         self.assertEqual(network_info_dict["loc"]['struct_shapes'], 1)
         self.assertEqual(network_info_dict["loc"]['P'].shape, (1, 1))
@@ -367,7 +364,7 @@ class TestPrepare_Data(unittest.TestCase):
 
         self.assertTrue((datadict['scale']['structured'] == ground_truth_scale).all())
         self.assertTrue((datadict['scale']['structured'].shape == ground_truth_scale.shape), 'shape missmatch')
-        self.assertTrue((datadict['scale']['d2'] == x1).all())
+        self.assertTrue((datadict['scale']['d2'].to_numpy() == x1.to_numpy()).all())
         self.assertTrue((datadict['scale']['d2'].shape == self.x[['x1']].shape),'shape missmatch for neural network input')
         self.assertEqual(network_info_dict["scale"]['struct_shapes'], 2)
         self.assertEqual(network_info_dict["scale"]['P'].shape, (2, 2))

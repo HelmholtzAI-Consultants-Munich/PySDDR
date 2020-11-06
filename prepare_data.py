@@ -1,6 +1,7 @@
 from utils import split_formula, get_info_from_design_matrix, get_P_from_design_matrix, orthogonalize_spline_wrt_non_splines, spline
 from patsy import dmatrix, build_design_matrices
 import torch
+import os
 
 class Prepare_Data(object):
 
@@ -36,7 +37,7 @@ class Prepare_Data(object):
             self.network_info_dict[param]['deep_models_dict'] = dict()
             self.network_info_dict[param]['deep_shapes'] = dict()
             
-            # formula_terms_dict contains the splitted formula of structured and unstructured part as well as the nemaes of the features are input to the different neural networks
+            # formula_terms_dict contains the splitted formula of structured and unstructured part as well as the names of the features are input to the different neural networks
             self.formula_terms_dict[param] = dict()
             self.formula_terms_dict[param]["structured_part"] = structured_part
             self.formula_terms_dict[param]["unstructured_terms"] = unstructured_terms
@@ -52,7 +53,6 @@ class Prepare_Data(object):
                     net_name = term_split[0]
                     net_feature_names = term_split[1].split(')')[0].split(',')
 
-
                     # store deep models given by the user in a deep model dict that corresponds to the parameter in which this deep model is used
                     # if the deeps models are given as string, evaluate the expression first
                     if isinstance(self.deep_models_dict[net_name]['model'], str):
@@ -61,9 +61,7 @@ class Prepare_Data(object):
                         self.network_info_dict[param]['deep_models_dict'][net_name] = self.deep_models_dict[net_name]['model']
 
                     self.network_info_dict[param]['deep_shapes'][net_name] = self.deep_models_dict[net_name]['output_shape']
-                    self.formula_terms_dict[param]['net_feature_names'][net_name] = net_feature_names
-
-            
+                    self.formula_terms_dict[param]['net_feature_names'][net_name] = net_feature_names       
 
 
     def fit(self,data):
@@ -90,14 +88,14 @@ class Prepare_Data(object):
             self.network_info_dict[param]['struct_shapes'] = structured_matrix.shape[1]
             self.network_info_dict[param]['P'] = P    
             
-    def transform(self,data):
+    def transform(self, data):
         
         prepared_data = dict()
         train_data_min,train_data_max = self.data_info
         
         for param in self.formulas.keys():
             prepared_data[param] = dict()
-            
+
             # create the structured matrix using the same specification of the spline basis 
             try:
                 structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]], data, return_type='dataframe')[0]
@@ -116,7 +114,7 @@ class Prepare_Data(object):
 
             for net_name in self.formula_terms_dict[param]['net_feature_names'].keys():
                 net_feature_names = self.formula_terms_dict[param]['net_feature_names'][net_name]
-                prepared_data[param][net_name] = torch.from_numpy(data[net_feature_names].to_numpy()).float()
+                prepared_data[param][net_name] = data[net_feature_names] #torch.from_numpy(data[net_feature_names].to_numpy()).float()
 
         return prepared_data
     
