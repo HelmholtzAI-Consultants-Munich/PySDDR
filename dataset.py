@@ -1,6 +1,9 @@
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
+from PIL import Image
+from torchvision.transforms import ToTensor
+import os
 
 class SddrDataset(Dataset):
     '''
@@ -62,7 +65,7 @@ class SddrDataset(Dataset):
             A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the
             formula has an intercept or not and a list of the degrees of freedom of the splines in the formula
     '''
-    def __init__(self, data, target, prepare_data):
+    def __init__(self, data, target, prepare_data, unstructred_data_info=dict()):
         
         # data loader for csv files
         if isinstance(data,str):
@@ -78,21 +81,68 @@ class SddrDataset(Dataset):
         elif isinstance(data,pd.core.frame.DataFrame) and isinstance(target,pd.core.frame.DataFrame):
             self._data = data
             self._target = target.values
-            
+
+        # add file paths of unstructured features to data
+        self.unstructred_data_info = unstructred_data_info
+
+        if self.unstructred_data_info:
+
+            # for testing with images only 
+            #self._data = self._data.iloc[:20]
+            #self._target = self._target[:20]
+
+            for feature_name in self.unstructred_data_info.keys():
+                list_unstructured_feat_files = os.listdir(self.unstructred_data_info[feature_name]['path'])
+                # remove hidden files
+                list_unstructured_feat_files = [file for file in list_unstructured_feat_files if not file.startswith('.')]
+                # sort them
+                list_unstructured_feat_files.sort()
+                # add this info to data
+                self._data[feature_name] = list_unstructured_feat_files
+        
         prepare_data.fit(self._data)
         self.prepared_data = prepare_data.transform(self._data) #for the case that there is not so much data it makes sense to preload it here. When we have a lot of batches the transform can also happen in the __getitem__ function.
-        
-        
+
+    def load_image(self, root_path, image_path):
+        transform = ToTensor()
+        img = Image.open(os.path.join(root_path, image_path))
+        img = transform(img)
+        return img
+
     def __getitem__(self,index):
         
         datadict = dict()
+        found_unstructred = False
         for param in self.prepared_data.keys():
             datadict[param] = dict()
-            
             for structured_or_net_name in self.prepared_data[param].keys():
-                datadict[param][structured_or_net_name] = self.prepared_data[param][structured_or_net_name][index] 
+                unstructured_feat_list = []
+                # previous implementation
+                #datadict[param][structured_or_net_name] = self.prepared_data[param][structured_or_net_name][index] 
+                if structured_or_net_name == 'structured':
+                    datadict[param][structured_or_net_name] = self.prepared_data[param][structured_or_net_name][index] 
+                else:
+                    # extract row from pandas data frame
+                    data_row = self.prepared_data[param][structured_or_net_name].iloc[index]
+                    for cur_feature in data_row.index:
+                        # if there is an unstructured feature it must be read from memory so store that feature in a list
+                        if cur_feature in self.unstructred_data_info.keys():
+                            unstructured_feat_list.append(cur_feature)
+                            # for now we can only have one unstructured feature so if it is found break loop
+                            break
+                    # if there is an unstructured feature - for now only one
+                    if unstructured_feat_list:
+                        cur_feature = unstructured_feat_list[0]
+                        feat_datatype = self.unstructred_data_info[cur_feature]['datatype']
+                        root_path = self.unstructred_data_info[cur_feature]['path']
+                        if feat_datatype == 'image':
+                            datadict[param][structured_or_net_name] = self.load_image(root_path, data_row[cur_feature])
+                        # extend for more cases
+                    else:
+                        datadict[param][structured_or_net_name] = torch.from_numpy(data_row.to_numpy()).float()
+
         gt = torch.from_numpy(self._target[index]).float()
-        
+
         return {'datadict': datadict, 'target': gt}        
     
     def __len__(self):

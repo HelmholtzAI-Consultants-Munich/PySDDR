@@ -54,32 +54,28 @@ class TestNet(nn.Module):
         super(TestNet, self).__init__()
         self.n_channels = n_channels
         self.n_classes = n_classes
-        '''
+        
         self.conv_block1 = ConvBlock(n_channels, 64)
         self.conv_block2 = ConvBlock(64,128)
         self.conv_block3 = ConvBlock(128, 256)
         self.conv_block4 = ConvBlock(256, 128)
         self.conv_block5 = ConvBlock(128, 64)
         self.flatten = Flatten()
-        '''
-        self.linear0 = nn.Linear(1, 4096)
-        self.linear =  nn.Linear(4096, self.n_classes) 
+        self.linear =  nn.Linear(6400, self.n_classes) 
         #self.sig = nn.Sigmoid()
         
     def forward(self, x):
-        '''
+        
         x1 = self.conv_block1(x)
         x2 = self.conv_block2(x1)
         x3 = self.conv_block3(x2)
         x4 = self.conv_block4(x3)
         x5 = self.conv_block5(x4)
         x6 = self.flatten(x5)
-        '''
-        x6 = self.linear0(x)
         x7 = self.linear(x6)
         #x8 = self.sig(x7)
-        #x9= x8.squeeze(1)
-        return x7
+        x9= x7.squeeze(1)
+        return x9
     
 class ConvBlock(nn.Module):
     '''

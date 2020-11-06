@@ -2,6 +2,7 @@ from utils import split_formula, get_info_from_design_matrix, get_P_from_design_
 from patsy import dmatrix, build_design_matrices
 import torch
 import pandas as pd
+import os
 
 class Prepare_Data(object):
     '''
@@ -173,7 +174,7 @@ class Prepare_Data(object):
         
         for param in self.formulas.keys():
             prepared_data[param] = dict()
-            
+
             # create the structured matrix using the same specification of the spline basis 
             try:
                 structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]], data, return_type='dataframe')[0]
@@ -200,6 +201,6 @@ class Prepare_Data(object):
 
             for net_name in self.formula_terms_dict[param]['net_feature_names'].keys():
                 net_feature_names = self.formula_terms_dict[param]['net_feature_names'][net_name]
-                prepared_data[param][net_name] = torch.from_numpy(data[net_feature_names].to_numpy()).float()
+                prepared_data[param][net_name] = data[net_feature_names] #torch.from_numpy(data[net_feature_names].to_numpy()).float()
 
         return prepared_data

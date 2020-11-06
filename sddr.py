@@ -69,13 +69,16 @@ class SDDR(object):
         
         # perform checks on given distribution name, parameter names and number of formulas given
         formulas = checkups(self.family.get_params(), self.config['formulas'])
-        
         self.prepare_data = Prepare_Data(formulas,
-                                         self.config['deep_models_dict'],
-                                         self.config['train_parameters']['degrees_of_freedom'])
+                                        self.config['deep_models_dict'],
+                                        self.config['train_parameters']['degrees_of_freedom'])
         
-        # create dataset
-        self.dataset = SddrDataset(self.config['data'],self.config['target'], self.prepare_data)
+        if 'unstructured_data' in self.config.keys():
+            # create dataset
+            self.dataset = SddrDataset(self.config['data'], self.config['target'], self.prepare_data, self.config['unstructured_data'])
+        else:  
+            # create dataset
+            self.dataset = SddrDataset(self.config['data'], self.config['target'], self.prepare_data)
         
         self.network_info_dict = self.prepare_data.network_info_dict
 
@@ -131,7 +134,6 @@ class SDDR(object):
                 # for each batch
                 target = batch['target'].float().to(self.device)
                 datadict = batch['datadict']
-                
                 
                 # send each input batch to the current device
                 for param in datadict.keys():

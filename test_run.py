@@ -33,7 +33,16 @@ if __name__ == '__main__':
         sddr = SDDR(config=config)
     else:
         # specify either a dict with params or a list of param values
-        data = './example_data/simple_gam/X.csv'
+        structured_data = './example_data/simple_gam/X.csv'
+        unstructured_data = None
+        '''
+        unstructured_data = {
+            'x3':{
+                'path': './example_data/images',
+                'datatype': 'image'
+            }
+        } 
+        '''
         target = './example_data/simple_gam/Y.csv'
         output_dir = './outputs'
         mode = 'train'
@@ -44,22 +53,22 @@ if __name__ == '__main__':
         formulas = {'rate': '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)'}
         deep_models_dict = {
         'd1': {
-            'model': TestNet(n_channels=1, n_classes=15),
-            'output_shape': 15},
+            'model': nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,1)), # TestNet(n_channels=1, n_classes=3)
+            'output_shape': 1},
         'd2': {
-            'model': nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,8)),
-            'output_shape': 8}
+            'model': nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,4)),
+            'output_shape': 4}
         }
 
         train_parameters = {
-        'batch_size': 1000,
+        'batch_size': 200,
         'epochs': 1000,
         'optimizer': optim.SGD,
         'optimizer_params':{'lr': 0.01, 'momentum': 0.9}, 
-        'degrees_of_freedom': {'rate': 100}
+        'degrees_of_freedom': {'rate': 10}
         }
 
-        sddr = SDDR(data=data,
+        sddr = SDDR(data=structured_data,
                     mode=mode,
                     target=target,
                     output_dir=output_dir,
