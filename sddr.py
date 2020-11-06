@@ -360,14 +360,19 @@ class SDDR(object):
         else:
             net = torch.load(net_path)
             net.eval()
-        pred_data = self.prepare_data.transform(data,clipping)     
+        pred_data = self.prepare_data.transform(data,clipping) 
+        # only works for structured data
+        for param in pred_data.keys():
+            for struct_or_net_name in pred_data[param].keys():
+                if struct_or_net_name != 'structured':
+                    pred_data[param][struct_or_net_name] = torch.from_numpy(pred_data[param][struct_or_net_name].to_numpy()).float()   
         with torch.no_grad():
             distribution_layer = net(pred_data) 
          
         get_feature = lambda feature_name: data.loc[:,feature_name].values
         partial_effects = self.eval(param, plot, data=pred_data, get_feature=get_feature)
         
-        return distribution_layer,partial_effects
+        return distribution_layer, partial_effects
         
     
 
