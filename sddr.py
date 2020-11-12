@@ -313,7 +313,7 @@ class SDDR(object):
         return self.net.distribution_layer
     
     
-    def predict(self, data, clipping=False, net_path=None, param = None, plot=False):
+    def predict(self, data, unstructred_data_info = dict(), clipping=False, param = None, plot=False):
         """
         Predict and eval on unseen data.
         Parameters
@@ -337,26 +337,26 @@ class SDDR(object):
                 There will be one item in the list for each spline in the distribution's parameter equation. Each item is a tuple
                 (feature, partial_effect)
         """
-        if net_path == None:
-            net = self.net
-        else:
-            net = torch.load(net_path)
-            net.eval()
-        pred_data = self.prepare_data.transform(data,clipping) 
-        # only works for structured data
-        for cur_param in pred_data.keys():
-            for struct_or_net_name in pred_data[cur_param].keys():
-                if struct_or_net_name != 'structured':
-                    pred_data[cur_param][struct_or_net_name] = pred_data[cur_param][struct_or_net_name]   
+            # create dataset
+        prediction_dataset = SddrDataset(data, target = None, prepare_data = self.prepare_data, unstructred_data_info = unstructred_data_info, fit = False, clipping = clipping)
+        
+
+        net = self.net   
+        
+
+        datadict = prediction_dataset[:]['datadict']
+
+        # send each input batch to the current device
+        for param in datadict.keys():
+            for data_part in datadict[param].keys():
+                datadict[param][data_part] = datadict[param][data_part].float().to(self.device)
+
         with torch.no_grad():
-            distribution_layer = net(pred_data) 
-         
+            distribution_layer = net(datadict) 
+
         get_feature = lambda feature_name: data.loc[:,feature_name].values
-        partial_effects = self.eval(param, plot, data=pred_data, get_feature=get_feature)
-        
+        partial_effects = self.eval(param, plot, data=datadict, get_feature=get_feature)
         return distribution_layer, partial_effects
-        
-    
 
 if __name__ == "__main__":
     params = train()

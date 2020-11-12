@@ -6,6 +6,7 @@ from torchvision.transforms import ToTensor
 import os
 #import cv2
 import imageio
+import numpy as np
 
 class SddrDataset(Dataset):
     '''
@@ -30,6 +31,8 @@ class SddrDataset(Dataset):
                       In this case the taget varibel must be contained in the input matrix 'data'.
             - pandas dataframe: the target variable as pandas dataframe column. 
                       In this case the target variable must be excluded from the input matrix 'data'.
+            - None (default):
+                        If target is given as none a dummy target with zeros will be created.
         family: Family 
             An instance of the class Family; on initialization checks whether the distribution given by the user is in the 
             list of available distribution and holds the name of the current distribution defined by the user
@@ -44,13 +47,11 @@ class SddrDataset(Dataset):
         regularization_params: dict
             A dictionary where keys are the name of the distribution parameter (e.g. eta,scale) and values 
             are either a single smooting parameter for all penalities of all splines for this parameter, or a list of smooting parameters, each for one of the splines that appear in the formula for this parameter
+        fit: bool - default True
+            If the prepare_data object should be fitted to the data during initialization of the dataset.
             
     Attributes
     -------
-        data: Pandas.DataFrame
-            input data (X)
-        target: Pandas.DataFrame default none
-            target (Y)
         y: torch
             target (Y) converted from panda dataframe to torch object
         parsed_formula_contents: dictionary
@@ -67,7 +68,8 @@ class SddrDataset(Dataset):
             A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the
             formula has an intercept or not and a list of the degrees of freedom of the splines in the formula
     '''
-    def __init__(self, data, target = None, prepare_data = None, unstructred_data_info=dict(), fit = True):
+    def __init__(self, data, target = None, prepare_data = None, unstructred_data_info=dict(), fit = True, clipping = False):
+        
         
         # data loader for csv files
         if isinstance(data,str):
@@ -83,6 +85,14 @@ class SddrDataset(Dataset):
         elif isinstance(data,pd.core.frame.DataFrame) and isinstance(target,pd.core.frame.DataFrame):
             self._data = data
             self._target = target.values
+            
+        if isinstance(data,str) and target is None:
+            self._data = pd.read_csv(data ,sep=None,engine='python')
+            self._target = np.zeros(len(self._data))
+        
+        elif isinstance(data,pd.core.frame.DataFrame) and target is None:
+            self._data = data
+            self._target = np.zeros(len(self._data))
 
         # add file paths of unstructured features to data
         self.unstructred_data_info = unstructred_data_info
@@ -105,7 +115,7 @@ class SddrDataset(Dataset):
                     self._data[feature_name] = list_unstructured_feat_files[:1000]
         if fit:
             prepare_data.fit(self._data)
-        self.prepared_data = prepare_data.transform(self._data) #for the case that there is not so much data it makes sense to preload it here. When we have a lot of batches the transform can also happen in the __getitem__ function.
+        self.prepared_data = prepare_data.transform(self._data, clipping) #for the case that there is not so much data it makes sense to preload it here. When we have a lot of batches the transform can also happen in the __getitem__ function.
         self.transform = ToTensor()
 
     def load_image(self, root_path, image_path):
