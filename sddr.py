@@ -72,7 +72,20 @@ class SDDR(object):
         self.prepare_data = Prepare_Data(formulas,
                                         self.config['deep_models_dict'],
                                         self.config['train_parameters']['degrees_of_freedom'])
-        
+
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print('Using device: ', self.device)
+
+        # check if an output directory has been given - if yes check if it already exists and create it if not
+        if self.config['output_dir']:
+            if not os.path.exists(self.config['output_dir']):
+                os.mkdir(self.config['output_dir'])
+    
+    def train(self, plot=False):
+        '''
+        Trains the SddrNet for a number of epochs and prints the loss throughout training
+        '''
+
         if 'unstructured_data' in self.config.keys():
             # create dataset
             self.dataset = SddrDataset(self.config['structured_data'], self.config['target'], self.prepare_data, self.config['unstructured_data'])
@@ -85,8 +98,6 @@ class SDDR(object):
         self.loader = DataLoader(self.dataset,
                                 batch_size=self.config['train_parameters']['batch_size'])
         
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print('Using device: ', self.device)
         self.net = SddrNet(self.family, self.network_info_dict)
         self.net = self.net.to(self.device)
 
@@ -115,16 +126,6 @@ class SDDR(object):
             # and set the optimizer to a string in the config for saving later
             self.config['train_parameters']['optimizer'] = str(self.optimizer)
 
-            
-        # check if an output directory has been given - if yes check if it already exists and create it if not
-        if self.config['output_dir']:
-            if not os.path.exists(self.config['output_dir']):
-                os.mkdir(self.config['output_dir'])
-    
-    def train(self, plot=False):
-        '''
-        Trains the SddrNet for a number of epochs and prints the loss throughout training
-        '''
         self.net.train()
         loss_list = []
         print('Beginning training ...')
@@ -146,7 +147,7 @@ class SDDR(object):
                 
                 # compute the loss and add regularization
                 loss = torch.mean(self.net.get_log_loss(target))
-                loss += self.net.get_regularization().squeeze_() 
+                loss += self.net.get_regularization(self.prepare_data.get_penalty_matrix()).squeeze_() 
                 
                 # and backprobagate
                 loss.backward()
@@ -160,6 +161,7 @@ class SDDR(object):
                 
             # and save it in a list in case we want to print later
             loss_list.append(self.epoch_loss)
+
         if plot:
             plt.plot(loss_list)
             plt.title('Training Loss')
@@ -265,6 +267,8 @@ class SDDR(object):
             'loss': self.epoch_loss,
             'optimizer': self.optimizer.state_dict(),
             'sddr_net': self.net.state_dict(),
+            'structured_matrix_design_info': self.prepare_data.structured_matrix_design_info,
+            'data_range': self.prepare_data.data_range
         }
         save_path = os.path.join(self.config['output_dir'], name)
         torch.save(state, save_path)
@@ -290,6 +294,10 @@ class SDDR(object):
             state_dict = torch.load(name, map_location='cpu')
         else:
             state_dict = torch.load(name)
+
+        self.prepare_data.set_structured_matrix_design_info(state_dict['structured_matrix_design_info'])
+        self.prepare_data.set_data_range(state_dict['data_range'])
+        # move this to predict after model init
         self.net.load_state_dict(state_dict['sddr_net'])
 
         if self.config['mode']=='train':

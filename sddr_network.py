@@ -42,10 +42,9 @@ class Sddr_Param_Net(nn.Module):
         This value is true if deep models have been used on init of the ssdr_single network, otherwise it is false
     '''
     
-    def __init__(self, deep_models_dict, deep_shapes, struct_shapes, orthogonalization_pattern, P):
+    def __init__(self, deep_models_dict, deep_shapes, struct_shapes, orthogonalization_pattern):
         
         super(Sddr_Param_Net, self).__init__()
-        self.P = P
         self.deep_models_dict = deep_models_dict
         
         #register external neural networks
@@ -105,8 +104,8 @@ class Sddr_Param_Net(nn.Module):
 
         return pred
     
-    def get_regularization(self):
-        P = torch.from_numpy(self.P).float() # should have shape struct_shapes x struct_shapes, numpy array
+    def get_regularization(self, P):
+        P = torch.from_numpy(P).float() # should have shape struct_shapes x struct_shapes, numpy array
         # do this somewhere else in the future?
         P = P.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
         weights = self.structured_head.weight #should have shape 1 x struct_shapes
@@ -158,12 +157,10 @@ class SddrNet(nn.Module):
             deep_shapes = value["deep_shapes"]
             struct_shapes = value["struct_shapes"]
             orthogonalization_pattern = value["orthogonalization_pattern"]
-            P = value["P"]
             self.single_parameter_sddr_list[key] = Sddr_Param_Net(deep_models_dict, 
                                                                   deep_shapes, 
                                                                   struct_shapes, 
-                                                                  orthogonalization_pattern,
-                                                                  P)
+                                                                  orthogonalization_pattern)
             
             #register the Sddr_Param_Net network
             self.add_module(key,self.single_parameter_sddr_list[key])
@@ -190,10 +187,11 @@ class SddrNet(nn.Module):
         
         return log_loss
     
-    def get_regularization(self):
+    def get_regularization(self, P):
     
         regularization = 0
-        for sddr_net  in self.single_parameter_sddr_list.values():
-            regularization += sddr_net.get_regularization()
+        for param  in self.single_parameter_sddr_list.keys():
+            sddr_net = self.single_parameter_sddr_list[param]
+            regularization += sddr_net.get_regularization(P[param])
         
         return regularization

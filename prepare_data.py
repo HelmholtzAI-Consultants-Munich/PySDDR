@@ -107,8 +107,6 @@ class Prepare_Data(object):
                     
                     self.formula_terms_dict[param]['net_feature_names'][net_name] = net_feature_names
 
-            
-
 
     def fit(self,data):
         """
@@ -124,10 +122,11 @@ class Prepare_Data(object):
         -------
 
         """
-        self.dm_info_dict = dict()
+
         self.structured_matrix_design_info = dict()
-        self.data_info = [data.min(),data.max()] # used in predict function
-      
+        self.data_range = [data.min(),data.max()] # used in predict function
+        self.P = dict()
+
         for param in self.formulas.keys():
 
             dfs = self.degrees_of_freedom[param]
@@ -136,26 +135,18 @@ class Prepare_Data(object):
             structured_matrix = dmatrix(self.formula_terms_dict[param]["structured_term"], data, return_type='dataframe')
             self.structured_matrix_design_info[param] = structured_matrix.design_info
 
-            # get bool depending on if formula has intercept or not and degrees of freedom and input feature names for each spline
-            spline_info, non_spline_info = get_info_from_design_matrix(structured_matrix, feature_names=data.columns)
-            self.dm_info_dict[param] = {'spline_info': spline_info, 'non_spline_info': non_spline_info }
+            # compute the penalty matrix and add content to the dicts to be returned
+            self.P[param] = get_P_from_design_matrix(structured_matrix, dfs)  
+    
+    def set_structured_matrix_design_info(self, structured_matrix_design_info):
+        self.structured_matrix_design_info = structured_matrix_design_info
+    
+    def set_data_range(self, data_range):
+        self.data_range = data_range
 
-            # compute the penalty matrix
-            P = get_P_from_design_matrix(structured_matrix, dfs)
-            
-            # add content to the dicts to be returned
-            self.network_info_dict[param]['struct_shapes'] = structured_matrix.shape[1]
-            self.network_info_dict[param]['P'] = P    
-            
-            #compute the orthogonalization patterns for the deep neural networks
-            for net_name in self.network_info_dict[param]['deep_models_dict'].keys():
-                net_feature_names = self.formula_terms_dict[param]['net_feature_names'][net_name]
-                orthogonalization_pattern = compute_orthogonalization_pattern_deepnets(net_feature_names, 
-                                                                                       spline_info, 
-                                                                                       non_spline_info) 
-                
-                self.network_info_dict[param]['orthogonalization_pattern'][net_name] = orthogonalization_pattern
-
+    def get_penalty_matrix(self):
+        return self.P
+    
     def transform(self,data,clipping=False):
         """
         Build patsy design matrix for input data and orthogonalize structured non-linear (e.g. splines) part wrt linear part.
@@ -173,6 +164,7 @@ class Prepare_Data(object):
                 are the data for the structured part (after orthogonalization) and unstructured terms of the SDDR model.
         """
         prepared_data = dict()
+        self.dm_info_dict = dict()
         
         for param in self.formulas.keys():
             prepared_data[param] = dict()
@@ -192,8 +184,20 @@ class Prepare_Data(object):
                 else:
                     raise Exception("Data should stay within the range of the training data. Please try clipping or manually set knots.")
             
-            spline_info = self.dm_info_dict[param]['spline_info']
-            non_spline_info = self.dm_info_dict[param]['non_spline_info']
+            self.network_info_dict[param]['struct_shapes'] = structured_matrix.shape[1]
+
+            # get bool depending on if formula has intercept or not and degrees of freedom and input feature names for each spline
+            spline_info, non_spline_info = get_info_from_design_matrix(structured_matrix, feature_names=data.columns)
+            self.dm_info_dict[param] = {'spline_info': spline_info, 'non_spline_info': non_spline_info }
+            
+            #compute the orthogonalization patterns for the deep neural networks
+            for net_name in self.network_info_dict[param]['deep_models_dict'].keys():
+                net_feature_names = self.formula_terms_dict[param]['net_feature_names'][net_name]
+                orthogonalization_pattern = compute_orthogonalization_pattern_deepnets(net_feature_names, 
+                                                                                       spline_info, 
+                                                                                       non_spline_info) 
+                
+                self.network_info_dict[param]['orthogonalization_pattern'][net_name] = orthogonalization_pattern
             
             # orthogonalize splines with respect to non-splines (including an intercept if it is there)
             orthogonalize_spline_wrt_non_splines(structured_matrix, spline_info, non_spline_info)
