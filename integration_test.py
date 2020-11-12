@@ -53,7 +53,7 @@ def integration_test_simple_gam():
     }
 
     #initialize SDDR
-    sddr = SDDR(data=data,
+    sddr = SDDR(structured_data=data,
                 target=target,
                 output_dir=output_dir,
                 distribution=distribution,
@@ -154,7 +154,7 @@ def integration_test_gamlss():
     }
 
     #initialize SDDR
-    sddr = SDDR(data=data,
+    sddr = SDDR(structured_data=data,
                 target=target,
                 output_dir=output_dir,
                 distribution=distribution,
