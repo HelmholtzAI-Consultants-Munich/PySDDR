@@ -299,24 +299,6 @@ class SDDR(object):
             self.loss = state_dict['loss']
             epoch = state_dict['epoch']
         print('Loading model {} at epoch {} with a loss {:.4f}'.format(name, epoch, self.loss))
-
-    def inference(self, metadadict):
-        """
-        Returns the model's prediction
-        Parameters
-        ----------
-            metadadict: dictionary
-                A dictionary with the input data structured into structured and unstructured parts
-        Returns
-        -------
-            pred: torch.distributions
-                An instance of some torch.distributions class (e.g. torch.distributions.poisson.Poisson) which holds
-                also predicted parameters of the distribution(e.g. rate)
-        """
-        self.net.eval()
-        with torch.no_grad():
-            pred = self.net(metadadict)
-            return pred
     
     def coeff(self, param):
         '''
@@ -365,7 +347,7 @@ class SDDR(object):
         for cur_param in pred_data.keys():
             for struct_or_net_name in pred_data[cur_param].keys():
                 if struct_or_net_name != 'structured':
-                    pred_data[cur_param][struct_or_net_name] = torch.from_numpy(pred_data[cur_param][struct_or_net_name].to_numpy()).float()   
+                    pred_data[cur_param][struct_or_net_name] = pred_data[cur_param][struct_or_net_name]   
         with torch.no_grad():
             distribution_layer = net(pred_data) 
          

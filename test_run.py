@@ -37,7 +37,7 @@ if __name__ == '__main__':
         structured_data = './example_data/simple_gam/X.csv'
         unstructured_data = {
             'x3':{
-                'path': './example_data/images',
+                'path': './mnist_data/mnist_images',
                 'datatype': 'image'
             }
         } 
@@ -49,12 +49,18 @@ if __name__ == '__main__':
 
         distribution  = 'Poisson'
 
-        formulas = {'rate': '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)'}
+        formulas = {'rate': '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x3)+d2(x2)'}
         deep_models_dict = {
         'd1': {
-            'model': nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,1)),
-             # TestNet(n_channels=1, n_classes=3) #models.alexnet(),
-            'output_shape': 1}, #1000 for alexnet
+            'model': nn.Sequential(nn.Flatten(1, -1),
+                     nn.Linear(28*28,256),
+                     nn.ReLU(),
+                     nn.Linear(256,128),
+                     nn.ReLU(),
+                     nn.Linear(128,64),
+                     nn.ReLU(),
+                     nn.Linear(64,10)),
+            'output_shape': 10}, #1000 for alexnet
         'd2': {
             'model': nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,4)),
             'output_shape': 4}
@@ -62,7 +68,7 @@ if __name__ == '__main__':
 
         train_parameters = {
         'batch_size': 200,
-        'epochs': 200,
+        'epochs': 1,
         'optimizer': optim.SGD,
         'optimizer_params':{'lr': 0.01, 'momentum': 0.9}, 
         'degrees_of_freedom': {'rate': 10}
@@ -75,8 +81,8 @@ if __name__ == '__main__':
                     distribution=distribution,
                     formulas=formulas,
                     deep_models_dict=deep_models_dict,
-                    train_parameters=train_parameters)
-                    #unstructured_data=unstructured_data,
+                    train_parameters=train_parameters,
+                    unstructured_data=unstructured_data)
 
     
     is_local = "load_model" in locals()

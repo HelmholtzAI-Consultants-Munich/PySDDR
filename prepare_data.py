@@ -203,6 +203,9 @@ class Prepare_Data(object):
 
             for net_name in self.formula_terms_dict[param]['net_feature_names'].keys():
                 net_feature_names = self.formula_terms_dict[param]['net_feature_names'][net_name]
-                prepared_data[param][net_name] = data[net_feature_names] #torch.from_numpy(data[net_feature_names].to_numpy()).float()
+                try:
+                    prepared_data[param][net_name] = torch.from_numpy(data[net_feature_names].to_numpy()).float()
+                except: #if it fails to convert to numpy as the data type is an object: store the data frame itself
+                    prepared_data[param][net_name] = data[net_feature_names]
 
         return prepared_data

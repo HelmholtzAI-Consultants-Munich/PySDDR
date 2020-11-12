@@ -4,7 +4,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 from torchvision.transforms import ToTensor
 import os
-import cv2
+#import cv2
 import imageio
 
 class SddrDataset(Dataset):
@@ -49,7 +49,7 @@ class SddrDataset(Dataset):
     -------
         data: Pandas.DataFrame
             input data (X)
-        target: Pandas.DataFrame 
+        target: Pandas.DataFrame default none
             target (Y)
         y: torch
             target (Y) converted from panda dataframe to torch object
@@ -67,7 +67,7 @@ class SddrDataset(Dataset):
             A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the
             formula has an intercept or not and a list of the degrees of freedom of the splines in the formula
     '''
-    def __init__(self, data, target, prepare_data, unstructred_data_info=dict()):
+    def __init__(self, data, target = None, prepare_data = None, unstructred_data_info=dict(), fit = True):
         
         # data loader for csv files
         if isinstance(data,str):
@@ -102,9 +102,9 @@ class SddrDataset(Dataset):
                     # sort them
                     list_unstructured_feat_files.sort()
                     # add this info to data
-                    self._data[feature_name] = list_unstructured_feat_files
-        
-        prepare_data.fit(self._data)
+                    self._data[feature_name] = list_unstructured_feat_files[:1000]
+        if fit:
+            prepare_data.fit(self._data)
         self.prepared_data = prepare_data.transform(self._data) #for the case that there is not so much data it makes sense to preload it here. When we have a lot of batches the transform can also happen in the __getitem__ function.
         self.transform = ToTensor()
 
@@ -118,21 +118,22 @@ class SddrDataset(Dataset):
         return img
 
     def __getitem__(self,index):
-        
         datadict = dict()
         found_unstructred = False
         for param in self.prepared_data.keys():
             datadict[param] = dict()
             for structured_or_net_name in self.prepared_data[param].keys():
                 unstructured_feat_list = []
-                # previous implementation
-                #datadict[param][structured_or_net_name] = self.prepared_data[param][structured_or_net_name][index] 
-                if structured_or_net_name == 'structured':
-                    datadict[param][structured_or_net_name] = self.prepared_data[param][structured_or_net_name][index] 
+                # extract row from pandas data frame
+                if type(self.prepared_data[param][structured_or_net_name]) == torch.Tensor:
+                    datadict[param][structured_or_net_name] = self.prepared_data[param][structured_or_net_name][index]
                 else:
-                    # extract row from pandas data frame
-                    data_row = self.prepared_data[param][structured_or_net_name].iloc[index]
-                    for cur_feature in data_row.index:
+                    data_row = self.prepared_data[param][structured_or_net_name].iloc[index] 
+                    if type(index) is int:
+                        feature_names = data_row.index
+                    else:
+                        feature_names = data_row.columns
+                    for cur_feature in feature_names:
                         # if there is an unstructured feature it must be read from memory so store that feature in a list
                         if cur_feature in self.unstructred_data_info.keys():
                             unstructured_feat_list.append(cur_feature)
@@ -144,10 +145,16 @@ class SddrDataset(Dataset):
                         feat_datatype = self.unstructred_data_info[cur_feature]['datatype']
                         root_path = self.unstructred_data_info[cur_feature]['path']
                         if feat_datatype == 'image':
-                            datadict[param][structured_or_net_name] = self.load_image(root_path, data_row[cur_feature])
-                        # extend for more cases
-                    else:
-                        datadict[param][structured_or_net_name] = torch.from_numpy(data_row.to_numpy()).float()
+                            if type(index) is int:
+                                datadict[param][structured_or_net_name] = self.load_image(root_path, data_row[cur_feature])
+                            else:
+                                images = []
+                                for image_file_name in data_row[cur_feature]:
+                                    images.append(self.load_image(root_path, image_file_name).unsqueeze(0))
+                                datadict[param][structured_or_net_name] = torch.cat(images)
+                                                      
+                            # extend for more cases
+                        
 
         gt = torch.from_numpy(self._target[index]).float()
 

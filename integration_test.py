@@ -186,7 +186,7 @@ def integration_test_gamlss():
 
     RMSE = (y-y_target).std()
     
-    assert RMSE<0.12, "Partial effect not properly estimated in GAMLSS."
+    assert RMSE<0.1, "Partial effect not properly estimated in GAMLSS."
     
     x = partial_effects_scale[0][0]
     y = normalize(partial_effects_scale[0][1])
