@@ -5,7 +5,8 @@ import yaml
 import torch.optim as optim
 import torch.nn as nn
 
-from model import TestNet
+#from model import TestNet
+#import torchvision.models as models
 
 # get configs
 def get_config(config):
@@ -19,7 +20,7 @@ def get_args():
     ------------------
         -c: The path to the config file of the test run
     '''
-    parser = argparse.ArgumentParser(description='Predict heart volume for test image',
+    parser = argparse.ArgumentParser(description='Run pySDDR',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--config', '-c',
                         help='Give the configuration file with for the test run')
@@ -34,15 +35,13 @@ if __name__ == '__main__':
     else:
         # specify either a dict with params or a list of param values
         structured_data = './example_data/simple_gam/X.csv'
-        unstructured_data = None
-        '''
         unstructured_data = {
             'x3':{
                 'path': './example_data/images',
                 'datatype': 'image'
             }
         } 
-        '''
+        
         target = './example_data/simple_gam/Y.csv'
         output_dir = './outputs'
         mode = 'train'
@@ -53,8 +52,9 @@ if __name__ == '__main__':
         formulas = {'rate': '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)'}
         deep_models_dict = {
         'd1': {
-            'model': nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,1)), # TestNet(n_channels=1, n_classes=3)
-            'output_shape': 1},
+            'model': nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,1)),
+             # TestNet(n_channels=1, n_classes=3) #models.alexnet(),
+            'output_shape': 1}, #1000 for alexnet
         'd2': {
             'model': nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,4)),
             'output_shape': 4}
@@ -62,13 +62,13 @@ if __name__ == '__main__':
 
         train_parameters = {
         'batch_size': 200,
-        'epochs': 1000,
+        'epochs': 200,
         'optimizer': optim.SGD,
         'optimizer_params':{'lr': 0.01, 'momentum': 0.9}, 
         'degrees_of_freedom': {'rate': 10}
         }
 
-        sddr = SDDR(data=structured_data,
+        sddr = SDDR(structured_data=structured_data,
                     mode=mode,
                     target=target,
                     output_dir=output_dir,
@@ -76,6 +76,7 @@ if __name__ == '__main__':
                     formulas=formulas,
                     deep_models_dict=deep_models_dict,
                     train_parameters=train_parameters)
+                    #unstructured_data=unstructured_data,
 
     
     is_local = "load_model" in locals()

@@ -4,6 +4,10 @@ import torch
 import pandas as pd
 import os
 
+#import torch.nn as nn
+#from model import TestNet
+#import torchvision.models as models
+
 class Prepare_Data(object):
     '''
     The Prepare_Data class parses the formulas defined by the user. This class includes fit and transform functions, which parses all information necessary to initialize the sddr network and
@@ -87,12 +91,10 @@ class Prepare_Data(object):
 
                 # for each unstructured term of the unstructured part of the formula
                 for term in unstructured_terms:
-
                     # get the feature name as input to each term
                     term_split = term.split('(')
                     net_name = term_split[0]
                     net_feature_names = term_split[1].split(')')[0].split(',')
-
                     # store deep models given by the user in a deep model dict that corresponds to the parameter in which this deep model is used
                     # if the deeps models are given as string, evaluate the expression first
                     if isinstance(self.deep_models_dict[net_name]['model'], str):

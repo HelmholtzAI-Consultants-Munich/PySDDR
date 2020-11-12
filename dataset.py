@@ -4,6 +4,8 @@ from torch.utils.data import Dataset
 from PIL import Image
 from torchvision.transforms import ToTensor
 import os
+import cv2
+import imageio
 
 class SddrDataset(Dataset):
     '''
@@ -87,26 +89,32 @@ class SddrDataset(Dataset):
 
         if self.unstructred_data_info:
 
-            # for testing with images only 
+            # for testing with local image set uncomment here 
             #self._data = self._data.iloc[:20]
             #self._target = self._target[:20]
 
             for feature_name in self.unstructred_data_info.keys():
-                list_unstructured_feat_files = os.listdir(self.unstructred_data_info[feature_name]['path'])
-                # remove hidden files
-                list_unstructured_feat_files = [file for file in list_unstructured_feat_files if not file.startswith('.')]
-                # sort them
-                list_unstructured_feat_files.sort()
-                # add this info to data
-                self._data[feature_name] = list_unstructured_feat_files
+                # if the user hasn't included unstructured data info as column in structured data
+                if feature_name not in self._data.columns:
+                    list_unstructured_feat_files = os.listdir(self.unstructred_data_info[feature_name]['path'])
+                    # remove hidden files
+                    list_unstructured_feat_files = [file for file in list_unstructured_feat_files if not file.startswith('.')]
+                    # sort them
+                    list_unstructured_feat_files.sort()
+                    # add this info to data
+                    self._data[feature_name] = list_unstructured_feat_files
         
         prepare_data.fit(self._data)
         self.prepared_data = prepare_data.transform(self._data) #for the case that there is not so much data it makes sense to preload it here. When we have a lot of batches the transform can also happen in the __getitem__ function.
+        self.transform = ToTensor()
 
     def load_image(self, root_path, image_path):
-        transform = ToTensor()
-        img = Image.open(os.path.join(root_path, image_path))
-        img = transform(img)
+        img = imageio.imread(os.path.join(root_path, image_path))
+        # next 3 lines are used to resize images to size for testing the use of alexnet
+        #img = cv2.resize(img,(227,227))
+        #img = cv2.cvtColor(img,cv2.COLOR_GRAY2RGB)
+        #img = Image.open(os.path.join(root_path, image_path))
+        img = self.transform(img)
         return img
 
     def __getitem__(self,index):

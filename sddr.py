@@ -75,10 +75,10 @@ class SDDR(object):
         
         if 'unstructured_data' in self.config.keys():
             # create dataset
-            self.dataset = SddrDataset(self.config['data'], self.config['target'], self.prepare_data, self.config['unstructured_data'])
+            self.dataset = SddrDataset(self.config['structured_data'], self.config['target'], self.prepare_data, self.config['unstructured_data'])
         else:  
             # create dataset
-            self.dataset = SddrDataset(self.config['data'], self.config['target'], self.prepare_data)
+            self.dataset = SddrDataset(self.config['structured_data'], self.config['target'], self.prepare_data)
         
         self.network_info_dict = self.prepare_data.network_info_dict
 
