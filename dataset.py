@@ -6,6 +6,7 @@ from torchvision.transforms import ToTensor
 import os
 #import cv2
 import imageio
+import numpy as np
 
 class SddrDataset(Dataset):
     '''
@@ -67,7 +68,7 @@ class SddrDataset(Dataset):
             A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the
             formula has an intercept or not and a list of the degrees of freedom of the splines in the formula
     '''
-    def __init__(self, data, target = None, prepare_data = None, unstructred_data_info=dict(), fit = True):
+    def __init__(self, data, target = None, prepare_data = None, unstructred_data_info=dict(), fit = True, clipping = False):
         
         # data loader for csv files
         if isinstance(data,str):
@@ -83,6 +84,17 @@ class SddrDataset(Dataset):
         elif isinstance(data,pd.core.frame.DataFrame) and isinstance(target,pd.core.frame.DataFrame):
             self._data = data
             self._target = target.values
+            
+        # data loader for Pandas.Dataframe 
+        elif isinstance(data,pd.core.frame.DataFrame) and target == None:
+            self._data = data
+            self._target = np.zeros(len(data))
+            
+        # data loader for Pandas.Dataframe 
+        elif isinstance(data,str) and target == None:
+            self._data = pd.read_csv(data ,sep=None,engine='python')
+            self._target = np.zeros(len(data))
+            
 
         # add file paths of unstructured features to data
         self.unstructred_data_info = unstructred_data_info
@@ -105,7 +117,7 @@ class SddrDataset(Dataset):
                     self._data[feature_name] = list_unstructured_feat_files[:1000]
         if fit:
             prepare_data.fit(self._data)
-        self.prepared_data = prepare_data.transform(self._data) #for the case that there is not so much data it makes sense to preload it here. When we have a lot of batches the transform can also happen in the __getitem__ function.
+        self.prepared_data = prepare_data.transform(self._data, clipping) #for the case that there is not so much data it makes sense to preload it here. When we have a lot of batches the transform can also happen in the __getitem__ function.
         self.transform = ToTensor()
 
     def load_image(self, root_path, image_path):
