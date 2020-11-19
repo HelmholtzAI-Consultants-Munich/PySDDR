@@ -16,6 +16,7 @@ from utils import checkups
 from prepare_data import Prepare_Data
 from family import Family
 import warnings
+import copy
 
 class SDDR(object):
     '''
@@ -251,12 +252,13 @@ class SDDR(object):
         torch.save(state, save_path)
         train_config_path = os.path.join(self.config['output_dir'], 'train_config.yaml')
         # need to improve
-        config = self.config.copy()
-        for net in config['deep_models_dict']:
-            model = config['deep_models_dict'][net]['model']
-            config['deep_models_dict'][net]['model'] = str(model)
+        save_config = copy.deepcopy(self.config)
+        
+        for net in save_config['deep_models_dict']:
+            model = save_config['deep_models_dict'][net]['model']
+            save_config['deep_models_dict'][net]['model'] = str(model)
         with open(train_config_path, 'w') as outfile:
-            yaml.dump(config, outfile, default_flow_style=False)
+            yaml.dump(save_config, outfile, default_flow_style=False)
     
     def _load_and_create_design_info(self, training_data, prepare_data):
         # data loader for csv files
@@ -307,7 +309,6 @@ class SDDR(object):
                 design info
         """
         self._load_and_create_design_info(training_data, self.prepare_data)
-
         if not torch.cuda.is_available():
             state_dict = torch.load(model_name, map_location='cpu')
         else:
@@ -343,7 +344,7 @@ class SDDR(object):
         return self.net.distribution_layer
     
     
-    def predict(self, data, unstructred_data_info = False, clipping=False, param = None, plot=False):
+    def predict(self, data, unstructred_data_info = False, clipping=False, plot=False):
         """
         Predict and eval on unseen data.
         Parameters
@@ -363,11 +364,12 @@ class SDDR(object):
         -------
             distribution_layer: trained distribution
                 The output of the SDDR network, could be applied .mean/.variance ...
-            partial_effects: list of tuples
+            partial_effects: dict of list of tuples
+                A dictionary with partial effects for all parameters of the distribution.
                 There will be one item in the list for each spline in the distribution's parameter equation. Each item is a tuple
                 (feature, partial_effect)
         """
-        
+        partial_effects = dict()
         predict_dataset = SddrDataset(data,
                                       prepare_data = self.prepare_data, 
                                       unstructred_data_info = unstructred_data_info,
@@ -386,7 +388,8 @@ class SDDR(object):
             distribution_layer = self.net(datadict) 
             
         get_feature = lambda feature_name: data.loc[:,feature_name].values
-        partial_effects = self.eval(param, plot, data=datadict, get_feature=get_feature)
+        for param in datadict.keys():
+            partial_effects[param] = self.eval(param, plot, data=datadict, get_feature=get_feature)
         
         return distribution_layer, partial_effects
 

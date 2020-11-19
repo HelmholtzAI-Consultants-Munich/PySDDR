@@ -5,7 +5,7 @@ import pandas as pd
 import torch.optim as optim
 import numpy as np
 import torch
-
+import os
 
 def normalize(x):
     x = x - x.mean()
@@ -106,6 +106,7 @@ def integration_test_simple_gam():
     
     assert RMSE<0.02, "Partial effect not properly estimated on unseen data in simple GAM."
     
+    sddr.save('temp_simple_gam.pth')
 
     
 def integration_test_gamlss():
@@ -242,17 +243,93 @@ def integration_test_gamlss():
     RMSE = (y-y_target).std()
     
     assert RMSE<0.4, "Partial effect not properly estimated in GAMLSS."
-  
+
+
+def integration_test_load_and_predict():
+    '''
+    Integration test loading a pretrained GAMLSS - Logistic Distribution.
+    The model is used to predict on unseen data.
+    '''
+    #set seeds for reproducibility
+    torch.manual_seed(1)
+    np.random.seed(1)
+    
+    #load data
+    data_path = './example_data/gamlss/X.csv'
+    target_path = './example_data/gamlss/Y.csv'
+
+    data = pd.read_csv(data_path,delimiter=';')
+    target = pd.read_csv(target_path)
+    train_data = data.iloc[:800]
+    train_target = data.iloc[:800]
+    test_data = data.iloc[800:]
+
+    output_dir = './outputs'
+
+    #define SDDR parameters
+    distribution  = 'Logistic'
+
+    formulas = {'loc': '~1+spline(x1, bs="bs", df=4)+spline(x2, bs="bs",df=4) + d1(x1)+d2(x2)',
+                'scale': '~1 + spline(x3, bs="bs",df=4) + spline(x4, bs="bs",df=4)'
+                }
+
+    deep_models_dict = {
+    'd1': {
+        'model': nn.Sequential(nn.Linear(1,15)),
+        'output_shape': 15},
+    'd2': {
+        'model': nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,8)),
+        'output_shape': 8}
+    }
+
+    train_parameters = {
+        'batch_size': 1000,
+        'epochs': 200,
+        'degrees_of_freedom': {'loc':4, 'scale':4},
+        'optimizer' : optim.RMSprop
+    }
+    #initialize SDDR
+    sddr = SDDR(output_dir=output_dir,
+                distribution=distribution,
+                formulas=formulas,
+                deep_models_dict=deep_models_dict,
+                train_parameters=train_parameters)
+    
+    # train SDDR
+    print(type(deep_models_dict['d1']['model']))
+    sddr.train(target=train_target, structured_data=train_data)
+    _, partial_effects = sddr.predict(test_data, clipping=True)
+    sddr.save('temp_gamlss.pth')
+    # load trained SDDR and predict
+    print(type(deep_models_dict['d1']['model']))
+    pred_sddr = SDDR(output_dir=output_dir,
+                distribution=distribution,
+                formulas=formulas,
+                deep_models_dict=deep_models_dict,
+                train_parameters=train_parameters)
+    pred_sddr.load('./outputs/temp_gamlss.pth', train_data)
+    _, partial_effects_loaded = pred_sddr.predict(test_data, clipping=True)
+    ae = partial_effects - partial_effects_loaded
+    print(ae)
+    assert ae < 0.1
+    os.remove('./outputs/temp_gamlss.pth')
+
         
 if __name__ == '__main__':
     
     # run integration tests
     print("Test simple GAM")
-    integration_test_simple_gam()  
+    #integration_test_simple_gam()  
     print("---------------------------")
     print("passed tests for simple GAM")
     
     print("Test simple GAMLSS")
-    integration_test_gamlss()   
+    #integration_test_gamlss()   
     print("-----------------------")
     print("passed tests for GAMLSS")
+
+    print("Test loading a GAMLSS model and predicting")
+    integration_test_load_and_predict()
+    print("-----------------------")
+    print("passed tests for loading and predicting")
+    #integration_test_load_and_resume()
