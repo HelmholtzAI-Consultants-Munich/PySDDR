@@ -67,32 +67,33 @@ class SddrDataset(Dataset):
             A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the
             formula has an intercept or not and a list of the degrees of freedom of the splines in the formula
     '''
-    def __init__(self, data, target = None, prepare_data = None, unstructred_data_info=dict(), fit = True):
+    def __init__(self, data, prepare_data, target = None, unstructred_data_info=dict(), fit = True):
         
-        # data loader for csv files
-        if isinstance(data,str):
-            self._data = pd.read_csv(data ,sep=None,engine='python')
-            self._target = pd.read_csv(target).values
-        
-        # data loader for input matrix (X) in Pandas.Dataframe format and target (Y) as feature name (str)
-        elif isinstance(data,pd.core.frame.DataFrame) and isinstance(target,str):
-            self._target = data.loc[:,[target]].values
-            self._data = data.drop(target, axis=1)
-        
-        # data loader for Pandas.Dataframe 
-        elif isinstance(data,pd.core.frame.DataFrame) and isinstance(target,pd.core.frame.DataFrame):
-            self._data = data
-            self._target = target.values
+        try:
+            # data loader for csv files
+            if isinstance(data,str):
+                self._data = pd.read_csv(data ,sep=None,engine='python')
+                if isinstance(target, str):
+                    self._target = pd.read_csv(target).values
+            
+            # data loader for input matrix (X) in Pandas.Dataframe format and target (Y) as feature name (str)
+            elif isinstance(data,pd.core.frame.DataFrame):
+                self._data = data
+                if isinstance(target,str):
+                    self._target = data.loc[:,[target]].values
+                    self._data = data.drop(target, axis=1)
+                elif isinstance(target,pd.core.frame.DataFrame):
+                    self._target = target.values
+        except:
+            print('ATTENTION! File format for data and target needs to be the same.')
 
         # add file paths of unstructured features to data
         self.unstructred_data_info = unstructred_data_info
 
         if self.unstructred_data_info:
-
             # for testing with local image set uncomment here 
             #self._data = self._data.iloc[:20]
             #self._target = self._target[:20]
-
             for feature_name in self.unstructred_data_info.keys():
                 # if the user hasn't included unstructured data info as column in structured data
                 if feature_name not in self._data.columns:

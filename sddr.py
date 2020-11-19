@@ -15,6 +15,7 @@ from dataset import SddrDataset
 from utils import checkups
 from prepare_data import Prepare_Data
 from family import Family
+import warnings
 
 class SDDR(object):
     '''
@@ -81,50 +82,20 @@ class SDDR(object):
             if not os.path.exists(self.config['output_dir']):
                 os.mkdir(self.config['output_dir'])
     
-    def train(self, plot=False):
+    def train(self, target, structured_data, unstructured_data=dict(), continue_train=False, plot=False):
         '''
         Trains the SddrNet for a number of epochs and prints the loss throughout training
         '''
-
-        if 'unstructured_data' in self.config.keys():
-            # create dataset
-            self.dataset = SddrDataset(self.config['structured_data'], self.config['target'], self.prepare_data, self.config['unstructured_data'])
-        else:  
-            # create dataset
-            self.dataset = SddrDataset(self.config['structured_data'], self.config['target'], self.prepare_data)
+        if continue_train:
+            self.dataset = SddrDataset(structured_data, self.prepare_data, target, unstructured_data, fit=False)
+        else:
+            self.dataset = SddrDataset(structured_data, self.prepare_data, target, unstructured_data)
+            self.net = SddrNet(self.family, self.prepare_data.network_info_dict)
+            self.net = self.net.to(self.device)
+            self._setup_optim()
         
-        self.network_info_dict = self.prepare_data.network_info_dict
-
         self.loader = DataLoader(self.dataset,
                                 batch_size=self.config['train_parameters']['batch_size'])
-        
-        self.net = SddrNet(self.family, self.network_info_dict)
-        self.net = self.net.to(self.device)
-
-        # if an optimizer hasn't been defined by the user use adam per default
-        if 'optimizer' not in self.config['train_parameters'].keys():
-            self.optimizer = optim.Adam(self.net.parameters())
-            # save these in the config as we want to save training configuration
-            self.config['train_parameters']['optimizer'] = str(self.optimizer)
-            self.config['train_parameters']['optimizer_params'] = {'lr': 0.001,
-                                                                    'betas': (0.9, 0.999),
-                                                                    'eps': 1e-08,
-                                                                    'weight_decay': 0,
-                                                                    'amsgrad': False}
-        else:
-            # check if the optimizer is a string not a class instance - will be the case when reading config from yaml
-            if isinstance(self.config['train_parameters']['optimizer'],str):
-                optimizer = eval(self.config['train_parameters']['optimizer'])
-            else:
-                optimizer = self.config['train_parameters']['optimizer']
-            # if optimizer parameters have been given initialize an optimizer with those
-            if 'optimizer_params' in self.config['train_parameters'].keys():
-                self.optimizer = optimizer(self.net.parameters(),**self.config['train_parameters']['optimizer_params'])
-            # else use torch default parameter values
-            else:
-                self.optimizer = optimizer(self.net.parameters())
-            # and set the optimizer to a string in the config for saving later
-            self.config['train_parameters']['optimizer'] = str(self.optimizer)
 
         self.net.train()
         loss_list = []
@@ -262,14 +233,20 @@ class SDDR(object):
             name: string
                 The name of the file to be saved
         """
+
         state={
             'epoch': self.config['train_parameters']['epochs'],
             'loss': self.epoch_loss,
             'optimizer': self.optimizer.state_dict(),
-            'sddr_net': self.net.state_dict(),
-            'structured_matrix_design_info': self.prepare_data.structured_matrix_design_info,
-            'data_range': self.prepare_data.data_range
+            'sddr_net': self.net.state_dict()
         }
+        # when it is possible to save this w/o pickle error adapt code
+        # 'data_range': self.prepare_data.data_range
+        # 'structured_matrix_design_info': self.prepare_data.structured_matrix_design_info,
+        warnings.simplefilter('always')
+        warnings.warn("""Please note that the metadata for the structured input has not been saved. If you want to load the model and use
+        it on new data you will need to also give the structured data used for training as input to the load function.""")
+        
         save_path = os.path.join(self.config['output_dir'], name)
         torch.save(state, save_path)
         train_config_path = os.path.join(self.config['output_dir'], 'train_config.yaml')
@@ -280,27 +257,72 @@ class SDDR(object):
             config['deep_models_dict'][net]['model'] = str(model)
         with open(train_config_path, 'w') as outfile:
             yaml.dump(config, outfile, default_flow_style=False)
+    
+    def _load_and_create_design_info(self, training_data, prepare_data):
+        # data loader for csv files
+        if isinstance(training_data, str):
+            training_data = pd.read_csv(training_data, sep=None, engine='python')
 
-    def load(self):
+        # data loader for Pandas.Dataframe 
+        elif isinstance(training_data, pd.core.frame.DataFrame):
+            training_data = training_data
+        prepare_data.fit(training_data)
+
+    def _setup_optim(self):
+        # if an optimizer hasn't been defined by the user use adam per default
+        if 'optimizer' not in self.config['train_parameters'].keys():
+            self.optimizer = optim.Adam(self.net.parameters())
+            # save these in the config as we want to save training configuration
+            self.config['train_parameters']['optimizer'] = str(self.optimizer)
+            self.config['train_parameters']['optimizer_params'] = {'lr': 0.001,
+                                                                    'betas': (0.9, 0.999),
+                                                                    'eps': 1e-08,
+                                                                    'weight_decay': 0,
+                                                                    'amsgrad': False}
+        else:
+            # check if the optimizer is a string not a class instance - will be the case when reading config from yaml
+            if isinstance(self.config['train_parameters']['optimizer'],str):
+                optimizer = eval(self.config['train_parameters']['optimizer'])
+            else:
+                optimizer = self.config['train_parameters']['optimizer']
+            # if optimizer parameters have been given initialize an optimizer with those
+            if 'optimizer_params' in self.config['train_parameters'].keys():
+                self.optimizer = optimizer(self.net.parameters(),**self.config['train_parameters']['optimizer_params'])
+            # else use torch default parameter values
+            else:
+                self.optimizer = optimizer(self.net.parameters())
+            # and set the optimizer to a string in the config for saving later
+            self.config['train_parameters']['optimizer'] = str(self.optimizer)
+
+
+    def load(self, model_name, training_data):
         """
         Loads a pre-trained model and the used training configuration 
         Parameters
         ----------
-            name: string
+            model_name: string
                 The file name from which to load the trained network
+            training_data: str / Pandas.DataFrame
+                The structured data used to train the model which is loaded here to create the matrix
+                design info
         """
-        name = self.config['load_model']
-        if not torch.cuda.is_available():
-            state_dict = torch.load(name, map_location='cpu')
-        else:
-            state_dict = torch.load(name)
+        self._load_and_create_design_info(training_data, self.prepare_data)
 
-        self.prepare_data.set_structured_matrix_design_info(state_dict['structured_matrix_design_info'])
-        self.prepare_data.set_data_range(state_dict['data_range'])
+        if not torch.cuda.is_available():
+            state_dict = torch.load(model_name, map_location='cpu')
+        else:
+            state_dict = torch.load(model_name)
+
+        self.net = SddrNet(self.family, self.prepare_data.network_info_dict)
+
+        #self.prepare_data.set_structured_matrix_design_info(state_dict['structured_matrix_design_info'])
+        #self.prepare_data.set_data_range(state_dict['data_range'])
         # move this to predict after model init
         self.net.load_state_dict(state_dict['sddr_net'])
+        self.net = self.net.to(self.device)
 
         if self.config['mode']=='train':
+            self._setup_optim()
             # Load optimizers
             self.optimizer.load_state_dict(state_dict['optimizer'])
             # Load losses
