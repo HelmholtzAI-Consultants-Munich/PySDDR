@@ -155,7 +155,7 @@ class SDDR(object):
                 
             # compute the avg loss over all batches in the epoch
             self.epoch_loss = self.epoch_loss/len(self.loader)
-            if epoch % 100 == 0:
+            if epoch % 10 == 0:
                 print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, self.epoch_loss))
                 
             # and save it in a list in case we want to print later
@@ -313,7 +313,7 @@ class SDDR(object):
         return self.net.distribution_layer
     
     
-    def predict(self, data, unstructred_data_info = False, clipping=False, param = None, plot=False):
+    def predict(self, data, unstructured_data = False, clipping=False, param = None, plot=False):
         """
         Predict and eval on unseen data.
         Parameters
@@ -340,7 +340,7 @@ class SDDR(object):
         
         predict_dataset = SddrDataset(data,
                                       prepare_data = self.prepare_data, 
-                                      unstructred_data_info = unstructred_data_info,
+                                      unstructred_data_info = unstructured_data,
                                       fit = False,
                                       clipping = clipping)
         
