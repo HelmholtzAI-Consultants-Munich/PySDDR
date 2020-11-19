@@ -86,7 +86,7 @@ class TestSddrDataset(unittest.TestCase):
 
         # load data
         data = pd.concat([self.data, self.target], axis=1, sort=False)
-        dataset = SddrDataset(data,"y", self.prepare_data)
+        dataset = SddrDataset(data, self.prepare_data, "y")
 
         feature_names = dataset.get_list_of_feature_names()
         feature_test_value = dataset.get_feature('x2')[11]
@@ -117,7 +117,7 @@ class TestSddrDataset(unittest.TestCase):
 
 
         # load data
-        dataset = SddrDataset(self.data,self.target, self.prepare_data)
+        dataset = SddrDataset(self.data, self.prepare_data, self.target)
 
         feature_names = dataset.get_list_of_feature_names()
         feature_test_value = dataset.get_feature('x2')[11]
@@ -147,7 +147,7 @@ class TestSddrDataset(unittest.TestCase):
         """
         
         # create dataset
-        dataset = SddrDataset(self.data_path,self.ground_truth_path, self.prepare_data)
+        dataset = SddrDataset(self.data_path, self.prepare_data, self.ground_truth_path)
         
         feature_names = dataset.get_list_of_feature_names()
         feature_test_value = dataset.get_feature('x2')[11]
@@ -232,6 +232,7 @@ class TestPrepare_Data(unittest.TestCase):
         datadict = prepare_data.transform(self.x)
         dm_info_dict = prepare_data.dm_info_dict
         network_info_dict = prepare_data.network_info_dict
+        P = prepare_data.P
         #call parse_formulas
         ground_truth = np.ones([len(self.x),1])
         ground_truth = torch.from_numpy(ground_truth).float()
@@ -239,15 +240,15 @@ class TestPrepare_Data(unittest.TestCase):
         #test if shapes of design matrices and P are as correct
         self.assertTrue((datadict['loc']['structured'] == ground_truth).all())
         self.assertTrue((datadict['loc']['structured'].shape == ground_truth.shape),'shape missmatch')
-        self.assertEqual(network_info_dict["loc"]['struct_shapes'], 1)
-        self.assertEqual(network_info_dict["loc"]['P'].shape, (1, 1))
-        self.assertEqual(network_info_dict["loc"]['P'], 0)
+        self.assertEqual(network_info_dict['loc']['struct_shapes'], 1)
+        self.assertEqual(P['loc'].shape, (1, 1))
+        self.assertEqual(P['loc'], 0)
 
         self.assertTrue((datadict['scale']['structured'].shape == ground_truth.shape), 'shape missmatch')
         self.assertTrue((datadict['scale']['structured'] == ground_truth).all())
-        self.assertEqual(network_info_dict["scale"]['struct_shapes'], 1)
-        self.assertEqual(network_info_dict["scale"]['P'].shape, (1, 1))
-        self.assertEqual(network_info_dict["scale"]['P'], 0)
+        self.assertEqual(network_info_dict['scale']['struct_shapes'], 1)
+        self.assertEqual(P['scale'].shape, (1, 1))
+        self.assertEqual(P['scale'], 0)
 
 
         # test if dm_info_dict is correct
@@ -284,6 +285,7 @@ class TestPrepare_Data(unittest.TestCase):
         datadict = prepare_data.transform(self.x)
         dm_info_dict = prepare_data.dm_info_dict
         network_info_dict = prepare_data.network_info_dict
+        P = prepare_data.P
         
         ground_truth_loc = dmatrix(formulas['loc'], self.x, return_type='dataframe').to_numpy()
         ground_truth_scale = dmatrix(formulas['scale'], self.x, return_type='dataframe').to_numpy()
@@ -294,15 +296,15 @@ class TestPrepare_Data(unittest.TestCase):
         #test if shapes of design matrices and P are as correct
         self.assertTrue((datadict['loc']['structured'] == ground_truth_loc).all())
         self.assertTrue((datadict['loc']['structured'].shape == ground_truth_loc.shape),'shape missmatch')
-        self.assertEqual(network_info_dict["loc"]['struct_shapes'], 1)
-        self.assertEqual(network_info_dict["loc"]['P'].shape, (1, 1))
-        self.assertTrue((network_info_dict["loc"]['P']==0).all())
+        self.assertEqual(network_info_dict['loc']['struct_shapes'], 1)
+        self.assertEqual(P['loc'].shape, (1, 1))
+        self.assertTrue((P['loc']==0).all())
 
         self.assertTrue((datadict['scale']['structured'].shape == ground_truth_scale.shape), 'shape missmatch')
         self.assertTrue((datadict['scale']['structured'] == ground_truth_scale).all())
-        self.assertEqual(network_info_dict["scale"]['struct_shapes'], 2)
-        self.assertEqual(network_info_dict["scale"]['P'].shape, (2, 2))
-        self.assertTrue((network_info_dict["scale"]['P']==0).all())
+        self.assertEqual(network_info_dict['scale']['struct_shapes'], 2)
+        self.assertEqual(P['scale'].shape, (2, 2))
+        self.assertTrue((P['scale']==0).all())
 
 
         # test if dm_info_dict is correct
@@ -341,6 +343,7 @@ class TestPrepare_Data(unittest.TestCase):
         datadict = prepare_data.transform(self.x)
         dm_info_dict = prepare_data.dm_info_dict
         network_info_dict = prepare_data.network_info_dict
+        P = prepare_data.P
         
         ground_truth_loc = dmatrix('~1', self.x, return_type='dataframe').to_numpy()
         ground_truth_scale = dmatrix('~1 + x1', self.x, return_type='dataframe').to_numpy()
@@ -355,9 +358,9 @@ class TestPrepare_Data(unittest.TestCase):
         self.assertTrue((datadict['loc']['structured'].shape == ground_truth_loc.shape),'shape missmatch')
         self.assertTrue(((datadict['loc']['d1'].numpy() - x2x1x3.to_numpy()) < 0.0001).all())
         self.assertTrue((datadict['loc']['d1'].shape == self.x[['x2','x1','x3']].shape),'shape missmatch for neural network input')
-        self.assertEqual(network_info_dict["loc"]['struct_shapes'], 1)
-        self.assertEqual(network_info_dict["loc"]['P'].shape, (1, 1))
-        self.assertTrue((network_info_dict["loc"]['P']==0).all())
+        self.assertEqual(network_info_dict['loc']['struct_shapes'], 1)
+        self.assertEqual(P['loc'].shape, (1, 1))
+        self.assertTrue((P['loc']==0).all())
         self.assertEqual(list(network_info_dict['loc']['deep_models_dict'].keys()), ['d1'])
         self.assertEqual(network_info_dict['loc']['deep_models_dict']['d1'], deep_models_dict['d1']['model'])
         self.assertEqual(network_info_dict['loc']['deep_shapes']['d1'], deep_models_dict['d1']['output_shape'])
@@ -367,8 +370,8 @@ class TestPrepare_Data(unittest.TestCase):
         self.assertTrue(((datadict['scale']['d2'].numpy() - x1.to_numpy()) < 0.0001).all())
         self.assertTrue((datadict['scale']['d2'].shape == self.x[['x1']].shape),'shape missmatch for neural network input')
         self.assertEqual(network_info_dict["scale"]['struct_shapes'], 2)
-        self.assertEqual(network_info_dict["scale"]['P'].shape, (2, 2))
-        self.assertTrue((network_info_dict["scale"]['P']==0).all())
+        self.assertEqual(P['scale'].shape, (2, 2))
+        self.assertTrue((P['scale']==0).all())
         self.assertEqual(list(network_info_dict['scale']['deep_models_dict'].keys()), ['d2'])
         self.assertEqual(network_info_dict['scale']['deep_models_dict']['d2'],deep_models_dict['d2']['model'])
         self.assertEqual(network_info_dict['scale']['deep_shapes']['d2'], deep_models_dict['d2']['output_shape'])
@@ -412,7 +415,8 @@ class TestPrepare_Data(unittest.TestCase):
         datadict = prepare_data.transform(self.x)
         dm_info_dict = prepare_data.dm_info_dict
         network_info_dict = prepare_data.network_info_dict
-        
+        P = prepare_data.P
+
         ground_truth_loc = dmatrix('~-1 + spline(x1,bs="bs",df=4, degree=3):x2 + spline(x2,bs="bs",df=5, degree=3):x1', self.x, return_type='dataframe').to_numpy()
         ground_truth_scale = dmatrix('~1 + x1 + spline(x1,bs="bs",df=10, degree=3)', self.x, return_type='dataframe').to_numpy()
         ground_truth_loc = torch.from_numpy(ground_truth_loc).float()
@@ -422,14 +426,14 @@ class TestPrepare_Data(unittest.TestCase):
         #test if shapes of design matrices and P are as correct
         self.assertTrue((datadict['loc']['structured'] == ground_truth_loc).all())
         self.assertTrue((datadict['loc']['structured'].shape == ground_truth_loc.shape),'shape missmatch')
-        self.assertEqual(network_info_dict["loc"]['struct_shapes'], 9)
-        self.assertEqual(network_info_dict["loc"]['P'].shape, (9, 9))
-        self.assertTrue((network_info_dict["loc"]['P']==0).all())
+        self.assertEqual(network_info_dict['loc']['struct_shapes'], 9)
+        self.assertEqual(P['loc'].shape, (9, 9))
+        self.assertTrue((P['loc']==0).all())
 
         self.assertFalse((datadict['scale']['structured'] == ground_truth_scale).all())  # assertFalse is due to orthogonalization
         self.assertTrue((datadict['scale']['structured'].shape == ground_truth_scale.shape), 'shape missmatch')
         self.assertEqual(network_info_dict["scale"]['struct_shapes'], 12)
-        self.assertEqual(network_info_dict["scale"]['P'].shape, (12, 12))
+        self.assertEqual(P['scale'].shape, (12, 12))
 
 
         # test if dm_info_dict is correct
@@ -470,12 +474,11 @@ class TestPrepare_Data(unittest.TestCase):
         dm_info_dict = prepare_data.dm_info_dict
         network_info_dict = prepare_data.network_info_dict
 
-
         # get original P and get penalized P (by lambda)
         sp = Spline()
         sp.memorize_chunk(self.x.x1, bs="bs", df=9, degree=3, return_penalty=True)
         P_original = sp.penalty_matrices[0]
-        P_penalized = network_info_dict["rate"]['P']
+        P_penalized = prepare_data.P['rate']
 
 
         # calculate regularization parameter lambda

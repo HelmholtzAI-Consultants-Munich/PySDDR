@@ -49,18 +49,12 @@ if __name__ == '__main__':
 
         distribution  = 'Poisson'
 
-        formulas = {'rate': '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x3)+d2(x2)'}
+        formulas = {'rate': '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)'}
         deep_models_dict = {
         'd1': {
-            'model': nn.Sequential(nn.Flatten(1, -1),
-                     nn.Linear(28*28,256),
-                     nn.ReLU(),
-                     nn.Linear(256,128),
-                     nn.ReLU(),
-                     nn.Linear(128,64),
-                     nn.ReLU(),
-                     nn.Linear(64,10)),
-            'output_shape': 10}, #1000 for alexnet
+            'model': nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,4)),
+            'output_shape': 4},
+
         'd2': {
             'model': nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,4)),
             'output_shape': 4}
@@ -68,7 +62,7 @@ if __name__ == '__main__':
 
         train_parameters = {
         'batch_size': 200,
-        'epochs': 1,
+        'epochs': 200,
         'optimizer': optim.SGD,
         'optimizer_params':{'lr': 0.01, 'momentum': 0.9}, 
         'degrees_of_freedom': {'rate': 10}
@@ -93,6 +87,17 @@ if __name__ == '__main__':
         if config['load_model']:
             sddr.load()
     sddr.train(plot=True)
-    partial_effects = sddr.eval('rate')
+    #partial_effects = sddr.eval('rate')
     sddr.save('model.pth')
 
+    '''
+    'model': nn.Sequential(nn.Flatten(1, -1),
+                nn.Linear(28*28,256),
+                nn.ReLU(),
+                nn.Linear(256,128),
+                nn.ReLU(),
+                nn.Linear(128,64),
+                nn.ReLU(),
+                nn.Linear(64,10)),
+    'output_shape': 10}, #1000 for alexnet
+    '''

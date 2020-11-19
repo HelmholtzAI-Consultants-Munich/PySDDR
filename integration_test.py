@@ -53,16 +53,14 @@ def integration_test_simple_gam():
     }
 
     #initialize SDDR
-    sddr = SDDR(structured_data=data,
-                target=target,
-                output_dir=output_dir,
+    sddr = SDDR(output_dir=output_dir,
                 distribution=distribution,
                 formulas=formulas,
                 deep_models_dict=deep_models_dict,
                 train_parameters=train_parameters)
     
     # train SDDR
-    sddr.train()
+    sddr.train(target=target, structured_data=data)
     
     #compute partial effects
     partial_effects_rate = sddr.eval('rate',plot=False)
@@ -154,16 +152,14 @@ def integration_test_gamlss():
     }
 
     #initialize SDDR
-    sddr = SDDR(structured_data=data,
-                target=target,
-                output_dir=output_dir,
+    sddr = SDDR(output_dir=output_dir,
                 distribution=distribution,
                 formulas=formulas,
                 deep_models_dict=deep_models_dict,
                 train_parameters=train_parameters)
     
     # train SDDR
-    sddr.train()
+    sddr.train(target=target, structured_data=data)
     
     #compute partial effects
     partial_effects_loc = sddr.eval('loc',plot=False)
