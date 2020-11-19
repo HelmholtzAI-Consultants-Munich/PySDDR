@@ -62,17 +62,18 @@ train_parameters = {
 }
 
 #initialize SDDR
-sddr = SDDR(structured_data=data,
-            target="y_gen",
-            output_dir=output_dir,
+sddr = SDDR(output_dir=output_dir,
             distribution=distribution,
             formulas=formulas,
             deep_models_dict=deep_models_dict,
             train_parameters=train_parameters,
-            unstructured_data = unstructured_data)
+            )
 
 # train SDDR
-sddr.train()
+sddr.train(structured_data=data,
+           target="y_gen",
+           unstructured_data = unstructured_data,
+          plot=True)
 
 #compute partial effects
 partial_effects_loc = sddr.eval('loc',plot=True)

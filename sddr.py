@@ -127,11 +127,12 @@ class SDDR(object):
                 
             # compute the avg loss over all batches in the epoch
             self.epoch_loss = self.epoch_loss/len(self.loader)
-            if epoch % 10 == 0:
+            if epoch % 1 == 0:
                 print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, self.epoch_loss))
                 
             # and save it in a list in case we want to print later
             loss_list.append(self.epoch_loss)
+        self.loss_list = loss_list
 
         if plot:
             plt.plot(loss_list)
