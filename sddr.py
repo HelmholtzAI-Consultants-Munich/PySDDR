@@ -313,7 +313,7 @@ class SDDR(object):
         return self.net.distribution_layer
     
     
-    def predict(self, data, unstructred_data_info = dict(), clipping=False, param = None, plot=False):
+    def predict(self, data, unstructred_data_info = False, clipping=False, param = None, plot=False):
         """
         Predict and eval on unseen data.
         Parameters
@@ -337,25 +337,27 @@ class SDDR(object):
                 There will be one item in the list for each spline in the distribution's parameter equation. Each item is a tuple
                 (feature, partial_effect)
         """
-            # create dataset
-        prediction_dataset = SddrDataset(data, target = None, prepare_data = self.prepare_data, unstructred_data_info = unstructred_data_info, fit = False, clipping = clipping)
         
-
-        net = self.net   
+        predict_dataset = SddrDataset(data,
+                                      prepare_data = self.prepare_data, 
+                                      unstructred_data_info = unstructred_data_info,
+                                      fit = False,
+                                      clipping = clipping)
         
-
-        datadict = prediction_dataset[:]['datadict']
-
+        datadict = predict_dataset[:]['datadict']
+                
         # send each input batch to the current device
-        for param in datadict.keys():
-            for data_part in datadict[param].keys():
-                datadict[param][data_part] = datadict[param][data_part].float().to(self.device)
-
+        for parameter in datadict.keys():
+            for data_part in datadict[parameter].keys():
+                datadict[parameter][data_part] = datadict[parameter][data_part].float().to(self.device)
+                        
+        # get the network output
         with torch.no_grad():
-            distribution_layer = net(datadict) 
-
+            distribution_layer = self.net(datadict) 
+            
         get_feature = lambda feature_name: data.loc[:,feature_name].values
         partial_effects = self.eval(param, plot, data=datadict, get_feature=get_feature)
+        
         return distribution_layer, partial_effects
 
 if __name__ == "__main__":

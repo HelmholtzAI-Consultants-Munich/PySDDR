@@ -70,7 +70,6 @@ class SddrDataset(Dataset):
     '''
     def __init__(self, data, target = None, prepare_data = None, unstructred_data_info=dict(), fit = True, clipping = False):
         
-        
         # data loader for csv files
         if isinstance(data,str):
             self._data = pd.read_csv(data ,sep=None,engine='python')
@@ -86,13 +85,15 @@ class SddrDataset(Dataset):
             self._data = data
             self._target = target.values
             
-        if isinstance(data,str) and target is None:
-            self._data = pd.read_csv(data ,sep=None,engine='python')
-            self._target = np.zeros(len(self._data))
-        
-        elif isinstance(data,pd.core.frame.DataFrame) and target is None:
+        # data loader for Pandas.Dataframe 
+        elif isinstance(data,pd.core.frame.DataFrame) and target == None:
             self._data = data
-            self._target = np.zeros(len(self._data))
+            self._target = np.zeros(len(data))
+            
+        # data loader for Pandas.Dataframe 
+        elif isinstance(data,str) and target == None:
+            self._data = pd.read_csv(data ,sep=None,engine='python')
+            self._target = np.zeros(len(data))
 
         # add file paths of unstructured features to data
         self.unstructred_data_info = unstructred_data_info
