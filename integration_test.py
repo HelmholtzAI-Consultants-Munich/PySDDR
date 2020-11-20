@@ -244,6 +244,113 @@ def integration_test_gamlss():
     assert RMSE<0.4, "Partial effect not properly estimated in GAMLSS."
   
         
+    
+def integration_test_mnist():
+    '''
+    Integration test with unstructed data.
+    A mixed model is used that has structued and unstructured input.
+    The unstructured input are mnist images. These mnist images are used in the formula and represent the number that is
+    on the image. The test tests if the estimated numbers are on average (median) a monotonically increasing function of the
+    true numbers on the mnist images
+    '''
+
+
+    #set seeds for reproducibility
+    torch.manual_seed(1)
+    np.random.seed(1)
+
+    #load data
+    data_path = './mnist_data/tab.csv'
+
+    data = pd.read_csv(data_path,delimiter=',').loc[:1000,:]
+
+    for i in data.index:
+
+        data.loc[i,'groundtruth'] = np.sin(data.loc[i,'x1']) - 3*data.loc[i,'x2'] + data.loc[i,'x3']**4 + 3*data.loc[i,'y_true']
+
+
+    data.loc[:,'groundtruth'] = data.loc[:,'groundtruth'] - data.loc[:,'groundtruth'].mean()
+
+    output_dir = './outputs'
+
+    unstructured_data = {
+      'numbers' : {
+        'path' : './mnist_data/mnist_images',
+        'datatype' : 'image'
+      }
+    }
+
+    for i in data.index:
+        data.loc[i,'numbers'] = f'img_{i}.jpg'
+
+
+
+    #define SDDR parameters
+    formulas = {'loc': '~ -1 + spline(x1, bs="bs", df=10) + x2 + dnn(numbers) + spline(x3, bs="bs", df=10)',
+                'scale': '~1'
+                }
+    distribution  = 'Normal'
+
+    deep_models_dict = {
+    'dnn': {
+        'model': nn.Sequential(nn.Flatten(1, -1),
+                               nn.Linear(28*28,128),
+                               nn.ReLU()),
+        'output_shape': 128},
+    }
+
+    train_parameters = {
+        'batch_size': 100,
+        'epochs': 100,
+        'degrees_of_freedom': {'loc':9.6, 'scale':9.6},
+        'optimizer' : optim.RMSprop
+    }
+
+    #initialize SDDR
+    sddr = SDDR(output_dir=output_dir,
+                distribution=distribution,
+                formulas=formulas,
+                deep_models_dict=deep_models_dict,
+                train_parameters=train_parameters,
+                )
+
+    # train SDDR
+    sddr.train(structured_data=data,
+               target="groundtruth",
+               unstructured_data = unstructured_data,
+              plot=True)
+
+    data_pred = data.loc[:,:]
+    distribution_layer, partial_effect = sddr.predict(data_pred,
+                                                      clipping=True,
+                                                      param='scale', 
+                                                      plot=False, 
+                                                      unstructured_data = unstructured_data)
+
+    assert distribution_layer.scale[0]>0.7, "Scale too large in mnist test"
+
+    data_pred2 = data.copy()
+
+    data_pred2.loc[:,'x1'] = 0
+    data_pred2.loc[:,'x2'] = 0
+    data_pred2.loc[:,'x3'] = 0
+    data_pred2
+
+    distribution_layer, partial_effect = sddr.predict(data_pred2,
+                                                      clipping=True,
+                                                      param='scale', 
+                                                      plot=False, 
+                                                      unstructured_data = unstructured_data)
+
+    data_pred2['predicted_number'] = distribution_layer.loc[:,:].numpy().flatten()
+
+
+    predicted_numbers  = data_pred2.groupby('y_true').median().predicted_number
+    maximum_deviation_mnist = abs((predicted_numbers.loc[1:].to_numpy() - predicted_numbers.loc[:8].to_numpy())/3 - 1).max()
+
+    assert distribution_layer.scale[0]>1, "Predicted numbers for the mnist not monotonically increasing"
+    
+    
 if __name__ == '__main__':
     
     # run integration tests
@@ -256,3 +363,8 @@ if __name__ == '__main__':
     integration_test_gamlss()   
     print("-----------------------")
     print("passed tests for GAMLSS")
+    
+    print("Test with MNIST data")
+    integration_test_mnist()   
+    print("-----------------------")
+    print("passed tests for MNIST data")

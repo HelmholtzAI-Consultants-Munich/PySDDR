@@ -86,6 +86,9 @@ class SDDR(object):
         '''
         Trains the SddrNet for a number of epochs and prints the loss throughout training
         '''
+        
+        epoch_print_interval = int(self.config['train_parameters']['epochs']/10)
+        
         if continue_train:
             self.dataset = SddrDataset(structured_data, self.prepare_data, target, unstructured_data, fit=False)
         else:
@@ -127,7 +130,7 @@ class SDDR(object):
                 
             # compute the avg loss over all batches in the epoch
             self.epoch_loss = self.epoch_loss/len(self.loader)
-            if epoch % 1 == 0:
+            if epoch % epoch_print_interval == 0:
                 print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, self.epoch_loss))
                 
             # and save it in a list in case we want to print later
