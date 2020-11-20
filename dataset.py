@@ -108,7 +108,7 @@ class SddrDataset(Dataset):
                     # sort them
                     list_unstructured_feat_files.sort()
                     # add this info to data
-                    self._data[feature_name] = list_unstructured_feat_files[:1000]
+                    self._data[feature_name] = list_unstructured_feat_files #[:1000]
         if fit:
             prepare_data.fit(self._data)
         self.prepared_data = prepare_data.transform(self._data, clipping) #for the case that there is not so much data it makes sense to preload it here. When we have a lot of batches the transform can also happen in the __getitem__ function.

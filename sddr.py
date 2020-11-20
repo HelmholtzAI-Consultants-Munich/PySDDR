@@ -325,9 +325,9 @@ class SDDR(object):
         # Load optimizers
         self.optimizer.load_state_dict(state_dict['optimizer'])
         # Load losses
-        self.loss = state_dict['loss']
+        loss = state_dict['loss']
         self.cur_epoch = state_dict['epoch']
-        print('Loaded model {} at epoch {} with a loss {:.4f}'.format(model_name, self.cur_epoch, self.loss))
+        print('Loaded model {} at epoch {} with a loss {:.4f}'.format(model_name, self.cur_epoch, loss))
 
     
     def coeff(self, param):

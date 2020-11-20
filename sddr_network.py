@@ -86,9 +86,12 @@ class Sddr_Param_Net(nn.Module):
                 
                 # orthogonalize the output of the neural network with respect to the parts of the structured part,
                 # that contain the same input as the neural network
-                X_sliced_with_orthogonalization_pattern = torch.cat([X[:,sl] for sl in self.orthogonalization_pattern[key]],1)
-                Q, R = torch.qr(X_sliced_with_orthogonalization_pattern)
-                Utilde_net = self._orthog_layer(Q, Uhat_net)
+                if len(self.orthogonalization_pattern[key]) >0:
+                    X_sliced_with_orthogonalization_pattern = torch.cat([X[:,sl] for sl in self.orthogonalization_pattern[key]],1)
+                    Q, R = torch.qr(X_sliced_with_orthogonalization_pattern)
+                    Utilde_net = self._orthog_layer(Q, Uhat_net)
+                else:
+                    Utilde_net = Uhat_net
                 
                 Utilde_list.append(Utilde_net)
             
