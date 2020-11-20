@@ -83,17 +83,18 @@ class SDDR(object):
             if not os.path.exists(self.config['output_dir']):
                 os.mkdir(self.config['output_dir'])
     
-    def train(self, target, structured_data, unstructured_data=dict(), continue_train=False, plot=False):
+    def train(self, target, structured_data, unstructured_data=dict(), resume=False, plot=False):
         '''
         Trains the SddrNet for a number of epochs and prints the loss throughout training
         '''
-        if continue_train:
+        if resume:
             self.dataset = SddrDataset(structured_data, self.prepare_data, target, unstructured_data, fit=False)
         else:
             self.dataset = SddrDataset(structured_data, self.prepare_data, target, unstructured_data)
             self.net = SddrNet(self.family, self.prepare_data.network_info_dict)
             self.net = self.net.to(self.device)
             self._setup_optim()
+            self.cur_epoch = 0
         
         self.loader = DataLoader(self.dataset,
                                 batch_size=self.config['train_parameters']['batch_size'])
@@ -101,7 +102,8 @@ class SDDR(object):
         self.net.train()
         loss_list = []
         print('Beginning training ...')
-        for epoch in range(self.config['train_parameters']['epochs']):
+        P = self.prepare_data.get_penalty_matrix(self.device)
+        for epoch in range(self.cur_epoch , self.config['train_parameters']['epochs']):
             self.epoch_loss = 0
             for batch in self.loader:
                 # for each batch
@@ -119,7 +121,7 @@ class SDDR(object):
                 
                 # compute the loss and add regularization
                 loss = torch.mean(self.net.get_log_loss(target))
-                loss += self.net.get_regularization(self.prepare_data.get_penalty_matrix()).squeeze_() 
+                loss += self.net.get_regularization(P).squeeze_() 
                 
                 # and backprobagate
                 loss.backward()
@@ -253,7 +255,7 @@ class SDDR(object):
         train_config_path = os.path.join(self.config['output_dir'], 'train_config.yaml')
         # need to improve
         save_config = copy.deepcopy(self.config)
-        
+        save_config['train_parameters']['optimizer'] = str(self.optimizer)
         for net in save_config['deep_models_dict']:
             model = save_config['deep_models_dict'][net]['model']
             save_config['deep_models_dict'][net]['model'] = str(model)
@@ -275,7 +277,6 @@ class SDDR(object):
         if 'optimizer' not in self.config['train_parameters'].keys():
             self.optimizer = optim.Adam(self.net.parameters())
             # save these in the config as we want to save training configuration
-            self.config['train_parameters']['optimizer'] = str(self.optimizer)
             self.config['train_parameters']['optimizer_params'] = {'lr': 0.001,
                                                                     'betas': (0.9, 0.999),
                                                                     'eps': 1e-08,
@@ -294,8 +295,6 @@ class SDDR(object):
             else:
                 self.optimizer = optimizer(self.net.parameters())
             # and set the optimizer to a string in the config for saving later
-            self.config['train_parameters']['optimizer'] = str(self.optimizer)
-
 
     def load(self, model_name, training_data):
         """
@@ -322,14 +321,14 @@ class SDDR(object):
         self.net.load_state_dict(state_dict['sddr_net'])
         self.net = self.net.to(self.device)
 
-        if self.config['mode']=='train':
-            self._setup_optim()
-            # Load optimizers
-            self.optimizer.load_state_dict(state_dict['optimizer'])
-            # Load losses
-            self.loss = state_dict['loss']
-            epoch = state_dict['epoch']
-        print('Loading model {} at epoch {} with a loss {:.4f}'.format(name, epoch, self.loss))
+        self._setup_optim()
+        # Load optimizers
+        self.optimizer.load_state_dict(state_dict['optimizer'])
+        # Load losses
+        self.loss = state_dict['loss']
+        self.cur_epoch = state_dict['epoch']
+        print('Loaded model {} at epoch {} with a loss {:.4f}'.format(model_name, self.cur_epoch, self.loss))
+
     
     def coeff(self, param):
         '''

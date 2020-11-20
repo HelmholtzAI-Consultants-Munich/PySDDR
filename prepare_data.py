@@ -137,6 +137,7 @@ class Prepare_Data(object):
 
             # compute the penalty matrix and add content to the dicts to be returned
             self.P[param] = get_P_from_design_matrix(structured_matrix, dfs)  
+            self.network_info_dict[param]['struct_shapes'] = structured_matrix.shape[1]
     '''
     def set_structured_matrix_design_info(self, structured_matrix_design_info):
         self.structured_matrix_design_info = structured_matrix_design_info
@@ -144,8 +145,14 @@ class Prepare_Data(object):
     def set_data_range(self, data_range):
         self.data_range = data_range
     '''
-    def get_penalty_matrix(self):
-        return self.P
+    def get_penalty_matrix(self, device):
+        ''' Return penalty matrix as a torch and cast to device '''
+        P = self.P
+        # this only needs to be done for the first epoch of training
+        for param in P.keys():
+            P[param] = torch.from_numpy(P[param]).float() # should have shape struct_shapes x struct_shapes, numpy array
+            P[param] = P[param].to(device)
+        return P
     
     
     def transform(self,data,clipping=False):
@@ -184,8 +191,6 @@ class Prepare_Data(object):
                     structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]], clipped_data, return_type='dataframe')[0]
                 else:
                     raise Exception("Data should stay within the range of the training data. Please try clipping or manually set knots.")
-            
-            self.network_info_dict[param]['struct_shapes'] = structured_matrix.shape[1]
 
             # get bool depending on if formula has intercept or not and degrees of freedom and input feature names for each spline
             spline_info, non_spline_info = get_info_from_design_matrix(structured_matrix, feature_names=data.columns)
