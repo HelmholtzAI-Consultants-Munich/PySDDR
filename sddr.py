@@ -16,6 +16,7 @@ from utils import checkups
 from prepare_data import Prepare_Data
 from family import Family
 import warnings
+import copy
 
 class SDDR(object):
     '''
@@ -82,28 +83,31 @@ class SDDR(object):
             if not os.path.exists(self.config['output_dir']):
                 os.mkdir(self.config['output_dir'])
     
-    def train(self, target, structured_data, unstructured_data=dict(), continue_train=False, plot=False):
+    def train(self, target, structured_data, unstructured_data=dict(), resume=False, plot=False):
         '''
         Trains the SddrNet for a number of epochs and prints the loss throughout training
         '''
         
-        epoch_print_interval = int(self.config['train_parameters']['epochs']/10)
+        epoch_print_interval = max(1,int(self.config['train_parameters']['epochs']/10))
         
-        if continue_train:
+        if resume:
             self.dataset = SddrDataset(structured_data, self.prepare_data, target, unstructured_data, fit=False)
         else:
             self.dataset = SddrDataset(structured_data, self.prepare_data, target, unstructured_data)
             self.net = SddrNet(self.family, self.prepare_data.network_info_dict)
             self.net = self.net.to(self.device)
             self._setup_optim()
+            self.cur_epoch = 0
         
         self.loader = DataLoader(self.dataset,
                                 batch_size=self.config['train_parameters']['batch_size'])
 
         self.net.train()
         loss_list = []
+        
         print('Beginning training ...')
-        for epoch in range(self.config['train_parameters']['epochs']):
+        P = self.prepare_data.get_penalty_matrix(self.device)
+        for epoch in range(self.cur_epoch , self.config['train_parameters']['epochs']):
             self.epoch_loss = 0
             for batch in self.loader:
                 # for each batch
@@ -121,7 +125,7 @@ class SDDR(object):
                 
                 # compute the loss and add regularization
                 loss = torch.mean(self.net.get_log_loss(target))
-                loss += self.net.get_regularization(self.prepare_data.get_penalty_matrix()).squeeze_() 
+                loss += self.net.get_regularization(P).squeeze_() 
                 
                 # and backprobagate
                 loss.backward()
@@ -135,7 +139,6 @@ class SDDR(object):
                 
             # and save it in a list in case we want to print later
             loss_list.append(self.epoch_loss)
-        self.loss_list = loss_list
 
         if plot:
             plt.plot(loss_list)
@@ -255,12 +258,13 @@ class SDDR(object):
         torch.save(state, save_path)
         train_config_path = os.path.join(self.config['output_dir'], 'train_config.yaml')
         # need to improve
-        config = self.config.copy()
-        for net in config['deep_models_dict']:
-            model = config['deep_models_dict'][net]['model']
-            config['deep_models_dict'][net]['model'] = str(model)
+        save_config = copy.deepcopy(self.config)
+        save_config['train_parameters']['optimizer'] = str(self.optimizer)
+        for net in save_config['deep_models_dict']:
+            model = save_config['deep_models_dict'][net]['model']
+            save_config['deep_models_dict'][net]['model'] = str(model)
         with open(train_config_path, 'w') as outfile:
-            yaml.dump(config, outfile, default_flow_style=False)
+            yaml.dump(save_config, outfile, default_flow_style=False)
     
     def _load_and_create_design_info(self, training_data, prepare_data):
         # data loader for csv files
@@ -277,7 +281,6 @@ class SDDR(object):
         if 'optimizer' not in self.config['train_parameters'].keys():
             self.optimizer = optim.Adam(self.net.parameters())
             # save these in the config as we want to save training configuration
-            self.config['train_parameters']['optimizer'] = str(self.optimizer)
             self.config['train_parameters']['optimizer_params'] = {'lr': 0.001,
                                                                     'betas': (0.9, 0.999),
                                                                     'eps': 1e-08,
@@ -296,8 +299,6 @@ class SDDR(object):
             else:
                 self.optimizer = optimizer(self.net.parameters())
             # and set the optimizer to a string in the config for saving later
-            self.config['train_parameters']['optimizer'] = str(self.optimizer)
-
 
     def load(self, model_name, training_data):
         """
@@ -311,7 +312,6 @@ class SDDR(object):
                 design info
         """
         self._load_and_create_design_info(training_data, self.prepare_data)
-
         if not torch.cuda.is_available():
             state_dict = torch.load(model_name, map_location='cpu')
         else:
@@ -325,14 +325,14 @@ class SDDR(object):
         self.net.load_state_dict(state_dict['sddr_net'])
         self.net = self.net.to(self.device)
 
-        if self.config['mode']=='train':
-            self._setup_optim()
-            # Load optimizers
-            self.optimizer.load_state_dict(state_dict['optimizer'])
-            # Load losses
-            self.loss = state_dict['loss']
-            epoch = state_dict['epoch']
-        print('Loading model {} at epoch {} with a loss {:.4f}'.format(name, epoch, self.loss))
+        self._setup_optim()
+        # Load optimizers
+        self.optimizer.load_state_dict(state_dict['optimizer'])
+        # Load losses
+        loss = state_dict['loss']
+        self.cur_epoch = state_dict['epoch']
+        print('Loaded model {} at epoch {} with a loss {:.4f}'.format(model_name, self.cur_epoch, loss))
+
     
     def coeff(self, param):
         '''
@@ -347,7 +347,7 @@ class SDDR(object):
         return self.net.distribution_layer
     
     
-    def predict(self, data, unstructured_data = False, clipping=False, param = None, plot=False):
+    def predict(self, data, unstructured_data = False, clipping=False, plot=False):
         """
         Predict and eval on unseen data.
         Parameters
@@ -367,11 +367,12 @@ class SDDR(object):
         -------
             distribution_layer: trained distribution
                 The output of the SDDR network, could be applied .mean/.variance ...
-            partial_effects: list of tuples
+            partial_effects: dict of list of tuples
+                A dictionary with partial effects for all parameters of the distribution.
                 There will be one item in the list for each spline in the distribution's parameter equation. Each item is a tuple
                 (feature, partial_effect)
         """
-        
+        partial_effects = dict()
         predict_dataset = SddrDataset(data,
                                       prepare_data = self.prepare_data, 
                                       unstructred_data_info = unstructured_data,
@@ -390,7 +391,8 @@ class SDDR(object):
             distribution_layer = self.net(datadict) 
             
         get_feature = lambda feature_name: data.loc[:,feature_name].values
-        partial_effects = self.eval(param, plot, data=datadict, get_feature=get_feature)
+        for param in datadict.keys():
+            partial_effects[param] = self.eval(param, plot, data=datadict, get_feature=get_feature)
         
         return distribution_layer, partial_effects
 

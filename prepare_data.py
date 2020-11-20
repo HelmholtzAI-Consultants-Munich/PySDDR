@@ -45,7 +45,7 @@ class Prepare_Data(object):
             A dictionary where keys are the distribution's parameter names and values are dictionaries containing information of spline and non-spline terms (information: the corresponding slice in the formula, the term name and its input features).
         structured_matrix_design_info: dictionary
             A dictionary where keys are the distribution's parameter names and value is the design info of the patsy design matrix constructed for the structured part of the formula.
-        data_info: list of integers
+        data_range: list of integers
             Stored the maximum and minimum values of the input data set.
     '''
     def __init__(self, formulas, deep_models_dict, degrees_of_freedom, verbose=False):
@@ -137,15 +137,23 @@ class Prepare_Data(object):
 
             # compute the penalty matrix and add content to the dicts to be returned
             self.P[param] = get_P_from_design_matrix(structured_matrix, dfs)  
-    
+            self.network_info_dict[param]['struct_shapes'] = structured_matrix.shape[1]
+    '''
     def set_structured_matrix_design_info(self, structured_matrix_design_info):
         self.structured_matrix_design_info = structured_matrix_design_info
     
     def set_data_range(self, data_range):
         self.data_range = data_range
-
-    def get_penalty_matrix(self):
-        return self.P
+    '''
+    def get_penalty_matrix(self, device):
+        ''' Return penalty matrix as a torch and cast to device '''
+        P = self.P
+        # this only needs to be done for the first epoch of training
+        for param in P.keys():
+            P[param] = torch.from_numpy(P[param]).float() # should have shape struct_shapes x struct_shapes, numpy array
+            P[param] = P[param].to(device)
+        return P
+    
     
     def transform(self,data,clipping=False):
         """
@@ -176,15 +184,13 @@ class Prepare_Data(object):
                 if clipping == True:
                     train_data_min = {}
                     train_data_max = {}
-                    for name in self.data_info[0].index:
-                        train_data_min[name]=self.data_info[0][name]
-                        train_data_max[name]=self.data_info[1][name]
+                    for name in self.data_range[0].index:
+                        train_data_min[name]=self.data_range[0][name]
+                        train_data_max[name]=self.data_range[1][name]
                     clipped_data = data.clip(lower=pd.Series(train_data_min),upper=pd.Series(train_data_max),axis=1)
                     structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]], clipped_data, return_type='dataframe')[0]
                 else:
                     raise Exception("Data should stay within the range of the training data. Please try clipping or manually set knots.")
-            
-            self.network_info_dict[param]['struct_shapes'] = structured_matrix.shape[1]
 
             # get bool depending on if formula has intercept or not and degrees of freedom and input feature names for each spline
             spline_info, non_spline_info = get_info_from_design_matrix(structured_matrix, feature_names=data.columns)
