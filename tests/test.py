@@ -17,7 +17,7 @@ from sddr.utils.family import Family
 from sddr.utils.splines import spline, Spline
 
 from sddr.utils import checkups
-from sddr.utils.prepare_data import Prepare_Data
+from sddr.utils.prepare_data import PrepareData
 
 class TestSddrDataset(unittest.TestCase):
     '''
@@ -76,7 +76,7 @@ class TestSddrDataset(unittest.TestCase):
         # perform checks on given distribution name, parameter names and number of formulas given
         self.formulas = checkups(self.family.get_params(), formulas)
         
-        self.prepare_data = Prepare_Data(self.formulas,
+        self.prepare_data = PrepareData(self.formulas,
                                          self.deep_models_dict,
                                          self.train_parameters['degrees_of_freedom'])
 
@@ -174,7 +174,7 @@ class TestSddrDataset(unittest.TestCase):
         self.assertEqual(self.true_x2_11.shape,feature_test_value.shape)
 
 
-class TestPrepare_Data(unittest.TestCase):
+class TestPrepareData(unittest.TestCase):
     '''
     Test parse_formulas function for different formulas with the iris dataset.
     
@@ -197,7 +197,7 @@ class TestPrepare_Data(unittest.TestCase):
 
     def __init__(self,*args,**kwargs):
 
-        super(TestPrepare_Data, self).__init__(*args,**kwargs)
+        super(TestPrepareData, self).__init__(*args,**kwargs)
 
 
         # load data
@@ -230,7 +230,7 @@ class TestPrepare_Data(unittest.TestCase):
 
         deep_models_dict = dict()
 
-        prepare_data = Prepare_Data(formulas, deep_models_dict, degrees_of_freedom)
+        prepare_data = PrepareData(formulas, deep_models_dict, degrees_of_freedom)
         prepare_data.fit(self.x)
         datadict = prepare_data.transform(self.x)
         dm_info_dict = prepare_data.dm_info_dict
@@ -283,7 +283,7 @@ class TestPrepare_Data(unittest.TestCase):
 
 
         #call parse_formulas
-        prepare_data = Prepare_Data(formulas, deep_models_dict, degrees_of_freedom)
+        prepare_data = PrepareData(formulas, deep_models_dict, degrees_of_freedom)
         prepare_data.fit(self.x)
         datadict = prepare_data.transform(self.x)
         dm_info_dict = prepare_data.dm_info_dict
@@ -341,7 +341,7 @@ class TestPrepare_Data(unittest.TestCase):
 
 
         #call parse_formulas
-        prepare_data = Prepare_Data(formulas, deep_models_dict, degrees_of_freedom)
+        prepare_data = PrepareData(formulas, deep_models_dict, degrees_of_freedom)
         prepare_data.fit(self.x)
         datadict = prepare_data.transform(self.x)
         dm_info_dict = prepare_data.dm_info_dict
@@ -413,7 +413,7 @@ class TestPrepare_Data(unittest.TestCase):
 
 
         #call parse_formulas
-        prepare_data = Prepare_Data(formulas, deep_models_dict, degrees_of_freedom)
+        prepare_data = PrepareData(formulas, deep_models_dict, degrees_of_freedom)
         prepare_data.fit(self.x)
         datadict = prepare_data.transform(self.x)
         dm_info_dict = prepare_data.dm_info_dict
@@ -471,7 +471,7 @@ class TestPrepare_Data(unittest.TestCase):
 
 
         # call parse_formulas
-        prepare_data = Prepare_Data(formulas, deep_models_dict, degrees_of_freedom)
+        prepare_data = PrepareData(formulas, deep_models_dict, degrees_of_freedom)
         prepare_data.fit(self.x)
         datadict = prepare_data.transform(self.x)
         dm_info_dict = prepare_data.dm_info_dict
@@ -525,7 +525,7 @@ class TestPrepare_Data(unittest.TestCase):
 
 
         #call parse_formulas
-        prepare_data = Prepare_Data(formulas, deep_models_dict, degrees_of_freedom)
+        prepare_data = PrepareData(formulas, deep_models_dict, degrees_of_freedom)
         prepare_data.fit(self.x)
         datadict = prepare_data.transform(self.x)
         dm_info_dict = prepare_data.dm_info_dict

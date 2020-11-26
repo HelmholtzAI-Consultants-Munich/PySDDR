@@ -45,7 +45,7 @@ class SddrParamNet(nn.Module):
     
     def __init__(self, deep_models_dict, deep_shapes, struct_shapes, orthogonalization_pattern):
         
-        super(Sddr_Param_Net, self).__init__()
+        super(SddrParamNet, self).__init__()
         self.deep_models_dict = deep_models_dict
         
         #register external neural networks
@@ -159,12 +159,12 @@ class SddrNet(nn.Module):
             deep_shapes = value["deep_shapes"]
             struct_shapes = value["struct_shapes"]
             orthogonalization_pattern = value["orthogonalization_pattern"]
-            self.single_parameter_sddr_list[key] = Sddr_Param_Net(deep_models_dict, 
+            self.single_parameter_sddr_list[key] = SddrParamNet(deep_models_dict, 
                                                                   deep_shapes, 
                                                                   struct_shapes, 
                                                                   orthogonalization_pattern)
             
-            #register the Sddr_Param_Net network
+            #register the SddrParamNet network
             self.add_module(key,self.single_parameter_sddr_list[key])
                 
         self.distribution_layer_type = family.get_distribution_layer_type()
@@ -184,13 +184,13 @@ class SddrNet(nn.Module):
         return self.distribution_layer
     
     def get_log_loss(self, Y):
-    ''' Compute log loss based on the trained distributional layer and the groundtruth Y'''
+        ''' Compute log loss based on the trained distributional layer and the groundtruth Y '''
         log_loss = -self.distribution_layer.log_prob(Y)
         
         return log_loss
     
     def get_regularization(self, P):
-    ''' Compute regularization given penalty matrix P'''
+        ''' Compute regularization given penalty matrix P '''
         regularization = 0
         for param  in self.single_parameter_sddr_list.keys():
             sddr_net = self.single_parameter_sddr_list[param]

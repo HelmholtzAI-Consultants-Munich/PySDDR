@@ -43,7 +43,7 @@ class Sddr(object):
             An instance of the class Family; on initialization checks whether the distribution given by the user is in the 
             list of available distribution and holds the name of the current distribution defined by the user
         prepare_data: Python Object
-            The Prepare_Data class includes fit and transform functions and parses the formulas defined by the user. 
+            The PrepareData class includes fit and transform functions and parses the formulas defined by the user. 
         device: torch.device
             The current device, e.g. cpu.
         dataset: SddrDataset (inherets torch.utils.data.Dataset)
@@ -71,7 +71,7 @@ class Sddr(object):
         
         # perform checks on given distribution name, parameter names and number of formulas given
         formulas = checkups(self.family.get_params(), self.config['formulas'])
-        self.prepare_data = Prepare_Data(formulas,
+        self.prepare_data = PrepareData(formulas,
                                         self.config['deep_models_dict'],
                                         self.config['train_parameters']['degrees_of_freedom'])
 
