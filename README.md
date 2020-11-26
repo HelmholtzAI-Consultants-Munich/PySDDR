@@ -23,9 +23,13 @@ If you are using conda first install pip by: ```conda install pip```
 Two tutorials are available in the [tutorials](https://github.com/davidruegamer/PySDDR/tree/dev/tutorials) directory. One is aimed as a beginner's guide, where toy data is used to familiarize the user with the package and the second includes a more advanced tutorial with an example of applying the package also to unstructured data.
 
 ## Contents
+
 [Model](#Model)
+
 [User Interface] (#Sddr-User-Interface)
+
 [Features] (#Features)
+
 [Results] (Results)
 
 ## Model
