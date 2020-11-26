@@ -1,6 +1,0 @@
-pandas
-torch
-patsy
-statsmodels
-matplotlib
-pyyaml
