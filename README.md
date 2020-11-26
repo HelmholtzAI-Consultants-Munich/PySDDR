@@ -26,11 +26,11 @@ Two tutorials are available in the [tutorials](https://github.com/davidruegamer/
 
 [Model](#Model)
 
-[User Interface] (#Sddr-User-Interface)
+[User Interface](#Sddr-User-Interface)
 
-[Features] (#Features)
+[Features](#Features)
 
-[Results] (Results)
+[Results](#Results)
 
 ## Model
 
@@ -83,7 +83,8 @@ For training two simple steps are required by the user:
 
 The user can then perform an evalutation of the training on any of the parameter's distribution, e.g. for a Poisson distribution: ```sddr.eval('rate') ```. This will return and plot the partial effects of the structured features. To turn off the plot functionality the user must set ```plot=False ``` when calling ```sddr.eval```.
 
-* To get the trained distribution the user can call ```distribution_layer = sddr.get_distribution()```. From this the user can then get all the properties avalaible from [PyTorch's Probability Distributions package](https://pytorch.org/docs/stable/distributions.html) (torch.distributions), e.g. the mean ```distribution_layer.mean``` or the standard deviaton ```distribution_layer.stddev```.
+* To get the trained distribution the user can call ```distribution_layer = sddr.get_distribution()```. From this the user can then get all the properties avalaible from [PyTorch's Probability Distributions package](https://pytorch.org/docs/stable/distributions.html) (torch.distributions), e.g. the mean can be retrieved by ```distribution_layer.mean``` or the standard deviaton by ```distribution_layer.stddev```.
+
 * To get the trained network's weights, i.e. coefficients, for the structured part, the user can call: 
 
 ### Saving
