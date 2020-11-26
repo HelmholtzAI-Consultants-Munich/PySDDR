@@ -8,6 +8,17 @@ It was built based on the concepts presented in _paper_ and follows the R implem
 
 The package works for both mean and distributional regression while assuming a distribution of any given data, as long as each parameter is defined by _a linear predictor_. It is built in such a way that allows for the beginner to easily use and take advantage of this unifying framework but also enables the more advanced user to exploit features and tweak parameters in a flexible and interactive way. The main model is built in a dynamic way depending on the user input and can accept any number of neural networks, from the simplest classifier to the more complicated architectures, such as LSTMs, integrating all these in a unified network written in PyTorch. Meanwhile the structured data is smoothed using splines as basis function and its partial effects can be visualized during evaluation.
 
+
+*rewrote:*
+
+PySDDR is a python package used for regression tasks, which combines statistical regression models and neural networks into a general framework to deal with multi-modal data (e.g. tabular and image data). It can be used for mean regression as well as for distributional regression, i.e. estimating any parameter of the assumed distribution, not just the mean. Each distributional parameter is defined by a formula, consisting of a structured (statistical regression model) and unstructured (neural networks) part. One of the main advantages of this package is the introduction of an orthogonalization layer, which ensure identifiability when structured and unstructured parts share some input data, thus making the attribution of shared effects to either one of the parts (structured or unstructured) identifiable.
+
+PySDDR allows bginners to easily use and take advantage of this general framework but also enables the more advanced user to exploit features and tweak parameters in a flexible and interactive way. The framework is written in PyTorch and accepts any number of neural networks, from the simplest classifier to the more complicated architectures, such as LSTMs. 
+
+The python package was built based on the concepts presented in _paper_ and follows the R implementation found here _link_. 
+
+
+
 ## Installation
 
 To install the package run:
@@ -64,10 +75,23 @@ The model architecture is built dynamically, depending on the user inputs such a
 
 ![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/sddr_net.jpg)
 
+
+*rewritten:*
+
+The framework combines statistical regression models and neural networks into one larger unifying network - ```SddrNet```. If ```SddrNet``` is used to build a distributional regression model, the user has to define a formula for each distributional parameter (e.g. a normal distribution has two parameters, *log* and *scale*), which is then used by ```SddrNet``` to build a sub-network - ```SddrFormulaNet``` - for each distributional parameter. The output of each ```SddrFormulaNet``` is the predicted parameter value, which are collected by ```SddrNet```, normalized based on the distrubution's rules and then given as input to a distributional layer. From the distributional layer a regularized log loss is computed, which is then backpropagated. An example of this can be seen below.
+
+![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/sddr_net.jpg)
+
+
+
 ### Preprocessing
 
 PySDDR has been built to accept tabular and imaging data, both singly and combined. The individual features of these data can be of two types: structured and unstructured. The user needs to define which features belong to each of these types and this is done through the parameters' formulas. The first part of preprocessing is then to split the input data into structured and unstructured depending on the given formulas. The structured part can have linear and non-linear (smoothing splines) terms, while the unstructured part can consist of one or more neural networks. [The non-linear strcuctured terms smoothing terms]
 Currently b-splines are used per default, whereas Cyclic Cubic splines are also available.
+
+*rewritten:*
+
+Each distributional parameter is defined by a formula that consists of a structured and unstructured part. The structured part can have linear and smoothing (non-linear) terms, while the unstructured part consist of one or more neural network terms. The user needs to define the input features for each term in the formula (the same input feature can be assigned to different terms). While the structured part only accepts structured (tabular) data as input features, the unstructured part accepts both, structured (tabular) and unstructured (currently only images are supported) data as input features. During the preprocessing, the input features are assigned to the corresponding terms and for each smoothing term, the respective basis fucntions and penalty matrices are computed. The framework currently supports b-splines (default) and cyclic cubic splines. In a last step, the orthogonalization of the smoothing terms wrt. the linear terms as well as the orthogonalization of the unstructured wrt. the structured part is computed.
 
 ### SddrFormulaNet
 
