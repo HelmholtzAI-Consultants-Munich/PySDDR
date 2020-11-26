@@ -10,7 +10,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 import torch.optim as optim
 # pysddr imports
-from .sddrnetwork import SddrNet, SddrParamNet
+from .sddrnetwork import SddrNet, SddrFormulaNet
 from .utils.dataset import SddrDataset
 from .utils import checkups
 from .utils.prepare_data import PrepareData

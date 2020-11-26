@@ -7,7 +7,7 @@ import pandas as pd
 
 
 ## SDDR NETWORK PART
-class SddrParamNet(nn.Module):
+class SddrFormulaNet(nn.Module):
     '''
     This class represents an sddr network with a structured part, one or many deep models, a linear layer for 
     the structured part and a linear layer for the concatenated outputs of the deep models. The concatenated 
@@ -45,7 +45,7 @@ class SddrParamNet(nn.Module):
     
     def __init__(self, deep_models_dict, deep_shapes, struct_shapes, orthogonalization_pattern):
         
-        super(SddrParamNet, self).__init__()
+        super(SddrFormulaNet, self).__init__()
         self.deep_models_dict = deep_models_dict
         
         #register external neural networks
@@ -159,12 +159,12 @@ class SddrNet(nn.Module):
             deep_shapes = value["deep_shapes"]
             struct_shapes = value["struct_shapes"]
             orthogonalization_pattern = value["orthogonalization_pattern"]
-            self.single_parameter_sddr_list[key] = SddrParamNet(deep_models_dict, 
+            self.single_parameter_sddr_list[key] = SddrFormulaNet(deep_models_dict, 
                                                                   deep_shapes, 
                                                                   struct_shapes, 
                                                                   orthogonalization_pattern)
             
-            #register the SddrParamNet network
+            #register the SddrFormulaNet network
             self.add_module(key,self.single_parameter_sddr_list[key])
                 
         self.distribution_layer_type = family.get_distribution_layer_type()
