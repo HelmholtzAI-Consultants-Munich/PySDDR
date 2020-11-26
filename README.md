@@ -28,13 +28,20 @@ Two tutorials are available in the [tutorials](https://github.com/davidruegamer/
 
 ## Contents
 
-[Model](#Model)
+1. [Model](#Model)
+1.1. [SddrNet](#SddrNet)
+1.2. [Preprocessing](#Preprocessing)
+1.3. [SddrFormulaNet](#SddrFormulaNet)
+1.4. [Orthogonalization](#Orthogonalization)
+1.5. [Smoothing Penalty](#Smoothing-Penalty)
+2. [User Interface](#Sddr-User-Interface)
+2.1. [Training](#Training)
+2.2. [Evaluating](#Evaluating)
+2.3. [Saving](#Saving)
+2.4. [Predicting](#Predicting)
+2.5. [Resume Training](#Resume-Training)
+2.6. [User inputs](#User-inputs)
 
-[User Interface](#Sddr-User-Interface)
-
-[Features](#Features)
-
-[Results](#Results)
 
 ## Model
 
@@ -118,7 +125,7 @@ The distrubution as well as the partial effects for all structured features of a
 
 Note here that the training data also needs to be provided during load for the preprocessing steps, i.e. basis functions creation, to be performed.
 
-### Resume
+### Resume Training
 
 The user may also wish to load a pretrained model to resume training. For this the first two steps (init, load) from above need to be performed and then the user can resume training by ```sddr.train(target, structured_data, resume=True)```
 
@@ -254,21 +261,3 @@ The training parameters are: batch size, epochs, optimizer, optimizer parameters
  ```
 
 Note that ```train_parameters['degrees_of_freedom']``` is a dictionary where the degrees of freedom of each parameter is defined. This can either be a list of degrees of freedom for each spline in the formula or a single number (same degrees of freedom for all splines). Using the Demmler-Reinsch Orhtogonalization, all smoothing terms are then calculated based on this specification (e.g., setting degrees_of_freedom = 5 results in sp = 1.234 for one smooth, but sp = 133.7 for another smooth due to their different nature and data). This ensures that no smooth term has more flexibility than the other term which makes sense in certain situations.
-
-
-## Example 
-
-```
-this is an example
-```
-_We should however add more content than currently in jupyter notebook_
-
- ## Example 
-
-```
-this is an example
-```
-
-
-## Results
-_Would be nice if eventually we have some nice results to show, though this is somehow similar to test_run.ipynb_
