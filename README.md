@@ -29,17 +29,29 @@ Two tutorials are available in the [tutorials](https://github.com/davidruegamer/
 ## Contents
 
 1. [Model](#Model)
+
 1.1. [SddrNet](#SddrNet)
+
 1.2. [Preprocessing](#Preprocessing)
+
 1.3. [SddrFormulaNet](#SddrFormulaNet)
+
 1.4. [Orthogonalization](#Orthogonalization)
+
 1.5. [Smoothing Penalty](#Smoothing-Penalty)
+
 2. [User Interface](#Sddr-User-Interface)
+
 2.1. [Training](#Training)
+
 2.2. [Evaluating](#Evaluating)
+
 2.3. [Saving](#Saving)
+
 2.4. [Predicting](#Predicting)
+
 2.5. [Resume Training](#Resume-Training)
+
 2.6. [User inputs](#User-inputs)
 
 
