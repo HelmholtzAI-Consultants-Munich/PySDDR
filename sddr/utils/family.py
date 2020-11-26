@@ -10,7 +10,7 @@ class Family():
         - 'Bernoulli_prob': bernoulli distribution with probabilities (sigmoid)
         - 'Multinomial': multinomial distribution parameterized by total_count(=1) and logits
         - 'Multinomial_prob': multinomial distribution parameterized by total_count(=1) and probs
-    Later more distributions will be implemented, such as Gamma, Beta and NegativeBinomial
+    Later more distributions could be implemented, such as Gamma, Beta and NegativeBinomial
     
     Parameters
     ----------

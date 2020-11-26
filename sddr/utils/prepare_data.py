@@ -10,19 +10,22 @@ import os
 
 class Prepare_Data(object):
     '''
-    The Prepare_Data class parses the formulas defined by the user. This class includes fit and transform functions, which parses all information necessary to initialize the sddr network and
-    also prepares the data by calculating penalty matrices (multiplied by the smoothing parameters lambda, which are computed from degrees of freedom) and orthogonalizing the non-linear (e.g. splines) wrt to the linear part of the formula.
+    The Prepare_Data class parses the formulas defined by the user. This class includes fit and transform functions, which parses all information necessary to initialize the sddr network and also prepares the data by calculating penalty matrices (multiplied by the smoothing parameters lambda, which are computed from degrees of freedom) and orthogonalizing the non-linear (e.g. splines) wrt to the linear part of the formula.
+
     Parameters
     ----------
         formulas: dictionary
-            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values
-            to strings defining the formula for each distribution, e.g. formulas['loc'] = '~ 1 + spline(x1, bs="bs", df=9) + dm1(x2)'.
+            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values to strings 
+            defining the formula for each distribution, e.g. formulas['loc'] = '~ 1 + spline(x1, bs="bs", df=9) + dm1(x2)'.
         deep_models_dict: dictionary
             A dictionary where keys are model names and values are dicts with model architecture and output shapes.
         degrees_of_freedom: int or list of ints
             Degrees from freedom from which the smoothing parameter lambda is computed.
-            Either a single value for all penalities of all splines, or a list of values, each for one of the splines that appear in the formula.
-
+            Either a single value for all penalities of all splines, or a list of values, each for one of the splines that 
+            appears in the formula.
+        verbose: boolean - default False
+            If True, the results of the splitting will be print.
+            
     Attributes
     -------
         formulas: dictionary
