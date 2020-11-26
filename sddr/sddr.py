@@ -65,7 +65,6 @@ class SDDR(object):
             else:
                 self.config = kwargs
             break
-        
         # create a family instance
         self.family = Family(self.config['distribution'])
         
