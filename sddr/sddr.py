@@ -10,24 +10,31 @@ from torch import nn
 from torch.utils.data import DataLoader
 import torch.optim as optim
 # pysddr imports
-from .sddrnetwork import SddrNet, Sddr_Param_Net
+from .sddrnetwork import SddrNet, SddrParamNet
 from .utils.dataset import SddrDataset
 from .utils import checkups
-from .utils.prepare_data import Prepare_Data
+from .utils.prepare_data import PrepareData
 from .utils.family import Family
 import warnings
 import copy
 
-class SDDR(object):
+class Sddr(object):
     '''
-    The SDDR class is the main class the user interacts with in order to use the PySDDR framework. This class includes
-    train, eval functions with which the user can train a pyssddr network and evaluation the training based on the partial
-    effects returned.
+    The SDDR class is the main class the user interacts with in order to use the PySDDR framework. 
+    This class includes 7 functions:
+    - 'train' function, with which the user can train a pyssddr network, 
+    - 'eval' functions, to evaluate the training based on the partial effects returned, 
+    - 'save' and 'load' function, which could save the trained model and load it for furthur usage, 
+    - 'coeff' function, to get the coefficients (network weights) of the structured head, 
+    - 'get_distribution' function, to get the trained distribution and 
+    - 'predict' function, to apply trained model on unseen data.
+    
     Parameters
     ----------
         **kwargs: either a list of parameters or a dict
             The user can give all the necessary parameters either one by one as variables or as a dictionary, where the keys
             are the variables
+            
     Attributes
     -------
         config: dictionary
@@ -35,26 +42,20 @@ class SDDR(object):
         family: Family 
             An instance of the class Family; on initialization checks whether the distribution given by the user is in the 
             list of available distribution and holds the name of the current distribution defined by the user
+        prepare_data: Python Object
+            The Prepare_Data class includes fit and transform functions and parses the formulas defined by the user. 
+        device: torch.device
+            The current device, e.g. cpu.
         dataset: SddrDataset (inherets torch.utils.data.Dataset)
             An instance that loads the data on initialization, parses the formulas given by the user, splits the data into
             structured and unstructured parts and prepares it for training by the PySSDDR network
-        degrees_of_freedom: dictionary
-            A dictionary where keys are the current distribution's parameters' names and values are the degrees of freedom
-            for each sub-network created for each parameters of the distribution
-        network_info_dict: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts 
-            will be: 'struct_shapes', 'P', 'deep_models_dict' and 'deep_shapes' with corresponding values for each distribution
-            paramter, i.e. given formula (shapes of structured parts, penalty matrix, a dictionary of the deep models' arcitectures
-            used in the current formula and the output shapes of these deep models)
+        net: SddrNet 
+            The sddr network. This will consist of smaller paraller networks (as many as the parameters of the distribution) each 
+            of which is built depending on the formulas and deep models given by the user
         loader: torch.utils.data.DataLoader
             Used to later load data in batches
-        device: torch.device
-            The current device
-        device: SddrNet 
-            The sddr network. This will consist of smaller paraller networks (as many as the parameters of the distribution) each of 
-            which is built depending on the formulas and deep models given by the user
-        optimizer: torch.optim.RMSprop
-            The current optimizer
+        optimizer: torch optimizer
+            The defined torch optimizer, e.g. torch.optim.RMSprop
     '''
     def __init__(self, **kwargs):
         # depending on whether the user has given a dict as input or multiple arguments self.config
@@ -85,7 +86,32 @@ class SDDR(object):
     
     def train(self, target, structured_data, unstructured_data=dict(), resume=False, plot=False):
         '''
-        Trains the SddrNet for a number of epochs and prints the loss throughout training
+        Trains the SddrNet for a number of epochs
+        
+        Parameters
+        ----------
+            target: str / Pandas.DataFrame 
+                target (Y), given as:
+                - string: file path pointing to the target column in csv format. This file must contain a column header 
+                          that corresponds to the name of the target variable. If target variable (Y) is given as file path, 
+                          the input matrix (X) should also be given as file path.
+                - string: name of the target variable that will be extracted from the input matrix 'data'. 
+                          In this case the taget variable must be contained in the input matrix 'data'.
+                - pandas dataframe: the target variable as pandas dataframe column. 
+                          In this case the target variable must be excluded from the input matrix 'data'.
+            structured_data: str / Pandas.DataFrame
+                input dataset (X), given as:
+                - string: file path pointing to the input matrix in csv format. This file must contain column headers 
+                          that correspond to the names used in the formula. If input matrix (X) is given as file path, 
+                          the target variable (Y) should also be given as file path.
+                - pandas dataframe: input matrix as pandas object with columns names that correspond to the names used in the    
+                          formula.        
+            unstructured_data: dictionary - default empty dict
+                The information of unstructured data, including file paths of the unstructured data and the type of it (image...)
+            resume: bool - default False
+                If true, the model could be continue trained based on the loaded results.
+            plot: boolean - default False
+                If true, the training loss vs epochs could be plotted
         '''
         
         epoch_print_interval = max(1,int(self.config['train_parameters']['epochs']/10))
@@ -159,6 +185,11 @@ class SDDR(object):
                 If true then a figure for each spline defined in the formula of the distribution's parameter is plotted.
                 This is only true for the splines which take only one feature as input.
                 If false then nothing is plotted.
+            data: dictionary - default Nonw
+                A dictionary where keys are the distribution's parameter names and values are dicts including data in structured 
+                and unstructured parts.
+            get_feature: numpy array
+                The respective feature column from the input matrix
         Returns
         -------
             partial_effects: list of tuples
@@ -336,13 +367,14 @@ class SDDR(object):
     
     def coeff(self, param):
         '''
-        Return coefficients (network weights) of the structured head
+        Given a distribution parameter, return the coefficients (network weights) of the corresponding structured head.
         '''
         return self.net.single_parameter_sddr_list[param].structured_head.weight.detach().numpy()
     
     def get_distribution(self):
         '''
         Return trained distribution, could be applied .mean/.variance ...
+        For more choice, please check https://pytorch.org/docs/stable/distributions.html
         '''
         return self.net.distribution_layer
     
@@ -354,15 +386,15 @@ class SDDR(object):
         ----------
             data: Pandas.DataFrame
                 The unseen data
+            unstructured_data: dictionary - default False
+                The information of unstructured data, including file paths of the unstructured data 
+                and the data type (e.g. image)
             clipping: boolean, default False
                 If true then when the unseen data is out of the range of the training data, they will be clipped.
                 If false then when the unseen data is out of range, an error will be thown.
-            param: string
-                The parameter of the distribution for which the evaluation is performed
-            plot: boolean, default True
-                If true then a figure for each spline defined in the formula of the distribution's parameter is plotted.
+            plot: boolean, default False
+                If true, a figure for each spline defined in the formula of the distribution's parameter is plotted.
                 This is only true for the splines which take only one feature as input.
-                If false then nothing is plotted.
         Returns
         -------
             distribution_layer: trained distribution

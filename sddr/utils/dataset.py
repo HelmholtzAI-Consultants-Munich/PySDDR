@@ -36,7 +36,7 @@ class SddrDataset(Dataset):
             - None (default, normally used in the predict function):
                         If target is given as none a dummy target with zeros will be created. 
         unstructured_data_info: dictionary - default empty dict
-            - the information of unstructured data, including file paths of the unstructured data and the type of it (image...)
+            The information of unstructured data, including file paths of the unstructured data and the data type (e.g. image)
         fit: bool - default True
             If the prepare_data object should be fitted to the data during initialization of the dataset.
         clipping: boolean - default False
@@ -46,7 +46,7 @@ class SddrDataset(Dataset):
     Attributes
     -------
         unstructured_data_info: dict - default empty dict
-            - the information of unstructured data, including file paths of the unstructured data and the data type (e.g.image) 
+            The information of unstructured data, including file paths of the unstructured data and the data type (e.g.image) 
         prepared_data: python object
             The Prepare_Data class includes fit and transform functions and parses the formulas defined by the user. 
         transform: function

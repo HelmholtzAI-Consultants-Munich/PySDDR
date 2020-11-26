@@ -9,8 +9,6 @@ import parser
 from .splines import spline, Spline
 
 
-
-
 def checkups(params, formulas):
     """
     Checks if the user has given an available distribution, too many formulas or wrong parameters for the given distribution.
@@ -20,15 +18,16 @@ def checkups(params, formulas):
         params : list of strings
             A list of strings of the parameters of the current distribution.
         formulas : dictionary
-            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values to strings defining the
-            formula for each distribution, e.g. formulas['loc'] = '~ 1 + spline(x1, bs="bs", df=9) + dm1(x2)'.
+            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values to strings 
+            defining the formula for each distribution, e.g. formulas['loc'] = '~ 1 + spline(x1, bs="bs", df=9) + dm1(x2)'.
             
     Returns
     -------
         new_formulas : dictionary
-            If the current distribution is available in the list of families, new_formulas holds a formula for each parameter of the distribution.
-            If a formula hasn't been given for a parameter and ~0 formula is set. If the current distribution is not available an empty dictionary
-            is returned.  
+            If the current distribution is available in the list of families, new_formulas holds a formula for each parameter of 
+            the distribution.
+            If a formula hasn't been given for a parameter, ~0 formula is set. If the current distribution is not available, 
+            an empty dictionary is returned.  
     """
     new_formulas=dict()
     for param in params:
@@ -39,7 +38,6 @@ def checkups(params, formulas):
             print('Parameter formula', param,'for distribution not defined. Creating a zero formula for it.')
             new_formulas[param] = '~0'
     return new_formulas
-
 
 
 
@@ -82,7 +80,6 @@ def split_formula(formula, net_names_list):
 
 
 
-
 def make_matrix_positive_semi_definite(A,machine_epsilon):
     """
     Transforms an input matrix such that it is semipositive definite.
@@ -113,8 +110,7 @@ def make_matrix_positive_semi_definite(A,machine_epsilon):
 
 
 
-
-def dfFun(lam, d, hat1):
+def df_fun(lam, d, hat1):
     """
     Calculates degrees of freedom from lambda.
 
@@ -127,7 +123,7 @@ def dfFun(lam, d, hat1):
 
     Returns
     -------
-        A : int
+        df : int
             Degrees of Freedom.
     """
     if hat1:
@@ -146,7 +142,7 @@ def df2lambda(dm, P, df, lam = None, hat1 = True, lam_max = 1e+15):
     Parameters
     ----------
         dm : patsy.dmatrix
-               The design matrix for the structured part of the formula - computed by patsy.
+            The design matrix for the structured part of the formula - computed by patsy.
         P: numpy-array
             The penalty matrix of the design matrix.
         df: int
@@ -205,7 +201,7 @@ def df2lambda(dm, P, df, lam = None, hat1 = True, lam_max = 1e+15):
 
     # if lambda given compute degrees of freedom
     if lam != None:
-        df = dfFun(lam, d, hat1)
+        df = df_fun(lam, d, hat1)
         return df, lam
 
     # else compute lambda from degrees of freedom through optimization
@@ -213,17 +209,17 @@ def df2lambda(dm, P, df, lam = None, hat1 = True, lam_max = 1e+15):
         lam = 0
         return df, lam
 
-    df_for_lam_max = dfFun(lam_max, d, hat1)
+    df_for_lam_max = df_fun(lam_max, d, hat1)
     if (df_for_lam_max - df) > 0 and (df_for_lam_max - df) > np.sqrt(machine_epsilon):
         warnings.simplefilter('always')
         warnings.warn("""lambda needs to be larger than lambda_max = {0} for given df. Settign lambda to {0} leeds to an deviation from your df of {1}. You can increase lambda_max in parameters. """.format(lam_max,df_for_lam_max - df))
         lam = lam_max
         return df, lam
 
-    lam = sp.optimize.brentq(lambda l: dfFun(l, d, hat1) - df, 0, lam_max)
-    if abs(dfFun(lam, d, hat1) - df) > np.sqrt(machine_epsilon):
+    lam = sp.optimize.brentq(lambda l: df_fun(l, d, hat1) - df, 0, lam_max)
+    if abs(df_fun(lam, d, hat1) - df) > np.sqrt(machine_epsilon):
         warnings.simplefilter('always')
-        warnings.warn("""estimated df differ from given df by {0} """.format(dfFun(lam, d, hat1) - df))
+        warnings.warn("""estimated df differ from given df by {0} """.format(df_fun(lam, d, hat1) - df))
 
     return df, lam
 
@@ -233,8 +229,7 @@ def df2lambda(dm, P, df, lam = None, hat1 = True, lam_max = 1e+15):
 def _get_penalty_matrix_from_factor_info(factor_info):
     '''
     Extracts the penalty matrix from a factor_info object if the factor info object is a spline.
-    Explanation: "spline" is a stateful pasty transform. After computation of the design matrix these stateful transforms are stored in the factor infos of the design matrix.
-                 In this function we extract this object and obtain the penalty matrix that corresponds to this spline.
+    Explanation: "spline" is a stateful pasty transform. After computation of the design matrix these stateful transforms are stored in the factor infos of the design matrix. In this function we extract this object and obtain the penalty matrix that corresponds to this spline.
 
     Parameters
     ----------
@@ -277,9 +272,8 @@ def _get_penalty_matrix_from_factor_info(factor_info):
 def get_P_from_design_matrix(dm, dfs):
     """
     Computes and returns the penalty matrix that corresponds to a patsy design matrix. The penalties are multiplied by the regularization parameters lambda computed from given degrees of freedom.
-    The result us a single block diagonal penalty matrix that combines the penalty matrices of each term in the formula that was used to create the design matrix. Only smooting splines terms have a non-zero penalty matrix.
-    The degrees of freedom can either be given as a single value, then all individual penalty matrices are multiplied with a single lambda.
-    Or they can be given as a list, then all (non-zero) penalty matrices are multiplied by different lambdas. The multiplication is in the order of the terms in the formula.
+    The result is a single block diagonal penalty matrix that combines the penalty matrices of each term in the formula that was used to create the design matrix. Only smooting splines terms have a non-zero penalty matrix.
+    The degrees of freedom can either be given as a single value, then all individual penalty matrices are multiplied with a single lambda. Or they can be given as a list, then all (non-zero) penalty matrices are multiplied by different lambdas. The multiplication is in the order of the terms in the formula.
     
     Parameters
     ----------
@@ -287,7 +281,8 @@ def get_P_from_design_matrix(dm, dfs):
             The design matrix for the structured part of the formula - computed by patsy.
         dfs: int or list of ints
             Degrees from freedom from which the smoothing parameter lambda is computed.
-            Either a single value for all penalities of all splines, or a list of values, each for one of the splines that appear in the formula.
+            Either a single value for all penalities of all splines, or a list of values, each for one of the splines that appear 
+            in the formula.
 
     Returns
     -------
@@ -370,7 +365,8 @@ def _get_all_input_features_for_term(term, feature_names):
     Returns
     -------
         input_features_term: list
-            List of feature names that appear in the patsy term. e.g. for a term x1:spline(x2, bs="bs", df=4, degree=3) -> ["x1","x2"].
+            List of feature names that appear in the patsy term. e.g. for a term x1:spline(x2, bs="bs", df=4, degree=3) -> 
+            ["x1","x2"].
     '''
     factors = term.factors
     input_features_term = set()
@@ -399,9 +395,11 @@ def get_info_from_design_matrix(structured_matrix, feature_names):
     Returns
     -------
         spline_info: dictionary
-            A dictionary containing information of the spline terms: the respective slice in the formula, the name of the spline and the feature names of the spline.
+            A dictionary containing information of the spline terms: the respective slice in the formula, the name of the spline 
+            and the feature names of the spline.
         non_spline_info: dictionary
-            A dictionary containing information of the terms that are not splines: the respective slice in the formula, the name of the term and the feature name of the term.
+            A dictionary containing information of the terms that are not splines: the respective slice in the formula, the name 
+            of the term and the feature name of the term.
     """
     spline_info = {'list_of_spline_slices': [],
                    'list_of_spline_input_features': [],
@@ -437,19 +435,19 @@ def get_info_from_design_matrix(structured_matrix, feature_names):
 
 def _orthogonalize(constraints, X):
     """
-    <add description>
+    Orthogonalize spline terms with respect to non spline terms.
 
     Parameters
     ----------
-        constraints: ??
-            <add description>
-        X: ??
-            <add description>
+        constraints: numpy array
+            constraint matrix, non spline terms
+        X: numpy array
+            spline terms
 
     Returns
     -------
-        constrained_X: ??
-            <add description>
+        constrained_X: numpy array
+            orthogonalized spline terms
     """
     Q, _ = np.linalg.qr(constraints) # compute Q
     Projection_Matrix = np.matmul(Q,Q.T)
@@ -471,9 +469,11 @@ def orthogonalize_spline_wrt_non_splines(structured_matrix,
     ----------
         structured_matrix: patsy.dmatrix
             The design matrix for the structured part of the formula - computed by patsy
-
         spline_info: dict
-            dictionary with keys list_of_spline_slices and list_of_spline_input_features. As produced by get_info_from_design_matrix
+            dictionary with keys list_of_spline_slices and list_of_spline_input_features. As produced by
+            get_info_from_design_matrix
+        non_spline_info: dict
+            dictionary with keys list_of_non_spline_slices and list_of_non_spline_input_features. 
     '''
     
     for spline_slice, spline_input_features in zip(spline_info['list_of_spline_slices'], 
@@ -503,14 +503,17 @@ def compute_orthogonalization_pattern_deepnets(net_feature_names,
     ----------
         net_feature_names: list of strings
             list of names of input features to the deep neural network
-
         spline_info: dict
-            dictionary with keys list_of_spline_slices and list_of_spline_input_features. As produced by get_info_from_design_matrix
+            dictionary with keys list_of_spline_slices and list_of_spline_input_features. As produced by 
+            get_info_from_design_matrix
+        non_spline_info: dict
+            dictionary with keys list_of_non_spline_slices and list_of_non_spline_input_features. 
             
     Returns
     -------
         orthogonalization_pattern: list of slice objects
-            For each term in the design matrix wrt that the deep neural network should be orthogonalized there is a slice in the list.
+            For each term in the design matrix wrt that the deep neural network should be orthogonalized there is 
+            a slice in the list.
     '''
     
     

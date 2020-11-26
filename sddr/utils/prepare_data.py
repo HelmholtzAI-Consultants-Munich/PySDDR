@@ -8,7 +8,7 @@ import os
 #from model import TestNet
 #import torchvision.models as models
 
-class Prepare_Data(object):
+class PrepareData(object):
     '''
     The Prepare_Data class parses the formulas defined by the user. This class includes fit and transform functions, which parses all information necessary to initialize the sddr network and also prepares the data by calculating penalty matrices (multiplied by the smoothing parameters lambda, which are computed from degrees of freedom) and orthogonalizing the non-linear (e.g. splines) wrt to the linear part of the formula.
 
@@ -39,8 +39,8 @@ class Prepare_Data(object):
             appears in the formula.
         network_info_dict: dictionary
             A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts
-            will be: 'struct_shapes', 'P', 'deep_models_dict' and 'deep_shapes' with corresponding values for each distribution
-            paramter, i.e. given formula (shapes of structured parts, penalty matrix, a dictionary of the deep models' 
+            will be: 'deep_models_dict', 'deep_shapes', 'struct_shapes' and 'orthogonalization_pattern' with corresponding values 
+            for each distribution paramter, i.e. given formula (shapes of structured parts, a dictionary of the deep models' 
             arcitectures used in the current formula and the output shapes of these deep models)
         formula_terms_dict: dictionary
             A dictionary where keys are the distribution's parameter names and values are dicts containing the structured term of 
