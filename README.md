@@ -13,7 +13,11 @@ The package works for both mean and distributional regression while assuming a d
 To install the package run:
 
 ```
-pip install -r requirements.txt
+pip install .        (Installation as python package: run inside directory)
+```
+or if you want to develop the package:
+```
+pip install -e .        (Installation as python package: run inside directory)
 ```
 
 If you are using conda first install pip by: ```conda install pip```
