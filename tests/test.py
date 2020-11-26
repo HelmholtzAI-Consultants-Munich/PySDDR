@@ -13,16 +13,16 @@ from torch import nn
 import pandas as pd
 import torch
 
-from sddr.dataset import SddrDataset
+from sddr.utils.dataset import SddrDataset
 
 from patsy import dmatrix
 import statsmodels.api as sm
 from sddr.utils import orthogonalize_spline_wrt_non_splines, get_info_from_design_matrix, df2lambda
-from sddr.family import Family
-from sddr.splines import spline, Spline
+from sddr.utils.family import Family
+from sddr.utils.splines import spline, Spline
 
 from sddr.utils import checkups
-from sddr.prepare_data import Prepare_Data
+from sddr.utils.prepare_data import Prepare_Data
 
 class TestSddrDataset(unittest.TestCase):
     '''
@@ -68,8 +68,8 @@ class TestSddrDataset(unittest.TestCase):
 
 
         # load data
-        self.data_path = './test_data/x.csv'
-        self.ground_truth_path = './test_data/y.csv'
+        self.data_path = '../data/test_data/x.csv'
+        self.ground_truth_path = '../data/test_data/y.csv'
 
         self.data = pd.read_csv(self.data_path ,sep=None,engine='python')
         self.target = pd.read_csv(self.ground_truth_path)
@@ -206,8 +206,8 @@ class TestPrepare_Data(unittest.TestCase):
 
 
         # load data
-        data_path = './test_data/x.csv'
-        ground_truth_path = './test_data/y.csv'
+        data_path = '../data/test_data/x.csv'
+        ground_truth_path = '../data/test_data/y.csv'
 
         self.x = pd.read_csv(data_path, sep=None, engine='python')
         self.y = pd.read_csv(ground_truth_path)
