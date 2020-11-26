@@ -7,7 +7,7 @@ import pandas as pd
 
 
 ## SDDR NETWORK PART
-class Sddr_Param_Net(nn.Module):
+class SddrParamNet(nn.Module):
     '''
     This class represents an sddr network with a structured part, one or many deep models, a linear layer for 
     the structured part and a linear layer for the concatenated outputs of the deep models. The concatenated 
@@ -15,8 +15,7 @@ class Sddr_Param_Net(nn.Module):
     parts of the deep output (by taking the Q matrix of the QR decomposition of the output of the structured part). 
     The two outputs of the linear layers are added so a prediction of a single parameter of the distribution is made
     and is returned as the final output of the network.
-    The model follows the architecture depicted here:
-    https://docs.google.com/presentation/d/1cBgh9LoMNAvOXo2N5t6xEp9dfETrWUvtXsoSBkgVrG4/edit#slide=id.g8ed34c120e_0_0
+    The model follows the architecture described in Read me file.
 
     Parameters
     ----------
@@ -24,16 +23,18 @@ class Sddr_Param_Net(nn.Module):
         dictionary where keys are names of the deep models and values are objects that define the deep models
     deep_shapes: dict
         dictionary where keys are names of the deep models and values are the outputs shapes of the deep models
-    struct_shapes: int?
+    struct_shapes: int
         number of structural features
-    P: numpy matrix 
-        matrix used for the smoothing regularization (with added zero matrix in the beginning for the linear part)
+    orthogonalization_pattern: list of slice objects
+        orthogonalization patterns for the deep neural networks, For each term in the design matrix wrt that the deep neural 
+        network should be orthogonalized there is a slice in the list.
+        
     Attributes
     ----------
-    P: numpy matrix 
-        matrix used for the smoothing regularization (with added zero matrix in the beginning for the linear part)
     deep_models_dict: dict
         dictionary where keys are names of the deep models and values are objects that define the deep models
+     orthogonalization_pattern: list of slice objects
+        orthogonalization patterns for the deep neural networks
     structured_head: nn.Linear
         A linear layer which is fed the structured part of the data
     deep_head: nn.Linear
@@ -44,7 +45,7 @@ class Sddr_Param_Net(nn.Module):
     
     def __init__(self, deep_models_dict, deep_shapes, struct_shapes, orthogonalization_pattern):
         
-        super(Sddr_Param_Net, self).__init__()
+        super(SddrParamNet, self).__init__()
         self.deep_models_dict = deep_models_dict
         
         #register external neural networks
@@ -129,19 +130,16 @@ class SddrNet(nn.Module):
 
     Parameters
     ----------
-        family: string 
-            A string describing the given distribution, e.g. "gaussian", "binomial", ...
-        regularization_params: 
-            The smoothing parameters 
+        family: Family 
+            An instance of the class Family
         network_info_dict: dict
             A dictionary with keys being parameters of the distribution, e.g. "eta" and "scale"
-            and values being dicts with keys deep_models_dict, struct_shapes and P (as used in Sddr_Param_Net)
+            and values being dicts with keys deep_models_dict, deep_shapes, struct_shapes and orthogonalization_pattern 
+            
     Attributes
     ----------
-        family: string 
-            A string describing the given distribution, e.g. "gaussian", "binomial", ...
-        #parameter_names: not used
-        
+        family: Family 
+            An instance of the class Family        
         single_parameter_sddr_list: dict
             A dictionary where keys are the name of the distribution parameter and values are the single_sddr object 
         distribution_layer_type: class object of some type of torch.distributions
@@ -152,25 +150,24 @@ class SddrNet(nn.Module):
             in family) and the predicted parameters from the forward pass
     '''
     
-    def __init__(self, family_class, network_info_dict):
+    def __init__(self, family, network_info_dict):
         super(SddrNet, self).__init__()
-        self.family_class = family_class
-        #self.parameter_names = network_info_dict.keys
+        self.family = family
         self.single_parameter_sddr_list = dict()
         for key, value in network_info_dict.items():
             deep_models_dict = value["deep_models_dict"]
             deep_shapes = value["deep_shapes"]
             struct_shapes = value["struct_shapes"]
             orthogonalization_pattern = value["orthogonalization_pattern"]
-            self.single_parameter_sddr_list[key] = Sddr_Param_Net(deep_models_dict, 
+            self.single_parameter_sddr_list[key] = SddrParamNet(deep_models_dict, 
                                                                   deep_shapes, 
                                                                   struct_shapes, 
                                                                   orthogonalization_pattern)
             
-            #register the Sddr_Param_Net network
+            #register the SddrParamNet network
             self.add_module(key,self.single_parameter_sddr_list[key])
                 
-        self.distribution_layer_type = family_class.get_distribution_layer_type()
+        self.distribution_layer_type = family.get_distribution_layer_type()
         
     def forward(self,datadict):
         
@@ -180,20 +177,20 @@ class SddrNet(nn.Module):
             sddr_net = self.single_parameter_sddr_list[parameter_name]
             pred[parameter_name] = sddr_net(data_dict_param)
             
-        predicted_parameters = self.family_class.get_distribution_trafos(pred)
+        predicted_parameters = self.family.get_distribution_trafos(pred)
         
         self.distribution_layer = self.distribution_layer_type(**predicted_parameters)
         
         return self.distribution_layer
     
     def get_log_loss(self, Y):
-    
+        ''' Compute log loss based on the trained distributional layer and the groundtruth Y '''
         log_loss = -self.distribution_layer.log_prob(Y)
         
         return log_loss
     
     def get_regularization(self, P):
-    
+        ''' Compute regularization given penalty matrix P '''
         regularization = 0
         for param  in self.single_parameter_sddr_list.keys():
             sddr_net = self.single_parameter_sddr_list[param]

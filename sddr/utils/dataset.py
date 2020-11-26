@@ -11,8 +11,7 @@ import numpy as np
 class SddrDataset(Dataset):
     '''
     The SDDRDataset class is used to load the data on initialization and parse the formula content of each distribution parameter. 
-    The parsing is used to seperate the structured from the unstructured part of the network and to create the corresponding 
-    input matrices for each part. It furthermore assembles information about the network structures.
+    The parsing is used to seperate the structured from the unstructured part of the network and to create the corresponding input matrices for each part. It furthermore assembles information about the network structures.
     
     Parameters
     ----------
@@ -21,54 +20,39 @@ class SddrDataset(Dataset):
             - string: file path pointing to the input matrix in csv format. This file must contain column headers 
                       that correspond to the names used in the formula. If input matrix (X) is given as file path, 
                       the target variable (Y) should also be given as file path.
-            - pandas dataframe: input matrix as pandas object with columns names that correspond to the names used in the formula.
-        target: str / Pandas.DataFrame
+            - pandas dataframe: input matrix as pandas object with columns names that correspond to the names used in the    
+                      formula.
+        prepare_data: Python Object
+            The Prepare_Data class includes fit and transform functions and parses the formulas defined by the user. 
+        target: str / Pandas.DataFrame / None(default)
             target (Y), given as:
             - string: file path pointing to the target column in csv format. This file must contain a column header 
                       that corresponds to the name of the target variable. If target variable (Y) is given as file path, 
                       the input matrix (X) should also be given as file path.
             - string: name of the target variable that will be extracted from the input matrix 'data'. 
-                      In this case the taget varibel must be contained in the input matrix 'data'.
+                      In this case the taget variable must be contained in the input matrix 'data'.
             - pandas dataframe: the target variable as pandas dataframe column. 
                       In this case the target variable must be excluded from the input matrix 'data'.
-            - None (default):
-                        If target is given as none a dummy target with zeros will be created.
-        family: Family 
-            An instance of the class Family; on initialization checks whether the distribution given by the user is in the 
-            list of available distribution and holds the name of the current distribution defined by the user
-        formulas: dict
-            A dictionary with keys corresponding to the parameters of the distribution defined by the user 
-            (e.g. 'rate' for poisson distribution or 'loc' and 'scale' for normal distribution) and values corresponding to strings
-            defining the formula for each distribution, e.g. formulas['loc'] = '~ 1 + x1 + spline(x2, bs="bs",df=9) + d1(x1) + d2(x2)'. 
-            Formulas must be given in right-sided format only. 
-        deep_models_dict: dict
-            dictionary where keys are names of the deep models and values are objects that define the deep models
-            
-        regularization_params: dict
-            A dictionary where keys are the name of the distribution parameter (e.g. eta,scale) and values 
-            are either a single smooting parameter for all penalities of all splines for this parameter, or a list of smooting parameters, each for one of the splines that appear in the formula for this parameter
+            - None (default, normally used in the predict function):
+                        If target is given as none a dummy target with zeros will be created. 
+        unstructured_data_info: dictionary - default empty dict
+            The information of unstructured data, including file paths of the unstructured data and the data type (e.g. image)
         fit: bool - default True
             If the prepare_data object should be fitted to the data during initialization of the dataset.
+        clipping: boolean - default False
+                If true then when the unseen data is out of the range of the training data, they will be clipped.
+                If false then when the unseen data is out of range, an error will be thown.
             
     Attributes
     -------
-        y: torch
-            target (Y) converted from panda dataframe to torch object
-        parsed_formula_contents: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts 
-            will be: 'struct_shapes', 'P', 'deep_models_dict' and 'deep_shapes' with corresponding values for each distribution
-            paramter, i.e. given formula (shapes of structured parts, penalty matrix, a dictionary of the deep models' arcitectures
-            used in the current formula and the output shapes of these deep models)
-        meta_datadict: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts 
-            will be: 'structured' and neural network names if defined in the formula of the parameter (e.g. 'dm1'). Their values 
-            are the data for the structured part (after smoothing for the non-linear terms) and unstructured part(s) of the SDDR 
-            model 
-        dm_info_dict: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts containing: a bool of whether the
-            formula has an intercept or not and a list of the degrees of freedom of the splines in the formula
+        unstructured_data_info: dict - default empty dict
+            The information of unstructured data, including file paths of the unstructured data and the data type (e.g.image) 
+        prepared_data: python object
+            The Prepare_Data class includes fit and transform functions and parses the formulas defined by the user. 
+        transform: function
+            convert to torch object
     '''
-    def __init__(self, data, prepare_data, target = None, unstructred_data_info=dict(), fit = True, clipping = False):
+    def __init__(self, data, prepare_data, target = None, unstructured_data_info=dict(), fit = True, clipping = False):
         
         try:
             # data loader for csv files
@@ -93,16 +77,16 @@ class SddrDataset(Dataset):
             print('ATTENTION! File format for data and target needs to be the same.')
 
         # add file paths of unstructured features to data
-        self.unstructred_data_info = unstructred_data_info
+        self.unstructured_data_info = unstructured_data_info
 
-        if self.unstructred_data_info:
+        if self.unstructured_data_info:
             # for testing with local image set uncomment here 
             #self._data = self._data.iloc[:20]
             #self._target = self._target[:20]
-            for feature_name in self.unstructred_data_info.keys():
+            for feature_name in self.unstructured_data_info.keys():
                 # if the user hasn't included unstructured data info as column in structured data
                 if feature_name not in self._data.columns:
-                    list_unstructured_feat_files = os.listdir(self.unstructred_data_info[feature_name]['path'])
+                    list_unstructured_feat_files = os.listdir(self.unstructured_data_info[feature_name]['path'])
                     # remove hidden files
                     list_unstructured_feat_files = [file for file in list_unstructured_feat_files if not file.startswith('.')]
                     # sort them
@@ -141,15 +125,15 @@ class SddrDataset(Dataset):
                         feature_names = data_row.columns
                     for cur_feature in feature_names:
                         # if there is an unstructured feature it must be read from memory so store that feature in a list
-                        if cur_feature in self.unstructred_data_info.keys():
+                        if cur_feature in self.unstructured_data_info.keys():
                             unstructured_feat_list.append(cur_feature)
                             # for now we can only have one unstructured feature so if it is found break loop
                             break
                     # if there is an unstructured feature - for now only one
                     if unstructured_feat_list:
                         cur_feature = unstructured_feat_list[0]
-                        feat_datatype = self.unstructred_data_info[cur_feature]['datatype']
-                        root_path = self.unstructred_data_info[cur_feature]['path']
+                        feat_datatype = self.unstructured_data_info[cur_feature]['datatype']
+                        root_path = self.unstructured_data_info[cur_feature]['path']
                         if feat_datatype == 'image':
                             if type(index) is int:
                                 datadict[param][structured_or_net_name] = self.load_image(root_path, data_row[cur_feature])
