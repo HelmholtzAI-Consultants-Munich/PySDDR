@@ -1,3 +1,11 @@
+import sys
+import os
+
+
+PACKAGE_PARENT = '..'
+SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
+
 # import the sddr module
 from sddr import SDDR
 import torch.nn as nn
@@ -24,8 +32,8 @@ def integration_test_simple_gam():
     np.random.seed(1)
     
     #load data
-    data_path = './example_data/simple_gam/X.csv'
-    target_path = './example_data/simple_gam/Y.csv'
+    data_path = '../data/simple_gam/X.csv'
+    target_path = '../data/simple_gam/Y.csv'
 
     data = pd.read_csv(data_path,delimiter=';')
     target = pd.read_csv(target_path)
@@ -121,8 +129,8 @@ def integration_test_gamlss():
     np.random.seed(1)
     
     #load data
-    data_path = './example_data/gamlss/X.csv'
-    target_path = './example_data/gamlss/Y.csv'
+    data_path = '../data/gamlss/X.csv'
+    target_path = '../data/gamlss/Y.csv'
 
     data = pd.read_csv(data_path,delimiter=';')
     target = pd.read_csv(target_path)
@@ -257,8 +265,8 @@ def integration_test_load_and_predict():
     np.random.seed(1)
     
     #load data
-    data_path = './example_data/gamlss/X.csv'
-    target_path = './example_data/gamlss/Y.csv'
+    data_path = '../data/gamlss/X.csv'
+    target_path = '../data/gamlss/Y.csv'
 
     data = pd.read_csv(data_path,delimiter=';')
     target = pd.read_csv(target_path)
@@ -327,8 +335,8 @@ def integration_test_load_and_resume():
     np.random.seed(1)
     
     #load data
-    data_path = './example_data/simple_gam/X.csv'
-    target_path = './example_data/simple_gam/Y.csv'
+    data_path = '../data/simple_gam/X.csv'
+    target_path = '../data/simple_gam/Y.csv'
 
     data = pd.read_csv(data_path,delimiter=';')
     target = pd.read_csv(target_path)
@@ -425,7 +433,7 @@ def integration_test_mnist():
     np.random.seed(1)
 
     #load data
-    data_path = './mnist_data/tab.csv'
+    data_path = '../data/mnist_data/tab.csv'
 
     data = pd.read_csv(data_path,delimiter=',').loc[:1000,:]
 
@@ -440,7 +448,7 @@ def integration_test_mnist():
 
     unstructured_data = {
       'numbers' : {
-        'path' : './mnist_data/mnist_images',
+        'path' : '../data/mnist_data/mnist_images',
         'datatype' : 'image'
       }
     }

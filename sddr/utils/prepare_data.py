@@ -1,4 +1,4 @@
-from utils import split_formula, get_info_from_design_matrix, get_P_from_design_matrix, orthogonalize_spline_wrt_non_splines, spline, compute_orthogonalization_pattern_deepnets
+from .utils import split_formula, get_info_from_design_matrix, get_P_from_design_matrix, orthogonalize_spline_wrt_non_splines, spline, compute_orthogonalization_pattern_deepnets
 from patsy import dmatrix, build_design_matrices
 import torch
 import pandas as pd

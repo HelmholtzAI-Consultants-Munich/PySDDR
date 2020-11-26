@@ -6,7 +6,7 @@ import os
 from torch import nn
 import torch
 import parser
-from splines import spline, Spline
+from .splines import spline, Spline
 
 
 

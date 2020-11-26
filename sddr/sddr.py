@@ -10,11 +10,11 @@ from torch import nn
 from torch.utils.data import DataLoader
 import torch.optim as optim
 # pysddr imports
-from sddrnetwork import SddrNet, Sddr_Param_Net
-from dataset import SddrDataset
-from utils import checkups
-from prepare_data import Prepare_Data
-from family import Family
+from .sddrnetwork import SddrNet, Sddr_Param_Net
+from .utils.dataset import SddrDataset
+from .utils import checkups
+from .utils.prepare_data import Prepare_Data
+from .utils.family import Family
 import warnings
 import copy
 
