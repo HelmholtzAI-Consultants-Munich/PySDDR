@@ -10,7 +10,7 @@ The package works for both mean and distributional regression while assuming a d
 
 ## Installation
 
-To install the necessary packages for this framework run:
+To install the package run:
 
 ```
 pip install -r requirements.txt
@@ -115,31 +115,40 @@ The user may also wish to load a pretrained model to resume training. For this t
 
 There are a number of inputs which need to be defined by the user before training, or testing can be performed. The user can either directly define these in their run script or give all the parameters through a config file - for more information see [Training features](#Training features). 
 
-A list of all inputs the user needs to give can be seen next:
+A list of all required inputs during initialization of the sddr instance can be seen next:
 
-**data:** the input data
+**distribution:** the assumed distribution of the data, see more in [Distributions](#Distributions)
 
-**target:** the target data, i.e. our ground truth
+**formulas:** a dictionary with a list of formulas for each parameters of the distribution, see more in [Formulas](#Formulas)
 
-**output_dir:** the path of the output directory in which to save training results, such as loss figures or checkpoints  **-> do we need it or is it optional?**
+**deep_models_dict:** a dictionary where keys are names of deep models and values are also dictionaries. In turn, their keys are 'model' with values being the model arcitectures and 'output_shape' with values being the output size of the model. Again see [Deep Neural Networks](#Deep-Neural-Networks) for more details
 
-**mode:** either 'train' or 'test' depending on what we wish to do
+**train_parameters:** A dictionary where the training parameters are defined, see more in [Train Parameters](#Train-Parameters)
 
-**distribution:** the assumed distribution of the data
-
-**formulas:** a dictionary with a list of formulas for each parameters of the distribution, see [Examples of training features](#Examples of training features) for more examples
-
-**deep_models_dict:** a dictionary where keys are names of deep models and values are also dictionaries. In turn, their keys are 'model' with values been the model arcitectures and 'output_shape' with values been the output size of the model. Again see [Examples of training features](#Examples of training features) for examples.
-
-**train_parameters:** A dictionary where the training parameters are defined. There are: batch size, epochs, optimizer, optimizer parameters and degrees of freedom of each parameter
+Additionally, the path of the output directory in which to save results  can be defined by the user by setting: **output_dir:** 
 
 ### Data
 
-There are two parameters required regarding the data, namely data and target. For both parameters two options are available:
-* The user can give a local path which corresponds to a csv files storing the data. The SDDRDataset class will then load the data.
-* The user has already loaded the data manually and sets data and target to two Pandas Data Frames corresponding to the input data and targert data.
+The data is required as input to three functions: ```sddr.train, sddr.predict, sddr.load```.
 
-A combination of the above options is also possible, i.e. have data as a dataframe and load target from a file and vice versa. 
+**structured_data:** the structured data in tabular form. This data can either be pre-loaded into a pandas dictionary which is then given as an input to the sddr functions, or the user can define a path to a csv file where the data is stored. Examples of these two options can be found in the beginner's guide tutorial.
+
+**unstructured_data:** the unstructured data. Currently the PySDDR package only expects images as unstructured data (but we aim to extend this soon to include text). The data is loaded in batches and for the initialization of the DataLoader a dictionary needs to be provided with information on the unstructured data. An example of this can be see below:
+
+```
+unstructured_data = {
+    'x3':{
+        'path': './mnist_data/mnist_images',
+        'datatype': 'image'
+    }
+} 
+```
+
+The keys of the dictionary are the feature names as defined also in the given formulas. Each feature then has a dictionary with two keys, 'path' and 'datatype', where the path to the data directory is provided and the data type defined (currently only 'image' is accepted). 
+
+**target:** the target data, i.e. our ground truth. This can also be given witht he same two options as above. Note that if the structured data has been given as a string or a pandas dataframe then the target data must also be given in the same format. However, one dataframe can be given for both in which case the column name of the target with the dataframe needs to be provided as target.
+
+A combination of the above options is also possible, i.e. have data as a dataframe and load target from a file and vice versa. Examples of these options can again be found in the beginner's guide tutorial.
 
 ### Distributions
 
@@ -153,12 +162,25 @@ Currently, the available distribution in PySDDR are:
 * Multinomial_prob: multinomial distribution parameterized by total_count(=1) and probs
 * Logistic: multinomial distribution parameterized by loc and scale
 
-Note that when setting the distribution parameter the distribution names should be given exactly as above, as well as their parameters (which are required when defining formulas and degrees of freedom of each parameter).
+Note that when setting the ```distribution``` parameter the distribution name should be given exactly as above in sting format, as well as their parameters (which are required when defining formulas and degrees of freedom of each parameter), e.g. ```distribution='Poisson'```
+
+### Formulas
+
+The PySDDR package uses Patsy to .. [LISA HELP]
+
+An example of formulas for a Logistic distribution is given below:
+
+```
+formulas = {'loc': '~1+spline(x1, bs="bs", df=4)+spline(x2, bs="bs",df=4) + d1(x3)+d2(x5)',
+            'scale': '~1 + spline(x3, bs="bs",df=4) + spline(x4, bs="bs",df=4)'
+            }
+```
+Formulas here has two keys loc and scale, corresponding to the two parameters of the Logistic distribution. The features x1,x2,x3,x4 need to be structured data as they are given as input to the splines (structured part). This means that the tabular data needs to have column names corresponding to the features, i.e. x1,x2,x3,x4. Feature x5 can be either structured or unstructured - note that if it is unstructured 'x5' should be a key value in the unstructured_data input. 
 
 
 ### Deep Neural Networks
 
-The neural network or networks to be used in the SDDR package are defined by the user. These user gives a name for each and this will be the corresponding key of the deep_models_dict input. Each value of the dictionary is of itself a dictionary with keys: model, where the neural network architecture is defined, and output_shape where the user should specify the output size of the neural network. This will help build the SDDR_Param_Net. The architecture can be either directly given, defined in a local script, or a pytorch model can be used.
+The neural network or networks to be used in the SDDR package are defined by the user. These user gives a name for each and this will be the corresponding key of the deep_models_dict input. This also then needs to be given in the same way in the formulas. Each value of the dictionary is of itself a dictionary with keys: model, where the neural network architecture is defined, and output_shape where the user should specify the output size of the neural network. This will help build the SddrFormulaNet. The architecture can be either directly given, defined in a local script, or a pytorch model can be used.
  
 #### Examples
 
@@ -189,7 +211,6 @@ deep_models_dict = {
 Note that also here the correct import needs to be given, e.g. ``` from model import myCNN```
 
 3. Use a pytorch model:
-_This case we still need to test but i think it will work out of the box_
 ```
 deep_models_dict = {
         'd0': {
@@ -200,7 +221,28 @@ deep_models_dict = {
 
 Note that also here the correct import needs to be given, e.g. ```import torchvision.models as models```
 
-## Features
+The last two methods can only be used if the class inputs are defined in a python script, they are currently not available when loading the inputs from a config file.
+
+
+### Train Parametes
+
+The training parameters are: batch size, epochs, optimizer, optimizer parameters and degrees of freedom of each parameter. Batch size, epochs and degrees of freedom are required but defining the optimizer is optional. If no optimizer is defined by the user Adam is used per default with PyTorch's default optimizer parameters, which can be found [here](https://pytorch.org/docs/stable/optim.html). An example of training parameters can be seen below:
+
+
+```
+ train_parameters = {
+ 'batch_size': 200,
+ 'epochs': 200,
+ 'optimizer': optim.SGD,
+ 'optimizer_params':{'lr': 0.01, 'momentum': 0.9}, 
+ 'degrees_of_freedom': {'rate': 10}
+ }
+ ```
+
+Note that ```train_parameters['degrees_of_freedom']``` is a dictionary where the degrees of freedom for the regularization of each of each parameter is defined -> [LISA HELP]
+
+
+## Features -> remove this part?
 
 ### Scientific features
 
