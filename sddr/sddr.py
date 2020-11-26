@@ -406,7 +406,7 @@ class Sddr(object):
         partial_effects = dict()
         predict_dataset = SddrDataset(data,
                                       prepare_data = self.prepare_data, 
-                                      unstructred_data_info = unstructured_data,
+                                      unstructured_data_info = unstructured_data,
                                       fit = False,
                                       clipping = clipping)
         
