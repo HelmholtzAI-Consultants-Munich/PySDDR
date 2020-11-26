@@ -1,3 +1,11 @@
+import sys
+import os
+
+PACKAGE_PARENT = '..'
+SCRIPT_DIR = os.path.dirname(os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__))))
+sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
+
+
 import unittest
 
 import numpy as np
@@ -5,16 +13,16 @@ from torch import nn
 import pandas as pd
 import torch
 
-from dataset import SddrDataset
+from sddr.dataset import SddrDataset
 
 from patsy import dmatrix
 import statsmodels.api as sm
-from utils import orthogonalize_spline_wrt_non_splines, get_info_from_design_matrix, df2lambda
-from family import Family
-from splines import spline, Spline
+from sddr.utils import orthogonalize_spline_wrt_non_splines, get_info_from_design_matrix, df2lambda
+from sddr.family import Family
+from sddr.splines import spline, Spline
 
-from utils import checkups
-from prepare_data import Prepare_Data
+from sddr.utils import checkups
+from sddr.prepare_data import Prepare_Data
 
 class TestSddrDataset(unittest.TestCase):
     '''
