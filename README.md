@@ -47,12 +47,12 @@ The model architecture is built dynamically, depending on the user inputs such a
 
 ### Preprocessing
 
-PySDDR has been built to accept tabular and imaging data, both singly and combined. The individual features of these data can be of three types: linear, structured and unstructured. The user needs to define which features belong to each of these three types and this is done through the parameters' formulas. The first part of preprocessing is then to split the input data into these three types depending on the given formulas. Additionally, the structured part is fitted to one or many basis functions giving smooth partial effects. Currently for the basis functions, b-splines are used per default, where Cyclic Cubic splines are also available.
+PySDDR has been built to accept tabular and imaging data, both singly and combined. The individual features of these data can be of two types: structured and unstructured. The user needs to define which features belong to each of these types and this is done through the parameters' formulas. The first part of preprocessing is then to split the input data into structured and unstructured depending on the given formulas. The structured part can have linear and non-linear (smoothing splines) terms, while the unstructured part can consist of one or more neural networks. [The non-linear strcuctured terms smoothing terms]
+Currently b-splines are used per default, whereas Cyclic Cubic splines are also available.
 
 ### SddrFormulaNet
 
-As mentioned, each SddrFormulaNet predicts a parameter of the assumed distribution. Depending on the formula the user has given for this parameter the SddrFormulaNet is built. The inputs to the network are the linear part of the data, the processed structured data and the unstructured data. _when does orthog of linear and structured happen-mention!_ The processed structured data has already been fitted with splines _word this better_, the number of which is defined by the user in the equation. The outputs of the smoothing _terms_ are concatenated and given to a fully connected _(linear)_ layer, which we name Structured Head. The unstructured data is given into one or multiple neural networks. Both the number and arcitecture of these are pre-defined by the user and are built within the SddrFormulaNet in a parallel fashion. Their outputs are concatenated and together with the processed structured data are given to the orthogonalization layer. 
-The orthogonalized, concatenated output of the neural networks is fed into a fully connected _(linear)_ layer, which we name Deep Head. The sum of this output and the output of the Structured Head forms the parameter prediction of the SddrFormulaNet. An example of the architecture can be seen below.
+As mentioned, each SddrFormulaNet predicts a parameter of the assumed distribution. Depending on the given formula the SddrFormulaNet is built. The inputs to the network are the processed structured data and the unstructured data. The processed structured data (linear and non-linear terms) is concatenated and given to a fully connected layer, which we name Structured Head. The unstructured data is given into one or multiple neural networks. Both the number and architecture of these are pre-defined by the user and are built within the SddrFormulaNet in a parallel fashion. Their outputs are concatenated and together with the processed structured data are given to the orthogonalization layer. Next, the orthogonalized, concatenated output of the neural networks is fed into a fully connected layer, which we name Deep Head. The sum of this output and the output of the Structured Head forms the parameter prediction of the SddrFormulaNet. An example of the architecture can be seen below.
 
 ![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/sddr_param_net.jpg)
 
@@ -67,11 +67,19 @@ For structured head weights $$w$$ and deep head weights $$\gamma$$ the ouptut of
 
 $$ \eta = Xw + \tilde{U}\gamma$$
 
+### Smoothing Penalty
+
+
+
+
+
+
 
 ## Sddr User Interface
  
 The user interacts with the package through the Sddr class. An overview of this class and its iteraction with the rest of the package can be seen in the fgigure below:
 
+[LISAS FIG]
 
 
 ### Training
@@ -115,7 +123,9 @@ Note here that the training data also needs to be provided during load for the p
 The user may also wish to load a pretrained model to resume training. For this the first two steps (init, load) from above need to be performed and then the user can resume training by ```sddr.train(target, structured_data, resume=True)```
 
 
-### User inputs
+### User inputs 
+
+#### Sddr Initialization
 
 There are a number of inputs which need to be defined by the user before training, or testing can be performed. The user can either directly define these in their run script or give all the parameters through a config file - for more information see [Training features](#Training features). 
 
@@ -129,9 +139,9 @@ A list of all required inputs during initialization of the sddr instance can be 
 
 **train_parameters:** A dictionary where the training parameters are defined, see more in [Train Parameters](#Train-Parameters)
 
-Additionally, the path of the output directory in which to save results  can be defined by the user by setting: **output_dir:** 
+Additionally, the path of the output directory in which to save results  can be defined by the user by setting: **output_dir** 
 
-### Data
+#### Data
 
 The data is required as input to three functions: ```sddr.train, sddr.predict, sddr.load```.
 
@@ -154,7 +164,7 @@ The keys of the dictionary are the feature names as defined also in the given fo
 
 A combination of the above options is also possible, i.e. have data as a dataframe and load target from a file and vice versa. Examples of these options can again be found in the beginner's guide tutorial.
 
-### Distributions
+#### Distributions
 
 Currently, the available distribution in PySDDR are:
 
@@ -168,18 +178,18 @@ Currently, the available distribution in PySDDR are:
 
 Note that when setting the ```distribution``` parameter the distribution name should be given exactly as above in sting format, as well as their parameters (which are required when defining formulas and degrees of freedom of each parameter), e.g. ```distribution='Poisson'```
 
-### Formulas
+#### Formulas
 
-The PySDDR package uses Patsy to .. [LISA HELP]
+The PySDDR package uses Patsy in the backend to parse the formulas. Each formula is given as a string and follows Patsy's formula conventions described [here](https://patsy.readthedocs.io/en/v0.1.0/formulas.html).
 
 An example of formulas for a Logistic distribution is given below:
 
 ```
-formulas = {'loc': '~1+spline(x1, bs="bs", df=4)+spline(x2, bs="bs",df=4) + d1(x3)+d2(x5)',
+formulas = {'loc': '~1+x1+spline(x1, bs="bs", df=4)+spline(x2, bs="bs",df=4) + d1(x3)+d2(x5)',
             'scale': '~1 + spline(x3, bs="bs",df=4) + spline(x4, bs="bs",df=4)'
             }
 ```
-Formulas here has two keys loc and scale, corresponding to the two parameters of the Logistic distribution. The features x1,x2,x3,x4 need to be structured data as they are given as input to the splines (structured part). This means that the tabular data needs to have column names corresponding to the features, i.e. x1,x2,x3,x4. Feature x5 can be either structured or unstructured - note that if it is unstructured 'x5' should be a key value in the unstructured_data input. 
+Formulas here has two keys loc and scale, corresponding to the two parameters of the Logistic distribution. The features x1,x2,x3,x4 need to be structured data as they are given as input both to the linear term and to the splines (structured part). This means that the tabular data needs to have column names corresponding to the features, i.e. x1,x2,x3,x4. Feature x5 can be either structured or unstructured - note that if it is unstructured 'x5' should be a key value in the unstructured_data input. 
 
 
 ### Deep Neural Networks
@@ -239,30 +249,24 @@ The training parameters are: batch size, epochs, optimizer, optimizer parameters
  'epochs': 200,
  'optimizer': optim.SGD,
  'optimizer_params':{'lr': 0.01, 'momentum': 0.9}, 
- 'degrees_of_freedom': {'rate': 10}
+ 'degrees_of_freedom': {'loc':4, 'scale':4}
  }
  ```
 
-Note that ```train_parameters['degrees_of_freedom']``` is a dictionary where the degrees of freedom for the regularization of each of each parameter is defined -> [LISA HELP]
+Note that ```train_parameters['degrees_of_freedom']``` is a dictionary where the degrees of freedom of each parameter is defined. This can either be a list of degrees of freedom for each spline in the formula or a single number (same degrees of freedom for all splines). Using the Demmler-Reinsch Orhtogonalization, all smoothing terms are then calculated based on this specification (e.g., setting degrees_of_freedom = 5 results in sp = 1.234 for one smooth, but sp = 133.7 for another smooth due to their different nature and data). This ensures that no smooth term has more flexibility than the other term which makes sense in certain situations.
 
 
-## Features -> remove this part?
-
-### Scientific features
-
-_Here discuss the scientific features available to the user, e.g. w or w/o orthogonolization, optimizer options etc._
-
-## Examples of using scientific features
+## Example 
 
 ```
-this is an example, here we can link also to test_run.ipynb
+this is an example
 ```
 _We should however add more content than currently in jupyter notebook_
 
- ## Examples of training features
+ ## Example 
 
 ```
-this is an example, here we can link also to example_usage.ipynb
+this is an example
 ```
 
 
