@@ -79,9 +79,11 @@ class Sddr(object):
         print('Using device: ', self.device)
 
         # check if an output directory has been given - if yes check if it already exists and create it if not
-        if self.config['output_dir']:
+        if 'output_dir' in self.config.keys():
             if not os.path.exists(self.config['output_dir']):
                 os.mkdir(self.config['output_dir'])
+        else:
+            self.config['output_dir'] = './'
     
     def train(self, target, structured_data, unstructured_data=dict(), resume=False, plot=False):
         '''

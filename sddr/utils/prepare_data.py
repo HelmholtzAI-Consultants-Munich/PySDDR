@@ -3,10 +3,7 @@ from patsy import dmatrix, build_design_matrices
 import torch
 import pandas as pd
 import os
-
-#import torch.nn as nn
-#from model import TestNet
-#import torchvision.models as models
+import torch.nn as nn
 
 class PrepareData(object):
     '''

@@ -1,23 +1,16 @@
-structured_data: ./example_data/simple_gam/X.csv
-unstructured_data: {
-  x3: {
-    path: './example_data/images',
-    datatype: 'image'
-  }
-} 
-target: ./example_data/simple_gam/Y.csv
+data_path: ../data/simple_gam/X.csv
+ground_truth_path: '../data/simple_gam/Y.csv'
+
 output_dir: ./outputs
-mode: train
-load_model: #./outputs/model.pth
 
 distribution: Poisson
-formulas: {rate: '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x3)+d2(x2)'
+formulas: {rate: '~1+spline(x1, bs="bs",df=9)+spline(x2, bs="bs",df=9)+d1(x1)+d2(x2)'
 }
 
 deep_models_dict: {
   d1: {
-    model: 'models.alexnet()', #'TestNet(n_channels=1, n_classes=15)', #'nn.Sequential(nn.Linear(1,15))',
-    output_shape: 1000},
+    model: 'nn.Sequential(nn.Linear(1,15))',
+    output_shape: 15},
   d2: {
     model: 'nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,8))',
      output_shape: 8}
@@ -25,8 +18,7 @@ deep_models_dict: {
 
 train_parameters: {
   batch_size: 1000,
-  epochs: 1000,
-  optimizer: 'optim.SGD',
-  optimizer_params: {lr: 0.01, momentum: 0.9}, 
-  degrees_of_freedom: {rate: 10}
+  epochs: 200,
+  degrees_of_freedom: {rate: 6},
+  optimizer: optim.RMSprop
 }
