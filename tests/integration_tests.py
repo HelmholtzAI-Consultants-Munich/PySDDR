@@ -2,7 +2,7 @@ import sys
 import os
 
 # import the sddr module
-from sddr import SDDR
+from sddr import Sddr
 import torch.nn as nn
 import pandas as pd
 import torch.optim as optim
@@ -35,7 +35,7 @@ def integration_test_simple_gam():
 
     output_dir = './outputs'
 
-    #define SDDR parameters
+    #define Sddr parameters
     distribution  = 'Poisson'
 
     formulas = {'rate': '~1 + spline(x1, bs="bs",df=9) + spline(x2, bs="bs",df=9) + d1(x1) + d2(x2)'}
@@ -55,14 +55,14 @@ def integration_test_simple_gam():
         'optimizer' : optim.RMSprop
     }
 
-    #initialize SDDR
-    sddr = SDDR(output_dir=output_dir,
+    #initialize Sddr
+    sddr = Sddr(output_dir=output_dir,
                 distribution=distribution,
                 formulas=formulas,
                 deep_models_dict=deep_models_dict,
                 train_parameters=train_parameters)
     
-    # train SDDR
+    # train Sddr
     sddr.train(target=target, structured_data=data)
     
     #compute partial effects
@@ -132,7 +132,7 @@ def integration_test_gamlss():
 
     output_dir = './outputs'
 
-    #define SDDR parameters
+    #define Sddr parameters
     distribution  = 'Logistic'
 
     formulas = {'loc': '~1+spline(x1, bs="bs", df=4)+spline(x2, bs="bs",df=4) + d1(x1)+d2(x2)',
@@ -155,14 +155,14 @@ def integration_test_gamlss():
         'optimizer' : optim.RMSprop
     }
 
-    #initialize SDDR
-    sddr = SDDR(output_dir=output_dir,
+    #initialize Sddr
+    sddr = Sddr(output_dir=output_dir,
                 distribution=distribution,
                 formulas=formulas,
                 deep_models_dict=deep_models_dict,
                 train_parameters=train_parameters)
     
-    # train SDDR
+    # train Sddr
     sddr.train(target=target, structured_data=data)
     
     #compute partial effects
@@ -271,7 +271,7 @@ def integration_test_load_and_predict():
 
     output_dir = './outputs'
 
-    #define SDDR parameters
+    #define Sddr parameters
     distribution  = 'Logistic'
 
     formulas = {'loc': '~1+spline(x1, bs="bs", df=4)+spline(x2, bs="bs",df=4) + d1(x1)+d2(x2)',
@@ -293,19 +293,19 @@ def integration_test_load_and_predict():
         'degrees_of_freedom': {'loc':4, 'scale':4},
         'optimizer' : optim.RMSprop
     }
-    #initialize SDDR
-    sddr = SDDR(output_dir=output_dir,
+    #initialize Sddr
+    sddr = Sddr(output_dir=output_dir,
                 distribution=distribution,
                 formulas=formulas,
                 deep_models_dict=deep_models_dict,
                 train_parameters=train_parameters)
     
-    # train SDDR
+    # train Sddr
     sddr.train(target=train_target, structured_data=train_data)
     _, partial_effects = sddr.predict(test_data, clipping=True)
     sddr.save('temp_gamlss.pth')
-    # load trained SDDR and predict
-    pred_sddr = SDDR(output_dir=output_dir,
+    # load trained Sddr and predict
+    pred_sddr = Sddr(output_dir=output_dir,
                 distribution=distribution,
                 formulas=formulas,
                 deep_models_dict=deep_models_dict,
@@ -338,7 +338,7 @@ def integration_test_load_and_resume():
 
     output_dir = './outputs'
 
-    #define SDDR parameters
+    #define Sddr parameters
     distribution  = 'Poisson'
 
     formulas = {'rate': '~1 + spline(x1, bs="bs",df=9) + spline(x2, bs="bs",df=9) + d1(x1) + d2(x2)'}
@@ -358,20 +358,20 @@ def integration_test_load_and_resume():
         'optimizer' : optim.RMSprop
     }
     
-    #initialize SDDR
-    sddr_100 = SDDR(output_dir=output_dir,
+    #initialize Sddr
+    sddr_100 = Sddr(output_dir=output_dir,
                 distribution=distribution,
                 formulas=formulas,
                 deep_models_dict=deep_models_dict,
                 train_parameters=train_parameters)
 
-    # train SDDR
+    # train Sddr
     sddr_100.train(target=target, structured_data=data)
     #_, partial_effects = sddr.predict(test_data, clipping=True)
     sddr_100.save('temp_simple_gam.pth')
-    # load trained SDDR and predict
+    # load trained Sddr and predict
     train_parameters['epochs'] = 500
-    sddr_resume = SDDR(output_dir=output_dir,
+    sddr_resume = Sddr(output_dir=output_dir,
                 distribution=distribution,
                 formulas=formulas,
                 deep_models_dict=deep_models_dict,
@@ -400,7 +400,7 @@ def integration_test_load_and_resume():
         'optimizer' : optim.RMSprop
     }
     
-    sddr_500 = SDDR(output_dir=output_dir,
+    sddr_500 = Sddr(output_dir=output_dir,
             distribution=distribution,
             formulas=formulas,
             deep_models_dict=deep_models_dict,
@@ -453,7 +453,7 @@ def integration_test_mnist():
 
 
 
-    #define SDDR parameters
+    #define Sddr parameters
     formulas = {'loc': '~ -1 + spline(x1, bs="bs", df=10) + x2 + dnn(numbers) + spline(x3, bs="bs", df=10)',
                 'scale': '~1'
                 }
@@ -474,15 +474,15 @@ def integration_test_mnist():
         'optimizer' : optim.RMSprop
     }
 
-    #initialize SDDR
-    sddr = SDDR(output_dir=output_dir,
+    #initialize Sddr
+    sddr = Sddr(output_dir=output_dir,
                 distribution=distribution,
                 formulas=formulas,
                 deep_models_dict=deep_models_dict,
                 train_parameters=train_parameters,
                 )
 
-    # train SDDR
+    # train Sddr
     sddr.train(structured_data=data,
                target="groundtruth",
                unstructured_data = unstructured_data,

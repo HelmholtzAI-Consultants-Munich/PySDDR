@@ -8,45 +8,56 @@ import os
 #from model import TestNet
 #import torchvision.models as models
 
-class Prepare_Data(object):
+class PrepareData(object):
     '''
-    The Prepare_Data class parses the formulas defined by the user. This class includes fit and transform functions, which parses all information necessary to initialize the sddr network and
-    also prepares the data by calculating penalty matrices (multiplied by the smoothing parameters lambda, which are computed from degrees of freedom) and orthogonalizing the non-linear (e.g. splines) wrt to the linear part of the formula.
+    The Prepare_Data class parses the formulas defined by the user. This class includes fit and transform functions, which parses all information necessary to initialize the sddr network and also prepares the data by calculating penalty matrices (multiplied by the smoothing parameters lambda, which are computed from degrees of freedom) and orthogonalizing the non-linear (e.g. splines) wrt to the linear part of the formula.
+
     Parameters
     ----------
         formulas: dictionary
-            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values
-            to strings defining the formula for each distribution, e.g. formulas['loc'] = '~ 1 + spline(x1, bs="bs", df=9) + dm1(x2)'.
+            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values to strings 
+            defining the formula for each distribution, e.g. formulas['loc'] = '~ 1 + spline(x1, bs="bs", df=9) + dm1(x2)'.
         deep_models_dict: dictionary
             A dictionary where keys are model names and values are dicts with model architecture and output shapes.
         degrees_of_freedom: int or list of ints
             Degrees from freedom from which the smoothing parameter lambda is computed.
-            Either a single value for all penalities of all splines, or a list of values, each for one of the splines that appear in the formula.
-
+            Either a single value for all penalities of all splines, or a list of values, each for one of the splines that 
+            appears in the formula.
+        verbose: boolean - default False
+            If True, the results of the splitting will be print.
+            
     Attributes
     -------
         formulas: dictionary
-            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values
-            to strings defining the formula for each distribution, e.g. formulas['loc'] = '~ 1 + spline(x1, bs="bs", df=9) + dm1(x2)'.
+            A dictionary with keys corresponding to the parameters of the distribution defined by the user and values to strings 
+            defining the formula for each distribution, e.g. formulas['loc'] = '~ 1 + spline(x1, bs="bs", df=9) + dm1(x2)'.
         deep_models_dict: dictionary
             A dictionary where keys are model names and values are dicts with model architecture and output shapes.
         degrees_of_freedom: int or list of ints
             Degrees from freedom from which the smoothing parameter lambda is computed.
-            Either a single value for all penalities of all splines, or a list of values, each for one of the splines that appear in the formula.
+            Either a single value for all penalities of all splines, or a list of values, each for one of the splines that 
+            appears in the formula.
         network_info_dict: dictionary
             A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts
-            will be: 'struct_shapes', 'P', 'deep_models_dict' and 'deep_shapes' with corresponding values for each distribution
-            paramter, i.e. given formula (shapes of structured parts, penalty matrix, a dictionary of the deep models' arcitectures
-            used in the current formula and the output shapes of these deep models)
+            will be: 'deep_models_dict', 'deep_shapes', 'struct_shapes' and 'orthogonalization_pattern' with corresponding values 
+            for each distribution paramter, i.e. given formula (shapes of structured parts, a dictionary of the deep models' 
+            arcitectures used in the current formula and the output shapes of these deep models)
         formula_terms_dict: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dicts containing the structured term of the formula (e.g. x1 + s(x2)), the list of unstructured terms (e.g. [d(x1),d(x2)])
-            as well as a dictionary which maps the feature names to the unstructured terms (e.g. {"d(x1,x2):[x1,x2]"}).
-        dm_info_dict: dictionary
-            A dictionary where keys are the distribution's parameter names and values are dictionaries containing information of spline and non-spline terms (information: the corresponding slice in the formula, the term name and its input features).
+            A dictionary where keys are the distribution's parameter names and values are dicts containing the structured term of 
+            the formula (e.g. x1 + s(x2)), the list of unstructured terms (e.g. [d(x1),d(x2)]) as well as a dictionary which maps 
+            the feature names to the unstructured terms (e.g. {"d(x1,x2):[x1,x2]"}).
         structured_matrix_design_info: dictionary
-            A dictionary where keys are the distribution's parameter names and value is the design info of the patsy design matrix constructed for the structured part of the formula.
+            A dictionary where keys are the distribution's parameter names and value is the design info of the patsy design 
+            matrix constructed for the structured part of the formula.
         data_range: list of integers
             Stored the maximum and minimum values of the input data set.
+        P: dictionary
+            A disctionary where keys are the distribution's parameter names and the values are the corresponding penalty matrix. 
+        dm_info_dict: dictionary
+            A dictionary where keys are the distribution's parameter names and values are dictionaries containing information of 
+            spline and non-spline terms (information: the corresponding slice in the formula, the term name and its input 
+            features).
+       
     '''
     def __init__(self, formulas, deep_models_dict, degrees_of_freedom, verbose=False):
         
@@ -118,9 +129,6 @@ class Prepare_Data(object):
             data: Pandas.DataFrame
                 input data (X)
 
-        Returns
-        -------
-
         """
 
         self.structured_matrix_design_info = dict()
@@ -163,13 +171,16 @@ class Prepare_Data(object):
         ----------
             data: Pandas.DataFrame
                 input data (X)
+            clipping: boolean - default False
+                If true then when the unseen data is out of the range of the training data, they will be clipped.
+                If false then when the unseen data is out of range, an error will be thown.
 
         Returns
         -------
             prepared_data: dictionary
                 A dictionary where keys are the distribution's parameter names and values are dicts. The keys of these dicts
-                will be: 'structured' and neural network names if defined in the formula of the parameter (e.g. 'dm1'). Their values
-                are the data for the structured part (after orthogonalization) and unstructured terms of the SDDR model.
+                will be: 'structured' and neural network names if defined in the formula of the parameter (e.g. 'dm1'). Their 
+                values are the data for the structured part (after orthogonalization) and unstructured terms of the SDDR model.
         """
         prepared_data = dict()
         self.dm_info_dict = dict()

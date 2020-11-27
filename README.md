@@ -2,11 +2,13 @@
 
 ## What is this?
 
-PySDDR is a python package used for regression tasks which combines statistical regression models and neural networks and takes advantage of the strengths of each to deal with multi-modal data.
+PySDDR is a python package used for regression tasks, which combines statistical regression models and neural networks into a general framework to deal with multi-modal data (e.g. tabular and image data). It can be used for mean regression as well as for distributional regression, i.e. estimating any parameter of the assumed distribution, not just the mean. Each distributional parameter is defined by a formula, consisting of a structured (statistical regression model) and unstructured (neural networks) part. One of the main advantages of this package is the introduction of an orthogonalization layer, which ensure identifiability when structured and unstructured parts share some input data, thus making the attribution of shared effects to either one of the parts (structured or unstructured) identifiable.
 
-It was built based on the concepts presented in _paper_ and follows the R implementation found here _link_. One of the main contributions of both the paper and packages is the introduction of an orthogonalization layer to help identifiability between structured and unstructured data.
+PySDDR allows beginners to easily use and take advantage of this general framework but also enables the more advanced user to exploit features and tweak parameters in a flexible and interactive way. The framework is written in PyTorch and accepts any number of neural networks, from the simplest classifier to the more complicated architectures, such as LSTMs. 
 
-The package works for both mean and distributional regression while assuming a distribution of any given data, as long as each parameter is defined by _a linear predictor_. It is built in such a way that allows for the beginner to easily use and take advantage of this unifying framework but also enables the more advanced user to exploit features and tweak parameters in a flexible and interactive way. The main model is built in a dynamic way depending on the user input and can accept any number of neural networks, from the simplest classifier to the more complicated architectures, such as LSTMs, integrating all these in a unified network written in PyTorch. Meanwhile the structured data is smoothed using splines as basis function and its partial effects can be visualized during evaluation.
+The python package was built based on the concepts presented in _paper_ and follows the R implementation found here _link_. 
+
+
 
 ## Installation
 
@@ -28,31 +30,57 @@ Two tutorials are available in the [tutorials](https://github.com/davidruegamer/
 
 ## Contents
 
-[Model](#Model)
+1. [Model](#Model)
 
-[User Interface](#Sddr-User-Interface)
+1.1. [SddrNet](#SddrNet)
 
-[Features](#Features)
+1.2. [Preprocessing](#Preprocessing)
 
-[Results](#Results)
+1.3. [SddrFormulaNet](#SddrFormulaNet)
+
+1.4. [Orthogonalization](#Orthogonalization)
+
+1.5. [Smoothing Penalty](#Smoothing-Penalty)
+
+2. [User Interface](#Sddr-User-Interface)
+
+2.1. [Training](#Training)
+
+2.2. [Evaluating](#Evaluating)
+
+2.3. [Saving](#Saving)
+
+2.4. [Predicting](#Predicting)
+
+2.5. [Resume Training](#Resume-Training)
+
+2.6. [User inputs](#User-inputs)
+
 
 ## Model
 
 
 ### SddrNet
 
-The model architecture is built dynamically, depending on the user inputs such as the assumed distribution and _linear predictors_. It combines statistical models and neural networks into one larger unifying network, namely SddrNet, responsible for integrating all parts. Depending on the number of parameters of the assumed distribution defined by the user, SDDRNet consists of a number of smaller networks, SddrFormulaNet, which are built in parallel. A formula is given by the user for each parameter based on which each SddrFormulaNet is built and the output of each is the predicted parameter value. Within SddrNet, these are collected, normalized based on the distrubution's rules, and given as input to a distributional layer. From the distributional layer a log loss is computed, to which a smoothing penalty is added for regularization forming the final loss which is then backpropagated. SddrNet accepts the data after preprocessing has been applied. An example of this can be seen below.
+The framework combines statistical regression models and neural networks into one larger unifying network - ```SddrNet```. The network architecture is built based on the user input, e.g. assumed model distribution and formula for each distributional parameter, and hence, the netwrok architecture is dynamic. If ```SddrNet``` is used to build a distributional regression model, the user has to define a formula for each distributional parameter (e.g. a normal distribution has two parameters, *log* and *scale*), which is then used by ```SddrNet``` to build a sub-network - ```SddrFormulaNet``` - for each distributional parameter. The output of each ```SddrFormulaNet``` is the predicted parameter value, which are collected by ```SddrNet```, normalized based on the distrubution's rules and then given as input to a distributional layer. From the distributional layer a regularized log loss is computed, which is then backpropagated. An example of this can be seen below.
 
 ![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/sddr_net.jpg)
 
+
+
 ### Preprocessing
 
-PySDDR has been built to accept tabular and imaging data, both singly and combined. The individual features of these data can be of three types: linear, structured and unstructured. The user needs to define which features belong to each of these three types and this is done through the parameters' formulas. The first part of preprocessing is then to split the input data into these three types depending on the given formulas. Additionally, the structured part is fitted to one or many basis functions giving smooth partial effects. Currently for the basis functions, b-splines are used per default, where Cyclic Cubic splines are also available.
+Each distributional parameter is defined by a formula that consists of a structured and unstructured part. The structured part can have linear and smoothing (non-linear) terms, while the unstructured part consist of one or more neural network terms. The user needs to define the input features for each term in the formula (the same input feature can be assigned to different terms). While the structured part only accepts structured (tabular) data as input features, the unstructured part accepts both, structured (tabular) and unstructured (currently only images are supported) data as input features. During the preprocessing, the input features are assigned to the corresponding terms and for each smoothing term, the respective basis fucntions and penalty matrices are computed. The framework currently supports b-splines (default) and cyclic cubic splines. In a last step, the orthogonalization of the smoothing terms wrt. the linear terms is computed.
 
 ### SddrFormulaNet
 
-As mentioned, each SddrFormulaNet predicts a parameter of the assumed distribution. Depending on the formula the user has given for this parameter the SddrFormulaNet is built. The inputs to the network are the linear part of the data, the processed structured data and the unstructured data. _when does orthog of linear and structured happen-mention!_ The processed structured data has already been fitted with splines _word this better_, the number of which is defined by the user in the equation. The outputs of the smoothing _terms_ are concatenated and given to a fully connected _(linear)_ layer, which we name Structured Head. The unstructured data is given into one or multiple neural networks. Both the number and arcitecture of these are pre-defined by the user and are built within the SddrFormulaNet in a parallel fashion. Their outputs are concatenated and together with the processed structured data are given to the orthogonalization layer. 
-The orthogonalized, concatenated output of the neural networks is fed into a fully connected _(linear)_ layer, which we name Deep Head. The sum of this output and the output of the Structured Head forms the parameter prediction of the SddrFormulaNet. An example of the architecture can be seen below.
+As mentioned, each SddrFormulaNet predicts a parameter of the assumed distribution. Depending on the given formula the SddrFormulaNet is built. The inputs to the network are the processed structured data and the unstructured data. The processed structured data (linear and non-linear terms) is concatenated and given to a fully connected layer, which we name Structured Head. The unstructured data is given into one or multiple neural networks. Both the number and architecture of these are pre-defined by the user and are built within the SddrFormulaNet in a parallel fashion. Their outputs are concatenated and together with the processed structured data are given to the orthogonalization layer. Next, the orthogonalized, concatenated output of the neural networks is fed into a fully connected layer, which we name Deep Head. The sum of this output and the output of the Structured Head forms the parameter prediction of the SddrFormulaNet. An example of the architecture can be seen below.
+
+![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/sddr_param_net.jpg)
+
+*rewritten:*
+
+As mentioned, each ```SddrFormulaNet``` predicts a distributional parameter, based on the corresponding user-defined formula. The inputs to the network are the processed structured features and the unstructured features. The processed structured features (linear and smoothing terms) are concatenated and given to a fully connected layer, which we name Structured Head. The unstructured features are given into one or multiple neural networks. Both the number and architecture of these are pre-defined by the user and are built within the SddrFormulaNet in a parallel fashion. Their outputs are concatenated and together with the processed structured data are given to the orthogonalization layer. Next, the orthogonalized, concatenated output of the neural networks is fed into a fully connected layer, which we name Deep Head. The sum of this output and the output of the Structured Head forms the parameter prediction of the SddrFormulaNet. An example of the architecture can be seen below.
 
 ![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/sddr_param_net.jpg)
 
@@ -61,17 +89,25 @@ The orthogonalized, concatenated output of the neural networks is fed into a ful
 Orthogonalization ensures identifiability of the data by a decomposition of covariates corresponding to the linear, structured and unstructured  part of the data.
 It occurs in two parts of the network. The first is performed once during preprocessing and only if linear features are a subset of the structured inputs. For example ```spline(x3, bs='bs', df=9, degree=3)``` is orthogonalized with respect to the intercept and x3. If any terms x2, x4 etc. are present they are ignored in this orthogonalization step. The second orthogonalization occurs in every forward step of the network and follows the same principle as before: it only occurs if structured features are a subset of the unstructured inputs. The formula used for the ortogonalization is the same in both cases and can be described as follows:
 
-Assume we have structured data $$X$$ and unstructured data $$U$$ which pass through the deep networks (defined by the user) and concatenated giving latent features $$\hat{U} = d(U)$$. Then we can replace $$\hat{U}$$ with $$\tilde{U} = P_{orthog}\hat{U}$$
+Assume we have structured data $X$ and unstructured data $U$ which pass through the deep networks (defined by the user) and concatenated giving latent features $$\hat{U} = d(U)$$. Then we can replace $$\hat{U}$$ with $$\tilde{U} = P_{orthog}\hat{U}$$
 
 For structured head weights $$w$$ and deep head weights $$\gamma$$ the ouptut of the SddrFormulaNet will then be:
 
-$$ \eta = Xw + \tilde{U}\gamma$$
+$ \eta = Xw + \tilde{U}\gamma$
+
+### Smoothing Penalty
+
+
+
+
+
 
 
 ## Sddr User Interface
  
 The user interacts with the package through the Sddr class. An overview of this class and its iteraction with the rest of the package can be seen in the fgigure below:
 
+[LISAS FIG]
 
 
 ### Training
@@ -110,12 +146,14 @@ The distrubution as well as the partial effects for all structured features of a
 
 Note here that the training data also needs to be provided during load for the preprocessing steps, i.e. basis functions creation, to be performed.
 
-### Resume
+### Resume Training
 
 The user may also wish to load a pretrained model to resume training. For this the first two steps (init, load) from above need to be performed and then the user can resume training by ```sddr.train(target, structured_data, resume=True)```
 
 
-### User inputs
+### User inputs 
+
+#### Sddr Initialization
 
 There are a number of inputs which need to be defined by the user before training, or testing can be performed. The user can either directly define these in their run script or give all the parameters through a config file - for more information see [Training features](#Training features). 
 
@@ -129,9 +167,9 @@ A list of all required inputs during initialization of the sddr instance can be 
 
 **train_parameters:** A dictionary where the training parameters are defined, see more in [Train Parameters](#Train-Parameters)
 
-Additionally, the path of the output directory in which to save results  can be defined by the user by setting: **output_dir:** 
+Additionally, the path of the output directory in which to save results  can be defined by the user by setting: **output_dir** 
 
-### Data
+#### Data
 
 The data is required as input to three functions: ```sddr.train, sddr.predict, sddr.load```.
 
@@ -154,7 +192,7 @@ The keys of the dictionary are the feature names as defined also in the given fo
 
 A combination of the above options is also possible, i.e. have data as a dataframe and load target from a file and vice versa. Examples of these options can again be found in the beginner's guide tutorial.
 
-### Distributions
+#### Distributions
 
 Currently, the available distribution in PySDDR are:
 
@@ -168,18 +206,18 @@ Currently, the available distribution in PySDDR are:
 
 Note that when setting the ```distribution``` parameter the distribution name should be given exactly as above in sting format, as well as their parameters (which are required when defining formulas and degrees of freedom of each parameter), e.g. ```distribution='Poisson'```
 
-### Formulas
+#### Formulas
 
-The PySDDR package uses Patsy to .. [LISA HELP]
+The PySDDR package uses Patsy in the backend to parse the formulas. Each formula is given as a string and follows Patsy's formula conventions described [here](https://patsy.readthedocs.io/en/v0.1.0/formulas.html).
 
 An example of formulas for a Logistic distribution is given below:
 
 ```
-formulas = {'loc': '~1+spline(x1, bs="bs", df=4)+spline(x2, bs="bs",df=4) + d1(x3)+d2(x5)',
+formulas = {'loc': '~1+x1+spline(x1, bs="bs", df=4)+spline(x2, bs="bs",df=4) + d1(x3)+d2(x5)',
             'scale': '~1 + spline(x3, bs="bs",df=4) + spline(x4, bs="bs",df=4)'
             }
 ```
-Formulas here has two keys loc and scale, corresponding to the two parameters of the Logistic distribution. The features x1,x2,x3,x4 need to be structured data as they are given as input to the splines (structured part). This means that the tabular data needs to have column names corresponding to the features, i.e. x1,x2,x3,x4. Feature x5 can be either structured or unstructured - note that if it is unstructured 'x5' should be a key value in the unstructured_data input. 
+Formulas here has two keys loc and scale, corresponding to the two parameters of the Logistic distribution. The features x1,x2,x3,x4 need to be structured data as they are given as input both to the linear term and to the splines (structured part). This means that the tabular data needs to have column names corresponding to the features, i.e. x1,x2,x3,x4. Feature x5 can be either structured or unstructured - note that if it is unstructured 'x5' should be a key value in the unstructured_data input. 
 
 
 ### Deep Neural Networks
@@ -239,32 +277,8 @@ The training parameters are: batch size, epochs, optimizer, optimizer parameters
  'epochs': 200,
  'optimizer': optim.SGD,
  'optimizer_params':{'lr': 0.01, 'momentum': 0.9}, 
- 'degrees_of_freedom': {'rate': 10}
+ 'degrees_of_freedom': {'loc':4, 'scale':4}
  }
  ```
 
-Note that ```train_parameters['degrees_of_freedom']``` is a dictionary where the degrees of freedom for the regularization of each of each parameter is defined -> [LISA HELP]
-
-
-## Features -> remove this part?
-
-### Scientific features
-
-_Here discuss the scientific features available to the user, e.g. w or w/o orthogonolization, optimizer options etc._
-
-## Examples of using scientific features
-
-```
-this is an example, here we can link also to test_run.ipynb
-```
-_We should however add more content than currently in jupyter notebook_
-
- ## Examples of training features
-
-```
-this is an example, here we can link also to example_usage.ipynb
-```
-
-
-## Results
-_Would be nice if eventually we have some nice results to show, though this is somehow similar to test_run.ipynb_
+Note that ```train_parameters['degrees_of_freedom']``` is a dictionary where the degrees of freedom of each parameter is defined. This can either be a list of degrees of freedom for each spline in the formula or a single number (same degrees of freedom for all splines). Using the Demmler-Reinsch Orhtogonalization, all smoothing terms are then calculated based on this specification (e.g., setting degrees_of_freedom = 5 results in sp = 1.234 for one smooth, but sp = 133.7 for another smooth due to their different nature and data). This ensures that no smooth term has more flexibility than the other term which makes sense in certain situations.
