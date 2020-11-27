@@ -90,10 +90,11 @@ For each spline in the formula, the number of basis function (```df```) and the 
 
 ## Sddr User Interface
  
-The user interacts with the package through the Sddr class. An overview of this class and its iteraction with the rest of the package can be seen in the fgigure below:
+The user interacts with the package through the Sddr class. An overview of this class and its iteraction with the rest of the package can be seen in the figure below:
 
 [LISAS FIG]
 
+**Add a initialization section here? with an example config?**
 
 ### Training
 
@@ -106,7 +107,7 @@ For training two simple steps are required by the user:
 
 ### Evaluating
 
-The user can then perform an evalutation of the training on any of the parameter's distribution, e.g. for a Poisson distribution: ```sddr.eval('rate') ```. This will return and plot the partial effects of the structured features. To turn off the plot functionality the user must set ```plot=False ``` when calling ```sddr.eval```.
+The user can then evaluate the training on any distributional parameter, e.g. for a Poisson distribution: ```sddr.eval('rate') ```. This will return and plot the partial effects of the structured features. To turn off the plot functionality the user must set ```plot=False ``` when calling ```sddr.eval```.
 
 * To get the trained distribution the user can call ```distribution_layer = sddr.get_distribution()```. From this the user can then get all the properties avalaible from [PyTorch's Probability Distributions package](https://pytorch.org/docs/stable/distributions.html) (torch.distributions), e.g. the mean can be retrieved by ```distribution_layer.mean``` or the standard deviaton by ```distribution_layer.stddev```.
 
