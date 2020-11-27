@@ -93,7 +93,7 @@ Assume we have structured data $X$ and unstructured data $U$ which pass through 
 
 For structured head weights $$w$$ and deep head weights $$\gamma$$ the ouptut of the SddrFormulaNet will then be:
 
-$$ \eta = Xw + \tilde{U}\gamma$$
+$ \eta = Xw + \tilde{U}\gamma$
 
 ### Smoothing Penalty
 
