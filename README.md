@@ -70,7 +70,7 @@ The framework combines statistical regression models and neural networks into on
 
 ### Preprocessing
 
-Each distributional parameter is defined by a formula that consists of a structured and unstructured part. The structured part can have linear and smoothing (non-linear) terms, while the unstructured part consist of one or more neural network terms. The user needs to define the input data for each term in the formula (the same input data can be assigned to different terms). While the structured part only accepts structured (tabular) data as input, the unstructured part accepts both, structured (tabular) and unstructured (currently only images are supported) data as input. During the preprocessing, the input data is assigned to the corresponding terms and for each smoothing term, the respective basis fucntions and penalty matrices are computed. The framework currently supports b-splines (default) and cyclic cubic splines. In a last step, the orthogonalization of the smoothing terms wrt. the linear terms is computed. The output of the processed structured part (linear and smoothing terms) is called structured features, while the output of the processed unstructured part (input to the neural networks) is called unstructured features.
+Each distributional parameter is defined by a formula that consists of a structured and unstructured part. The structured part can have linear and smoothing (non-linear) terms, while the unstructured part consist of one or more neural network terms. The user needs to define the input data for each term in the formula (the same input data can be assigned to different terms). While the structured part only accepts structured (tabular) data as input, the unstructured part accepts both, structured (tabular) and unstructured (currently only images are supported) data as input. During the preprocessing, the input data is assigned to the corresponding terms and for each smoothing term, the respective basis fucntions and penalty matrices are computed. The framework currently supports b-splines (default) and cyclic cubic splines. In a last step, the orthogonalization of the smoothing terms wrt. the linear terms is computed. The output of the processed structured part (linear and smoothing terms) is called structured (consitsting of linear and smoothing) features, while the output of the processed unstructured part (input to the neural networks) is called unstructured features.
 
 ### SddrFormulaNet
 
@@ -80,8 +80,7 @@ As mentioned, each ```SddrFormulaNet``` predicts a distributional parameter, bas
 
 ### Orthogonalization
 
-Orthogonalization ensures identifiability of the data by a decomposition of covariates corresponding to the linear, structured and unstructured  part of the data.
-It occurs in two parts of the network. The first is performed once during preprocessing and only if linear features are a subset of the structured inputs. For example ```spline(x3, bs='bs', df=9, degree=3)``` is orthogonalized with respect to the intercept and x3. If any terms x2, x4 etc. are present they are ignored in this orthogonalization step. The second orthogonalization occurs in every forward step of the network and follows the same principle as before: it only occurs if structured features are a subset of the unstructured inputs. The formula used for the ortogonalization is the same in both cases and can be described as follows:
+Orthogonalization ensures identifiability of the data by a decomposition of covariates corresponding to the data of the structured and unstructured part. It occurs in two parts of the network. The first orthogonalization is computed during preprocessing and only if linear features are a subset of the smoothing term inputs. For example in ```~ 1 + x3 + spline(x3, bs='bs', df=9, degree=3)```, ```spline(x3, bs='bs', df=9, degree=3)``` is orthogonalized with respect to the intercept and x3. If any terms x2, x4 etc. are present they are ignored in this orthogonalization step. The second orthogonalization occurs in every forward step of the network and follows the same principle as before: it only occurs if linear or smoothing features are a subset of the unstructured termsinputs. The formula used for the ortogonalization is the same in both cases and can be described as follows:
 
 Assume we have structured data $X$ and unstructured data $U$ which pass through the deep networks (defined by the user) and concatenated giving latent features $$\hat{U} = d(U)$$. Then we can replace $$\hat{U}$$ with $$\tilde{U} = P_{orthog}\hat{U}$$
 
@@ -91,10 +90,7 @@ $ \eta = Xw + \tilde{U}\gamma$
 
 ### Smoothing Penalty
 
-
-
-
-
+For each spline in the formula, the number of basis function (```df```), and the degree of the spline functions (```degree```) have to be specified. A smoothing penalty matrix is implicity created when smoothing terms are used in the formula. Each smoothing penaily matrix is regularized with a lambda parameter computed from user-defined degrees of freedom. The degrees of freedom can be given as a single value, then all individual penalty matrices are multiplied with a single lambda. This ensures that no smooth term has more flexibility than the other term which makes sense in certain situations. The degrees of freedom can also be given as a list, which not only allows to specify different degrees of freedom for each distributional parameter, but also to specify different degrees of freedom for each smoothing term in each formula by providing a vector of the same length as the number of smoothing terms in the parameter’s formula. In this case, all smoothing penalty matrices are multiplied by different lambdas.
 
 
 ## Sddr User Interface
@@ -275,4 +271,4 @@ The training parameters are: batch size, epochs, optimizer, optimizer parameters
  }
  ```
 
-Note that ```train_parameters['degrees_of_freedom']``` is a dictionary where the degrees of freedom of each parameter is defined. This can either be a list of degrees of freedom for each spline in the formula or a single number (same degrees of freedom for all splines). Using the Demmler-Reinsch Orhtogonalization, all smoothing terms are then calculated based on this specification (e.g., setting degrees_of_freedom = 5 results in sp = 1.234 for one smooth, but sp = 133.7 for another smooth due to their different nature and data). This ensures that no smooth term has more flexibility than the other term which makes sense in certain situations.
+Note that ```train_parameters['degrees_of_freedom']``` is a dictionary where the degrees of freedom of each parameter is defined. This can either be a list of degrees of freedom for each smoothing term in the formula or a single value for all smoothing terms.
