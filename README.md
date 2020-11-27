@@ -23,6 +23,7 @@ pip install -e .        (Installation as python package: run inside directory)
 ```
 
 If you are using conda first install pip by: ```conda install pip```
+This installation was tested for python version 3.7 and 3.8
 
 ## Tutorials
 
@@ -94,74 +95,18 @@ The user interacts with the package through the Sddr class. An overview of this 
 
 [LISAS FIG]
 
-**Add a initialization section here? with an example config?**
-
-### Training
-
-For training two simple steps are required by the user:
-
-* Initialize an Sddr instance, e.g. ```sddr = Sddr(config=config)```
-* Train with the structured training data by ```sddr.train(target, structured_data)```
-* Train with the structured and unstructured training data by ```sddr.train(target, structured_data, unstructured_data)```
-* Train, plot and save loss curve by ```sddr.train(target, structured_data, unstructured_data, plot=True)```
-
-### Evaluating
-
-The user can then evaluate the training on any distributional parameter, e.g. for a Poisson distribution: ```sddr.eval('rate') ```. This will return and plot the partial effects of the structured features. To turn off the plot functionality the user must set ```plot=False ``` when calling ```sddr.eval```.
-
-* To get the trained distribution the user can call ```distribution_layer = sddr.get_distribution()```. From this the user can then get all the properties avalaible from [PyTorch's Probability Distributions package](https://pytorch.org/docs/stable/distributions.html) (torch.distributions), e.g. the mean can be retrieved by ```distribution_layer.mean``` or the standard deviaton by ```distribution_layer.stddev```.
-
-* To get the trained network's weights, i.e. coefficients, for the structured part, the user can call: 
-
-### Saving
-
-After training and evaluation the model can be saved by ```sddr.save()``` or ```sddr.save('MyModel.pth')```, if the user wishes to save the model with a name different than the default _model.pth_. This will be saved in the output directory defined by the user in the config, or if no output directory has been defined an _outputs_ directory is automatically created.
-
-### Predicting
-
-At a later stage the user can again initialize an Sddr instance and use the previously trained model to make predictions on unseen data. This can be done by:
-
-* Initialize an Sddr instance, e.g. ```sddr = Sddr(config=config) ```
-* Load model ```sddr.load(model_name, training_data) ``` 
-* Predict on unseen linear and structured data ```sddr.predict(data) ```
-* Predict on unseen linear, structured data and unstructured data ```sddr.predict(data, unstructured_data) ```
-* Predict on unseen data and clip the data range to fall inside training data range if a out of range error occurs: ```sddr.predict(data, clipping=True) ```
-* Predict on unseed data and plot a figure for each spline defined in each formula of the distribution's parameters```sddr.predict(data, plot=True) ```
-
-The distrubution as well as the partial effects for all structured features of all parameters of the distribution will be returned. 
-
-Note here that the training data also needs to be provided during load for the preprocessing steps, i.e. basis functions creation, to be performed.
-
-### Resume Training
-
-The user may also wish to load a pretrained model to resume training. For this the first two steps (init, load) from above need to be performed and then the user can resume training by ```sddr.train(target, structured_data, resume=True)```
-
-
 ### User inputs 
 
-#### Sddr Initialization
+There are a number of inputs which need to be defined by the user before training or testing can be performed. The user can either directly define these in their run script or give all the parameters through a config file - for more information see [Training features](#Training features). 
 
-There are a number of inputs which need to be defined by the user before training, or testing can be performed. The user can either directly define these in their run script or give all the parameters through a config file - for more information see [Training features](#Training features). 
-
-A list of all required inputs during initialization of the sddr instance can be seen next:
-
-**distribution:** the assumed distribution of the data, see more in [Distributions](#Distributions)
-
-**formulas:** a dictionary with a list of formulas for each parameters of the distribution, see more in [Formulas](#Formulas)
-
-**deep_models_dict:** a dictionary where keys are names of deep models and values are also dictionaries. In turn, their keys are 'model' with values being the model arcitectures and 'output_shape' with values being the output size of the model. Again see [Deep Neural Networks](#Deep-Neural-Networks) for more details
-
-**train_parameters:** A dictionary where the training parameters are defined, see more in [Train Parameters](#Train-Parameters)
-
-Additionally, the path of the output directory in which to save results  can be defined by the user by setting: **output_dir** 
 
 #### Data
 
-The data is required as input to three functions: ```sddr.train, sddr.predict, sddr.load```.
+The data is required as input to three functions: ```sddr.train(), sddr.predict(), sddr.load()```.
 
-**structured_data:** the structured data in tabular form. This data can either be pre-loaded into a pandas dictionary which is then given as an input to the sddr functions, or the user can define a path to a csv file where the data is stored. Examples of these two options can be found in the beginner's guide tutorial.
+**structured_data:** the structured data in tabular format. This data can either be pre-loaded into a pandas dictionary, which is then given as an input to the sddr functions, or the user can define a path to a csv file where the data is stored. Examples of these two options can be found in the beginner's guide tutorial.
 
-**unstructured_data:** the unstructured data. Currently the PySDDR package only expects images as unstructured data (but we aim to extend this soon to include text). The data is loaded in batches and for the initialization of the DataLoader a dictionary needs to be provided with information on the unstructured data. An example of this can be see below:
+**unstructured_data:** the unstructured data. Currently the PySDDR package only accepts images as unstructured data. The data is loaded in batches and for the initialization of the DataLoader a dictionary needs to be provided with information on the unstructured data. An example of this can be see below:
 
 ```
 unstructured_data = {
@@ -172,9 +117,9 @@ unstructured_data = {
 } 
 ```
 
-The keys of the dictionary are the feature names as defined also in the given formulas. Each feature then has a dictionary with two keys, 'path' and 'datatype', where the path to the data directory is provided and the data type defined (currently only 'image' is accepted). 
+The keys of the dictionary are the input feature names, as defined in the given formulas. Each input feature then has a dictionary with two keys, 'path' and 'datatype', where the path to the data directory is provided and the data type defined (currently only 'image' is accepted). 
 
-**target:** the target data, i.e. our ground truth. This can also be given witht he same two options as above. Note that if the structured data has been given as a string or a pandas dataframe then the target data must also be given in the same format. However, one dataframe can be given for both in which case the column name of the target with the dataframe needs to be provided as target.
+**target:** the target data, i.e. our ground truth. This can be given with the same two options as above. Note that if the structured data has been given as a string or a pandas dataframe then the target data must also be given in the same format. However, input data and target can be given in one dataframe can be given for both, in which case the column name of the target with the dataframe needs to be provided as target.
 
 A combination of the above options is also possible, i.e. have data as a dataframe and load target from a file and vice versa. Examples of these options can again be found in the beginner's guide tutorial.
 
@@ -268,3 +213,59 @@ The training parameters are: batch size, epochs, optimizer, optimizer parameters
  ```
 
 Note that ```train_parameters['degrees_of_freedom']``` is a dictionary where the degrees of freedom of each parameter is defined. This can either be a list of degrees of freedom for each smoothing term in the formula or a single value for all smoothing terms.
+
+### Initialization
+
+A list of all required inputs during initialization of the sddr instance can be seen next:
+
+**distribution:** the assumed distribution of the data, see more in [Distributions](#Distributions)
+
+**formulas:** a dictionary with a list of formulas for each parameters of the distribution, see more in [Formulas](#Formulas)
+
+**deep_models_dict:** a dictionary where keys are names of deep models and values are also dictionaries. In turn, their keys are 'model' with values being the model arcitectures and 'output_shape' with values being the output size of the model. Again see [Deep Neural Networks](#Deep-Neural-Networks) for more details
+
+**train_parameters:** A dictionary where the training parameters are defined, see more in [Train Parameters](#Train-Parameters)
+
+Additionally, the path of the output directory in which to save results  can be defined by the user by setting: **output_dir** 
+
+### Training
+
+For training two simple steps are required by the user:
+
+* Initialize an Sddr instance, e.g. ```sddr = Sddr(config=config)```
+* Train with the structured training data by ```sddr.train(target, structured_data)```
+* Train with the structured and unstructured training data by ```sddr.train(target, structured_data, unstructured_data)```
+* Train, plot and save loss curve by ```sddr.train(target, structured_data, unstructured_data, plot=True)```
+
+### Evaluating
+
+The user can then evaluate the training on any distributional parameter, e.g. for a Poisson distribution: ```sddr.eval('rate') ```. This will return and plot the partial effects of the structured features. To turn off the plot functionality the user must set ```plot=False ``` when calling ```sddr.eval```.
+
+* To get the trained distribution the user can call ```distribution_layer = sddr.get_distribution()```. From this the user can then get all the properties avalaible from [PyTorch's Probability Distributions package](https://pytorch.org/docs/stable/distributions.html) (torch.distributions), e.g. the mean can be retrieved by ```distribution_layer.mean``` or the standard deviaton by ```distribution_layer.stddev```.
+
+* To get the trained network's weights, i.e. coefficients, for the structured part, the user can call: 
+
+### Saving
+
+After training and evaluation the model can be saved by ```sddr.save()``` or ```sddr.save('MyModel.pth')```, if the user wishes to save the model with a name different than the default _model.pth_. This will be saved in the output directory defined by the user in the config, or if no output directory has been defined an _outputs_ directory is automatically created.
+
+### Predicting
+
+At a later stage the user can again initialize an Sddr instance and use the previously trained model to make predictions on unseen data. This can be done by:
+
+* Initialize an Sddr instance, e.g. ```sddr = Sddr(config=config) ```
+* Load model ```sddr.load(model_name, training_data) ``` 
+* Predict on unseen linear and structured data ```sddr.predict(data) ```
+* Predict on unseen linear, structured data and unstructured data ```sddr.predict(data, unstructured_data) ```
+* Predict on unseen data and clip the data range to fall inside training data range if a out of range error occurs: ```sddr.predict(data, clipping=True) ```
+* Predict on unseed data and plot a figure for each spline defined in each formula of the distribution's parameters```sddr.predict(data, plot=True) ```
+
+The distrubution as well as the partial effects for all structured features of all parameters of the distribution will be returned. 
+
+Note here that the training data also needs to be provided during load for the preprocessing steps, i.e. basis functions creation, to be performed.
+
+### Resume Training
+
+The user may also wish to load a pretrained model to resume training. For this the first two steps (init, load) from above need to be performed and then the user can resume training by ```sddr.train(target, structured_data, resume=True)```
+
+
