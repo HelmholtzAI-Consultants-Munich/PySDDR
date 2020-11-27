@@ -112,7 +112,7 @@ The keys of the dictionary are the input feature names, as defined in the given 
 
 **target:** the target data, i.e. our ground truth. This can be given with the same two options as above. Note that if the structured data has been given as a string or a pandas dataframe then the target data must also be given in the same format. However, structured data and target can be given in one dataframe, in which case the column name of the target with the dataframe needs to be provided as target.
 
-A combination of the above options is also possible, i.e. have data as a dataframe and load target from a file and vice versa. Examples of these options can again be found in the beginner's guide tutorial.
+A combination of the above options is also possible, i.e. have the structured data as a dataframe and load the target from a file and vice versa. Examples of these options can again be found in the beginner's guide tutorial.
 
 #### Distributions
 
@@ -126,7 +126,7 @@ Currently, the available distribution in PySDDR are:
 * Multinomial_prob: multinomial distribution parameterized by total_count(=1) and probs
 * Logistic: multinomial distribution parameterized by loc and scale
 
-Note that when setting the ```distribution``` parameter the distribution name should be given exactly as above in sting format, as well as their parameters (which are required when defining formulas and degrees of freedom of each parameter), e.g. ```distribution='Poisson'```
+Note that when setting the ```distribution``` parameter, the distribution name should be given as above in sting format, as well as their parameters (which are required when defining formulas and degrees of freedom of each parameter), e.g. ```distribution='Poisson'```.
 
 #### Formulas
 
@@ -135,18 +135,19 @@ The PySDDR package uses Patsy in the backend to parse the formulas. Each formula
 An example of formulas for a Logistic distribution is given below:
 
 ```
-formulas = {'loc': '~1+x1+spline(x1, bs="bs", df=4)+spline(x2, bs="bs",df=4) + d1(x3)+d2(x5)',
+formulas = {'loc': '~1 + x1 + spline(x1, bs="bs", df=4) + spline(x2, bs="bs",df=4) + d1(x3)+d2(x5)',
             'scale': '~1 + spline(x3, bs="bs",df=4) + spline(x4, bs="bs",df=4)'
             }
 ```
-Formulas here has two keys loc and scale, corresponding to the two parameters of the Logistic distribution. The features x1,x2,x3,x4 need to be structured data as they are given as input both to the linear term and to the splines (structured part). This means that the tabular data needs to have column names corresponding to the features, i.e. x1,x2,x3,x4. Feature x5 can be either structured or unstructured - note that if it is unstructured 'x5' should be a key value in the unstructured_data input. 
+
+In this example, ```formulas``` has two keys, *loc* and *scale*, corresponding to the two parameters of the Logistic distribution. The features x1, x2, x3, x4 need to be structured data as they are given as input to the linear and smoothing terms (structured part). This means that the tabular data needs to have column names corresponding to the features, i.e. x1, x2, x3, x4. Feature x5 can be either structured or unstructured data - note that if it is unstructured data 'x5' should be a key value in the unstructured_data input. 
 
 
-### Deep Neural Networks
+#### Deep Neural Networks
 
-The neural network or networks to be used in the SDDR package are defined by the user. These user gives a name for each and this will be the corresponding key of the deep_models_dict input. This also then needs to be given in the same way in the formulas. Each value of the dictionary is of itself a dictionary with keys: model, where the neural network architecture is defined, and output_shape where the user should specify the output size of the neural network. This will help build the SddrFormulaNet. The architecture can be either directly given, defined in a local script, or a pytorch model can be used.
+The neural networks to be used in the PySDDR package are defined by the user. The user provides a name for each neural network, which will be the corresponding name in the ```formulas``` and the corresponding key of the ```deep_models_dict```. Each value of the dictionary is itself a dictionary with keys: ```model```, where the neural network architecture is defined, and ```output_shape```, where the user should specify the output size of the neural network. This will help build the ```SddrFormulaNet```. The architecture can be either given directly, defined in a local script, or a pytorch model can be used.
  
-#### Examples
+**Examples**
 
 1. Define two neural networks directly:
 ```
@@ -159,7 +160,7 @@ deep_models_dict = {
             'output_shape': 4}
         }
 ```
-Note that the correct imports will also need to be specified in your script, so for this case ``` import torch.nn as nn```
+Note that the correct imports will also need to be specified in your script, i.e. ``` import torch.nn as nn```
 
 2. Use a model architecture saved in a script to define a network:
 ```
@@ -188,7 +189,7 @@ Note that also here the correct import needs to be given, e.g. ```import torchvi
 The last two methods can only be used if the class inputs are defined in a python script, they are currently not available when loading the inputs from a config file.
 
 
-### Train Parametes
+#### Train Parametes
 
 The training parameters are: batch size, epochs, optimizer, optimizer parameters and degrees of freedom of each parameter. Batch size, epochs and degrees of freedom are required but defining the optimizer is optional. If no optimizer is defined by the user Adam is used per default with PyTorch's default optimizer parameters, which can be found [here](https://pytorch.org/docs/stable/optim.html). An example of training parameters can be seen below:
 
@@ -204,6 +205,7 @@ The training parameters are: batch size, epochs, optimizer, optimizer parameters
  ```
 
 Note that ```train_parameters['degrees_of_freedom']``` is a dictionary where the degrees of freedom of each parameter is defined. This can either be a list of degrees of freedom for each smoothing term in the formula or a single value for all smoothing terms.
+
 
 ### Initialization
 
