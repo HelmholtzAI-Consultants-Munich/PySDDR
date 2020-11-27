@@ -88,7 +88,7 @@ The user interacts with the package through the Sddr class. An overview of this 
 
 ### User inputs 
 
-There are a number of inputs which need to be defined by the user before training or testing can be performed. The user can either directly define these in their run script or give all the parameters through a config file - for more information see [Training features](#Training features). 
+There are a number of inputs which need to be defined by the user before training or testing can be performed. The user can either directly define these in their run script or give all the parameters through a config file - for more information see [Training features](#Training-features). 
 
 
 #### Data
