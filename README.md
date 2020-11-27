@@ -40,9 +40,9 @@ Two tutorials are available in the [tutorials](https://github.com/davidruegamer/
 
 2. [User Interface](#Sddr-User-Interface)  
     2.1. [User inputs](#User-inputs)  
-    2.2. [Initialization](#Initialization)
+    2.2. [Initialization](#Initialization)  
     2.3. [Training](#Training)  
-    2.4. [Resume Training](#Resume-Training) 
+    2.4. [Resume Training](#Resume-Training)  
     2.5. [Evaluating](#Evaluating)  
     2.6. [Saving](#Saving)  
     2.7. [Predicting](#Predicting)  
