@@ -80,13 +80,7 @@ As mentioned, each ```SddrFormulaNet``` predicts a distributional parameter, bas
 
 ### Orthogonalization
 
-Orthogonalization ensures identifiability of the data by a decomposition of covariates corresponding to the data of the structured and unstructured part. It occurs in two parts of the network. The first orthogonalization is computed during preprocessing and only if linear features are a subset of the smoothing term inputs. For example in ```~ 1 + x3 + spline(x3, bs='bs', df=9, degree=3)```, ```spline(x3, bs='bs', df=9, degree=3)``` is orthogonalized with respect to the intercept and x3. If any terms x2, x4 etc. are present they are ignored in this orthogonalization step. The second orthogonalization occurs in every forward step of the network and follows the same principle as before: it only occurs if linear or smoothing features are a subset of the unstructured termsinputs. The formula used for the ortogonalization is the same in both cases and can be described as follows:
-
-Assume we have structured data $X$ and unstructured data $U$ which pass through the deep networks (defined by the user) and concatenated giving latent features $$\hat{U} = d(U)$$. Then we can replace $$\hat{U}$$ with $$\tilde{U} = P_{orthog}\hat{U}$$
-
-For structured head weights $$w$$ and deep head weights $$\gamma$$ the ouptut of the SddrFormulaNet will then be:
-
-$ \eta = Xw + \tilde{U}\gamma$
+Orthogonalization ensures identifiability of the data by a decomposition of covariates corresponding to the data of the structured and unstructured part. It occurs in two parts of the network. The first orthogonalization is computed during preprocessing and only if linear features are a subset of the smoothing term inputs. For example in ```~ 1 + x3 + spline(x3, bs='bs', df=9, degree=3)```, ```spline(x3, bs='bs', df=9, degree=3)``` is orthogonalized with respect to the intercept and x3. If any terms x2, x4 etc. are present they are ignored in this orthogonalization step. The second orthogonalization occurs in every forward step of the network and follows the same principle as before: it only occurs if linear or smoothing features are a subset of the unstructured termsinputs. 
 
 ### Smoothing Penalty
 
