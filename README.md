@@ -45,17 +45,19 @@ Two tutorials are available in the [tutorials](https://github.com/davidruegamer/
 
 2. [User Interface](#Sddr-User-Interface)
 
-2.1. [Training](#Training)
+2.1. [User inputs](#User-inputs)
 
-2.2. [Evaluating](#Evaluating)
+2.2. [Training](#Training)
 
-2.3. [Saving](#Saving)
+2.3. [Evaluating](#Evaluating)
 
-2.4. [Predicting](#Predicting)
+2.4. [Saving](#Saving)
 
-2.5. [Resume Training](#Resume-Training)
+2.5. [Predicting](#Predicting)
 
-2.6. [User inputs](#User-inputs)
+2.6. [Resume Training](#Resume-Training)
+
+
 
 
 ## Model
@@ -119,7 +121,7 @@ unstructured_data = {
 
 The keys of the dictionary are the input feature names, as defined in the given formulas. Each input feature then has a dictionary with two keys, 'path' and 'datatype', where the path to the data directory is provided and the data type defined (currently only 'image' is accepted). 
 
-**target:** the target data, i.e. our ground truth. This can be given with the same two options as above. Note that if the structured data has been given as a string or a pandas dataframe then the target data must also be given in the same format. However, input data and target can be given in one dataframe can be given for both, in which case the column name of the target with the dataframe needs to be provided as target.
+**target:** the target data, i.e. our ground truth. This can be given with the same two options as above. Note that if the structured data has been given as a string or a pandas dataframe then the target data must also be given in the same format. However, structured data and target can be given in one dataframe, in which case the column name of the target with the dataframe needs to be provided as target.
 
 A combination of the above options is also possible, i.e. have data as a dataframe and load target from a file and vice versa. Examples of these options can again be found in the beginner's guide tutorial.
 
