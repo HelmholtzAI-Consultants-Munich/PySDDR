@@ -140,12 +140,12 @@ formulas = {'loc': '~1 + x1 + spline(x1, bs="bs", df=4) + spline(x2, bs="bs",df=
             }
 ```
 
-In this example, ```formulas``` has two keys, *loc* and *scale*, corresponding to the two parameters of the Logistic distribution. The features x1, x2, x3, x4 need to be structured data as they are given as input to the linear and smoothing terms (structured part). This means that the tabular data needs to have column names corresponding to the features, i.e. x1, x2, x3, x4. Feature x5 can be either structured or unstructured data - note that if it is unstructured data 'x5' should be a key value in the unstructured_data input. 
+In this example, ```formulas``` has two keys, 'loc' and 'scale', corresponding to the two parameters of the Logistic distribution. The features x1, x2, x3, x4 need to be structured data as they are given as input to the linear and smoothing terms (structured part). This means that the tabular data needs to have column names corresponding to the features, i.e. x1, x2, x3, x4. Feature x5 can be either structured or unstructured data - note that if it is unstructured data 'x5' should be a key value in the unstructured_data input. 
 
 
 #### Deep Neural Networks
 
-The neural networks to be used in the PySDDR package are defined by the user. The user provides a name for each neural network, which will be the corresponding name in the ```formulas``` and the corresponding key of the ```deep_models_dict```. Each value of the dictionary is itself a dictionary with keys: ```model```, where the neural network architecture is defined, and ```output_shape```, where the user should specify the output size of the neural network. This will help build the ```SddrFormulaNet```. The architecture can be either given directly, defined in a local script, or a pytorch model can be used.
+The neural networks to be used in the PySDDR package are defined by the user. The user provides a name for each neural network, which will be the corresponding name in the ```formulas``` and the corresponding key of the ```deep_models_dict```. Each value of the dictionary is itself a dictionary with keys: 'model', where the neural network architecture is defined, and 'output_shape', where the user should specify the output size of the neural network. This will help build the ```SddrFormulaNet```. The architecture can be either given directly, defined in a local script, or a pytorch model can be used.
  
 **Examples**
 
@@ -191,7 +191,7 @@ The last two methods can only be used if the class inputs are defined in a pytho
 
 #### Train Parametes
 
-The training parameters are: batch size, epochs, optimizer, optimizer parameters and degrees of freedom of each parameter. Batch size, epochs and degrees of freedom are required but defining the optimizer is optional. If no optimizer is defined by the user Adam is used per default with PyTorch's default optimizer parameters, which can be found [here](https://pytorch.org/docs/stable/optim.html). An example of training parameters can be seen below:
+The training parameters are: batch size, epochs, optimizer, optimizer parameters and degrees of freedom of each parameter. Batch size, epochs and degrees of freedom are required but defining the optimizer is optional. If no optimizer is defined by the user, *Adam* is used per default with PyTorch's default optimizer parameters, which can be found [here](https://pytorch.org/docs/stable/optim.html). An example of training parameters can be seen below:
 
 
 ```
@@ -209,17 +209,74 @@ Note that ```train_parameters['degrees_of_freedom']``` is a dictionary where the
 
 ### Initialization
 
-A list of all required inputs during initialization of the sddr instance can be seen next:
+A list of all required inputs during initialization of the Sddr instance can be seen next:
 
 **distribution:** the assumed distribution of the data, see more in [Distributions](#Distributions)
 
 **formulas:** a dictionary with a list of formulas for each parameters of the distribution, see more in [Formulas](#Formulas)
 
-**deep_models_dict:** a dictionary where keys are names of deep models and values are also dictionaries. In turn, their keys are 'model' with values being the model arcitectures and 'output_shape' with values being the output size of the model. Again see [Deep Neural Networks](#Deep-Neural-Networks) for more details
+**deep_models_dict:** a dictionary, where keys are names of deep models and values are also dictionaries. In turn, their keys are 'model' with values being the model arcitectures and 'output_shape' with values being the output size of the model. Again see [Deep Neural Networks](#Deep-Neural-Networks) for more details
 
-**train_parameters:** A dictionary where the training parameters are defined, see more in [Train Parameters](#Train-Parameters)
+**train_parameters:** a dictionary, where the training parameters are defined, see more in [Train Parameters](#Train-Parameters)
 
-Additionally, the path of the output directory in which to save results  can be defined by the user by setting: **output_dir** 
+Additionally, the path of the output directory (to save results) can be defined by the user by setting: **output_dir**.
+
+
+**Example**
+
+```
+structured_data: ./X.csv
+
+unstructured_data: {
+  x3: {
+    path: './images',
+    datatype: 'image'
+  }
+} 
+
+target: ./Y.csv
+
+output_dir: ./outputs
+
+mode: train
+load_model: 
+
+distribution: Poisson
+formulas: {rate: '~ 1 + spline(x1, bs="bs",df=9) + spline(x2, bs="bs",df=9) + d1(x3) + d2(x2)'}
+
+deep_models_dict: {
+  d1: {
+    model: 'models.alexnet()',
+    output_shape: 1000},
+  d2: {
+    model: 'nn.Sequential(nn.Linear(1,3),nn.ReLU(), nn.Linear(3,8))',
+    output_shape: 8}
+}
+
+train_parameters: {
+  batch_size: 1000,
+  epochs: 1000,
+  optimizer: 'optim.SGD',
+  optimizer_params: {lr: 0.01, momentum: 0.9}, 
+  degrees_of_freedom: {rate: 10}
+}
+
+```
+The initialization parameters can be given as a ```config.yaml``` file and an Sddr instance can be initialized with:
+
+```sddr = Sddr(config=config)```
+
+Otherwise, the initialization parameters have to be given to the Sddr instance: 
+
+```
+sddr = SDDR(data=data,
+            target=target,
+            output_dir=output_dir,
+            distribution=distribution,
+            formulas=formulas,
+            deep_models_dict=deep_models_dict,
+            train_parameters=train_parameters)
+```
 
 ### Training
 
@@ -237,6 +294,10 @@ The user can then evaluate the training on any distributional parameter, e.g. fo
 * To get the trained distribution the user can call ```distribution_layer = sddr.get_distribution()```. From this the user can then get all the properties avalaible from [PyTorch's Probability Distributions package](https://pytorch.org/docs/stable/distributions.html) (torch.distributions), e.g. the mean can be retrieved by ```distribution_layer.mean``` or the standard deviaton by ```distribution_layer.stddev```.
 
 * To get the trained network's weights, i.e. coefficients, for the structured part, the user can call: 
+
+### Resume Training
+
+The user may also wish to load a pretrained model to resume training. Therefore, Sddr needs to be initialized, e.g. ```sddr.load(model_name, training_data) ``` and the pre-trained model needs to be loaded ```sddr.load(model_name, training_data) ```. Then the user can resume training by ```sddr.train(target, structured_data, resume=True)```
 
 ### Saving
 
@@ -257,8 +318,5 @@ The distrubution as well as the partial effects for all structured features of a
 
 Note here that the training data also needs to be provided during load for the preprocessing steps, i.e. basis functions creation, to be performed.
 
-### Resume Training
-
-The user may also wish to load a pretrained model to resume training. For this the first two steps (init, load) from above need to be performed and then the user can resume training by ```sddr.train(target, structured_data, resume=True)```
 
 
