@@ -33,15 +33,15 @@ Two tutorials are available in the [tutorials](https://github.com/davidruegamer/
 
 1. [Model](#Model)
 
-1.1. [SddrNet](#SddrNet)
+  1.1. [SddrNet](#SddrNet)
 
-1.2. [Preprocessing](#Preprocessing)
+  1.2. [Preprocessing](#Preprocessing)
 
-1.3. [SddrFormulaNet](#SddrFormulaNet)
+  1.3. [SddrFormulaNet](#SddrFormulaNet)
 
-1.4. [Orthogonalization](#Orthogonalization)
+  1.4. [Orthogonalization](#Orthogonalization)
 
-1.5. [Smoothing Penalty](#Smoothing-Penalty)
+  1.5. [Smoothing Penalty](#Smoothing-Penalty)
 
 2. [User Interface](#Sddr-User-Interface)
 
