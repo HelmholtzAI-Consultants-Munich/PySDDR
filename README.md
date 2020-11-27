@@ -262,11 +262,8 @@ train_parameters: {
 }
 
 ```
-The initialization parameters can be given as a ```config.yaml``` file and an Sddr instance can be initialized with:
 
-```sddr = Sddr(config=config)```
-
-Otherwise, the initialization parameters have to be given to the Sddr instance: 
+The initialization parameters have to be given to the Sddr instance: 
 
 ```
 sddr = SDDR(data=data,
@@ -278,6 +275,12 @@ sddr = SDDR(data=data,
             train_parameters=train_parameters)
 ```
 
+The initialization parameters can also be given as a ```config.yaml``` file and an Sddr instance can be initialized with:
+
+```sddr = Sddr(config=config)```
+
+
+
 ### Training
 
 For training two simple steps are required by the user:
@@ -287,6 +290,10 @@ For training two simple steps are required by the user:
 * Train with the structured and unstructured training data by ```sddr.train(target, structured_data, unstructured_data)```
 * Train, plot and save loss curve by ```sddr.train(target, structured_data, unstructured_data, plot=True)```
 
+### Resume Training
+
+The user may also wish to load a pretrained model to resume training. Therefore, Sddr needs to be initialized, e.g. ```sddr = Sddr(config=config) ``` and the pre-trained model needs to be loaded ```sddr.load(model_name, training_data) ```. Then the user can resume training by ```sddr.train(target, structured_data, resume=True)```
+
 ### Evaluating
 
 The user can then evaluate the training on any distributional parameter, e.g. for a Poisson distribution: ```sddr.eval('rate') ```. This will return and plot the partial effects of the structured features. To turn off the plot functionality the user must set ```plot=False ``` when calling ```sddr.eval```.
@@ -295,9 +302,6 @@ The user can then evaluate the training on any distributional parameter, e.g. fo
 
 * To get the trained network's weights, i.e. coefficients, for the structured part, the user can call: 
 
-### Resume Training
-
-The user may also wish to load a pretrained model to resume training. Therefore, Sddr needs to be initialized, e.g. ```sddr.load(model_name, training_data) ``` and the pre-trained model needs to be loaded ```sddr.load(model_name, training_data) ```. Then the user can resume training by ```sddr.train(target, structured_data, resume=True)```
 
 ### Saving
 
