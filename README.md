@@ -298,11 +298,11 @@ The user may also wish to load a pretrained model to resume training. Therefore,
 
 ### Evaluating
 
-The user can then evaluate the training on any distributional parameter, e.g. for a Poisson distribution: ```sddr.eval('rate') ```. This will return and plot the partial effects of the structured features. To turn off the plot functionality the user must set ```plot=False ``` when calling ```sddr.eval```.
+The user can then evaluate the training on any distributional parameter, e.g. for a Poisson distribution: ```sddr.eval('rate') ```. This will return and plot the partial effects of the structured features. To turn off the plot functionality the user must set ```plot=False ``` when calling ```sddr.eval()```.
 
 * To get the trained distribution the user can call ```distribution_layer = sddr.get_distribution()```. From this the user can then get all the properties avalaible from [PyTorch's Probability Distributions package](https://pytorch.org/docs/stable/distributions.html) (torch.distributions), e.g. the mean can be retrieved by ```distribution_layer.mean``` or the standard deviaton by ```distribution_layer.stddev```.
 
-* To get the trained network's weights, i.e. coefficients, for the structured part, the user can call: 
+* To get the trained network's weights, i.e. coefficients, for the structured part and for a specific distributional parameter, the user can call:```sddr.coeff(self, 'rate')```.
 
 
 ### Saving
