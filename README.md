@@ -86,7 +86,7 @@ For each spline in the formula, the number of basis function (```df```) and the 
  
 The user interacts with the package through the Sddr class. An overview of this class and its iteraction with the rest of the package can be seen in the figure below:
 
-![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/sddr_ui.jpeg)
+![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/sddr_user_interface.jpeg)
 
 ### User inputs 
 
