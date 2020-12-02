@@ -56,7 +56,7 @@ Two tutorials are available in the [tutorials](https://github.com/davidruegamer/
 
 ### SddrNet
 
-The framework combines statistical regression models and neural networks into one larger unifying network - ```SddrNet``` - which has a dynamic network architecture because its architecture depends on the user input, i.e. assumed model distribution and defined formulas of distributional parameters. If ```SddrNet``` is used to build a distributional regression model, the user has to define a formula for each distributional parameter (e.g. a normal distribution has two parameters, *log* and *scale*), which is then used by ```SddrNet``` to build a sub-network - ```SddrFormulaNet``` - for each distributional parameter. The output of each ```SddrFormulaNet``` is the predicted parameter value, which are collected by ```SddrNet```, normalized based on the distrubution's rules and then given as input to a distributional layer. From the distributional layer a regularized log loss is computed, which is then backpropagated. An example of this can be seen below.
+The framework combines statistical regression models and neural networks into one larger unifying network - ```SddrNet``` - which has a dynamic network architecture because its architecture depends on the user input, i.e. assumed model distribution and defined formulas of distributional parameters. If ```SddrNet``` is used to build a distributional regression model, the user has to define a formula for each distributional parameter (e.g. a normal distribution has two parameters, *loc* and *scale*), which is then used by ```SddrNet``` to build a sub-network - ```SddrFormulaNet``` - for each distributional parameter. The output of each ```SddrFormulaNet``` is the predicted parameter value, which are collected by ```SddrNet```, transformed based on the distrubution's rules (e.g., an `exp` transformation to get a positive variance value) and then given as input to a distributional layer. From the distributional layer a regularized log loss is computed, which is then backpropagated. An example of this can be seen below.
 
 ![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/sddr_net.jpeg)
 
@@ -64,7 +64,7 @@ The framework combines statistical regression models and neural networks into on
 
 ### Preprocessing
 
-Each distributional parameter is defined by a formula that consists of a structured and unstructured part. The structured part can have linear and smoothing (non-linear) terms, while the unstructured part consist of one or more neural network terms. The user needs to define the input data for each term in the formula (the same input data can be assigned to different terms). While the structured part only accepts structured (tabular) data as input, the unstructured part accepts both, structured (tabular) and unstructured (currently only images are supported) data as input. During the preprocessing, the input data is assigned to the corresponding terms and for each smoothing term, the respective basis fucntions and penalty matrices are computed. The framework currently supports b-splines (default) and cyclic cubic splines. In a last step, the orthogonalization of the smoothing terms wrt. the linear terms is computed. The output of the processed structured part (linear and smoothing terms) is called structured features (consitsting of linear and smoothing features), while the output of the processed unstructured part (input to the neural networks) is called unstructured features.
+Each distributional parameter is defined by a formula that consists of a structured and unstructured part. The structured part can have linear and smoothing (non-linear) terms, while the unstructured part consist of one or more neural network terms. The user needs to define the input data for each term in the formula (the same input data can be assigned to different terms). While the structured part only accepts structured (tabular) data as input, the unstructured part accepts both, structured (tabular) and unstructured (currently only images are supported) data as input. During the preprocessing, the input data is assigned to the corresponding terms and for each smoothing term, the respective basis functions and penalty matrices are computed. The framework currently supports B-splines (default) and cyclic cubic regression splines. In a last step, the orthogonalization of the smoothing terms wrt. the linear terms is computed. The output of the processed structured part (linear and smoothing terms) is called structured features (consitsting of linear and smoothing features), while the output of the processed unstructured part (input to the neural networks) is called unstructured features.
 
 ### SddrFormulaNet
 
@@ -79,7 +79,7 @@ Orthogonalization ensures identifiability of the input data by a decomposition o
 
 ### Smoothing Penalty
 
-For each spline in the formula, the number of basis function (```df```) and the degree of the spline functions (```degree```) have to be specified. A smoothing penalty matrix is implicity created when smoothing terms are used in the formula. Each smoothing penaily matrix is regularized with a lambda parameter computed from user-defined degrees of freedom. The degrees of freedom can be given as a single value, then all individual penalty matrices are multiplied with a single lambda. This ensures that no smoothing term has more flexibility than the other, which makes sense in certain situations. The degrees of freedom can also be given as a list, which not only allows to specify different degrees of freedom for each distributional parameter, but also to specify different degrees of freedom for each smoothing term in each formula by providing a vector of the same length as the number of smoothing terms in the parameter’s formula. In this case, all smoothing penalty matrices are multiplied by different lambdas.
+For each spline in the formula, the number of basis function (```df```) and the degree of the spline functions (```degree```) have to be specified. A smoothing penalty matrix is implicity created when smoothing terms are used in the formula. Each smoothing penalty matrix is regularized with a lambda parameter computed from user-defined degrees of freedom. The degrees of freedom can be given as a single value, then all individual penalty matrices are multiplied with a single lambda. This ensures that no smoothing term has more flexibility than the other, which makes sense in certain situations. The degrees of freedom can also be given as a list, which not only allows to specify different degrees of freedom for each distributional parameter, but also to specify different degrees of freedom for each smoothing term in each formula by providing a vector of the same length as the number of smoothing terms in the parameter’s formula. In this case, all smoothing penalty matrices are multiplied by different lambdas.
 
 
 ## Sddr User Interface
@@ -120,15 +120,15 @@ A combination of the above options is also possible, i.e. have the structured da
 
 Currently, the available distribution in PySDDR are:
 
-* Normal: bernoulli distribution with logits (identity)
-* Poisson: poisson with rate (exp)
-* Bernoulli: bernoulli distribution with logits (identity)
-* Bernoulli_prob: bernoulli distribution with probabilities (sigmoid)
-* Multinomial: multinomial distribution parameterized by total_count(=1) and logits **-->is it implemented?**
-* Multinomial_prob: multinomial distribution parameterized by total_count(=1) and probs
-* Logistic: multinomial distribution parameterized by loc and scale
+* Normal: normal distribution with mean and variance
+* Poisson: poisson with rate
+* Bernoulli: bernoulli distribution modeling the logits
+* Bernoulli_prob: bernoulli distribution modeling probabilities
+* Multinomial: multinomial distribution parameterized by total_count (=1) and logits **-->is it implemented?**
+* Multinomial_prob: multinomial distribution parameterized by total_count (=1) and probs
+* Logistic: logistic distribution parameterized by loc and scale
 
-Note that when setting the ```distribution``` parameter, the distribution name should be given as above in sting format, as well as their parameters (which are required when defining formulas and degrees of freedom of each parameter), e.g. ```distribution='Poisson'```.
+Note that when setting the ```distribution``` parameter, the distribution name should be given as above in string format, as well as their parameters (which are required when defining formulas and degrees of freedom of each parameter), e.g. ```distribution='Poisson'```.
 
 #### Formulas
 
@@ -191,7 +191,7 @@ Note that also here the correct import needs to be given, e.g. ```import torchvi
 The last two methods can only be used if the class inputs are defined in a python script, they are currently not available when loading the inputs from a config file.
 
 
-#### Train Parametes
+#### Train Parameters
 
 The training parameters are: batch size, epochs, optimizer, optimizer parameters and degrees of freedom of each parameter. Batch size, epochs and degrees of freedom are required but defining the optimizer is optional. If no optimizer is defined by the user, *Adam* is used per default with PyTorch's default optimizer parameters, which can be found [here](https://pytorch.org/docs/stable/optim.html). An example of training parameters can be seen below:
 
@@ -300,14 +300,14 @@ The user may also wish to load a pretrained model to resume training. Therefore,
 
 The user can then evaluate the training on any distributional parameter, e.g. for a Poisson distribution: ```sddr.eval('rate') ```. This will return and plot the partial effects of the structured features. To turn off the plot functionality the user must set ```plot=False ``` when calling ```sddr.eval()```.
 
-* To get the trained distribution the user can call ```distribution_layer = sddr.get_distribution()```. From this the user can then get all the properties avalaible from [PyTorch's Probability Distributions package](https://pytorch.org/docs/stable/distributions.html) (torch.distributions), e.g. the mean can be retrieved by ```distribution_layer.mean``` or the standard deviaton by ```distribution_layer.stddev```.
+* To get the trained distribution the user can call ```distribution_layer = sddr.get_distribution()```. From this the user can then get all the properties available from [PyTorch's Probability Distributions package](https://pytorch.org/docs/stable/distributions.html) (torch.distributions), e.g. the mean can be retrieved by ```distribution_layer.mean``` or the standard deviaton by ```distribution_layer.stddev```.
 
 * To get the trained network's weights, i.e. coefficients, for the structured part and for a specific distributional parameter, the user can call:```sddr.coeff(self, 'rate')```.
 
 
 ### Saving
 
-After training and evaluation the model can be saved by ```sddr.save()``` or ```sddr.save('MyModel.pth')```, if the user wishes to save the model with a name different than the default _model.pth_. This will be saved in the output directory defined by the user in the config, or if no output directory has been defined an _outputs_ directory is automatically created.
+After training and evaluation, the model can be saved by ```sddr.save()``` or ```sddr.save('MyModel.pth')```, if the user wishes to save the model with a name different than the default _model.pth_. This will be saved in the output directory defined by the user in the config, or if no output directory has been defined an _outputs_ directory is automatically created.
 
 ### Predicting
 
