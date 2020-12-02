@@ -243,7 +243,7 @@ class Sddr(object):
             num_plots =  sum(can_plot)
             current_non_plots = 0
             if num_plots == 0:
-                print('Not possible to print any partial effects')
+                print('Nothing to plot. No (non-)linear partial effects specified for this parameter. (Deep partial effects are not plotted.)')
             elif num_plots != len(partial_effects):
                 print('Cannot plot ', len(partial_effects) - num_plots, ' splines because they have more that one input')
             
@@ -365,12 +365,30 @@ class Sddr(object):
         self.cur_epoch = state_dict['epoch']
         print('Loaded model {} at epoch {} with a loss {:.4f}'.format(model_name, self.cur_epoch, loss))
 
-    
+
+
     def coeff(self, param):
         '''
         Given a distribution parameter, return the coefficients (network weights) of the corresponding structured head.
         '''
-        return self.net.single_parameter_sddr_list[param].structured_head.weight.detach().numpy()
+        # get a list of the slices all structured terms inthe data matrix and thus also in the coefficient vector
+        list_of_slices = self.prepare_data.dm_info_dict[param]['non_spline_info']['list_of_non_spline_slices']
+        list_of_slices += self.prepare_data.dm_info_dict[param]['spline_info']['list_of_spline_slices']
+
+
+        # get a list of the names all structured terms
+        list_of_term_names = self.prepare_data.dm_info_dict[param]['non_spline_info']['list_of_term_names']
+        list_of_term_names += self.prepare_data.dm_info_dict[param]['spline_info']['list_of_term_names']
+
+        #get the vector of all coefficients for the structured part for this parameter
+        all_coeffs = self.net.single_parameter_sddr_list[param].structured_head.weight.detach().numpy()
+
+        #create dictionary that contains the coefficients for each term in the formula
+        coefs_dict = {}
+        for term_name, slice_ in zip(list_of_term_names, list_of_slices):
+            coefs_dict[term_name] = all_coeffs[0,slice_]
+
+        return coefs_dict   
     
     def get_distribution(self):
         '''

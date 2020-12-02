@@ -35,7 +35,8 @@ def checkups(params, formulas):
             new_formulas[param] = formulas[param]
         # define an empty formula for parameters for which the user has not specified a formula
         else:
-            print('Parameter formula', param,'for distribution not defined. Creating a zero formula for it.')
+            warnings.simplefilter('always')
+            warnings.warn(f'Parameter formula f{param} for distribution not defined. Creating a zero formula for it.')
             new_formulas[param] = '~0'
     return new_formulas
 
