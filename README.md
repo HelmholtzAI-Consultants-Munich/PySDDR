@@ -289,17 +289,21 @@ The initialization parameters can also be given as a ```config.yaml``` file and 
 
 ### Training
 
-For training two simple steps are required by the user:
+For training two simple steps are required by the user. The following options are available:
 
-* Initialize an Sddr instance, e.g. ```sddr = Sddr(config=config)```
-* Train the model with ```sddr.train()```  
-  * Train with the structured training data by ```sddr.train(target, structured_data)```  
-  * Train with the structured and unstructured training data by ```sddr.train(target, structured_data, unstructured_data)```  
-  * Train, plot and save loss curve by ```sddr.train(target, structured_data, unstructured_data, plot=True)```  
+ * Train with the structured training data: ```sddr.train(target, structured_data)```  
+ * Train with the structured and unstructured training data: ```sddr.train(target, structured_data, unstructured_data)```  
+ * Train, plot and save loss curve: ```sddr.train(target, structured_data, unstructured_data, plot=True)```  
+
 
 ### Resume Training
 
-The user may also wish to load a pretrained model to resume training. Therefore, Sddr needs to be initialized, e.g. ```sddr = Sddr(config=config) ``` and the pre-trained model needs to be loaded ```sddr.load(model_name, training_data) ```. Then the user can resume training by ```sddr.train(target, structured_data, resume=True)```
+The user may also wish to load a pretrained model to resume training. This can be done by:
+
+* Initialize an Sddr instance: ```sddr = Sddr(config=config)```
+* Load the pre-trained model: ```sddr.load(model_name, training_data) ```
+* Resume training: ```sddr.train(target, structured_data, resume=True)```
+
 
 ### Evaluating
 
@@ -310,24 +314,30 @@ The user can then evaluate the training on any distributional parameter, e.g. fo
 * To get the trained network's weights, i.e. coefficients, for the structured part and for a specific distributional parameter, the user can call:```sddr.coeff(self, 'rate')```.
 
 
+### Predicting
+
+The trained model can be used to make predictions on unseen data. The following options are available:
+
+* Predict on unseen structured data: ```sddr.predict(data) ```
+* Predict on unseen structured and unstructured data: ```sddr.predict(data, unstructured_data) ```
+* Predict on unseen data and clip the data range to fall inside training data range if a out of range error occurs: ```sddr.predict(data, clipping=True) ```
+* Predict on unseed data and plot a figure for each spline defined in each formula of the distribution's parameters: ```sddr.predict(data, plot=True) ```
+
+The distrubution as well as the partial effects for all structured features of all parameters of the distribution will be returned. 
+
+Another option is to load a pre-trained model and use the previously trained model to make predictions on unseen data. This can be done by:
+
+* Initialize an Sddr instance: ```sddr = Sddr(config=config) ```
+* Load model: ```sddr.load(model_name, training_data) ``` 
+* Predict on unseen data: ```sddr.predict(data) ```
+
+Note here that the training data also needs to be provided during load for the preprocessing steps, i.e. basis functions creation, to be performed.
+
+
 ### Saving
 
 After training and evaluation, the model can be saved by ```sddr.save()``` or ```sddr.save('MyModel.pth')```, if the user wishes to save the model with a name different than the default _model.pth_. This will be saved in the output directory defined by the user in the config, or if no output directory has been defined an _outputs_ directory is automatically created.
 
-### Predicting
-
-At a later stage the user can again initialize an Sddr instance and use the previously trained model to make predictions on unseen data. This can be done by:
-
-* Initialize an Sddr instance, e.g. ```sddr = Sddr(config=config) ```
-* Load model ```sddr.load(model_name, training_data) ``` 
-* Predict on unseen linear and structured data ```sddr.predict(data) ```
-* Predict on unseen linear, structured data and unstructured data ```sddr.predict(data, unstructured_data) ```
-* Predict on unseen data and clip the data range to fall inside training data range if a out of range error occurs: ```sddr.predict(data, clipping=True) ```
-* Predict on unseed data and plot a figure for each spline defined in each formula of the distribution's parameters```sddr.predict(data, plot=True) ```
-
-The distrubution as well as the partial effects for all structured features of all parameters of the distribution will be returned. 
-
-Note here that the training data also needs to be provided during load for the preprocessing steps, i.e. basis functions creation, to be performed.
 
 
 
