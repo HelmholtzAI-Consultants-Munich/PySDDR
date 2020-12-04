@@ -67,7 +67,7 @@ The framework combines statistical regression models and neural networks into on
 Each distributional parameter is defined by a formula that consists of a structured and unstructured part. 
 
 
-~ <span style="color:lightblue">1 + x1</span> + <span style="color:blue">spline(x1, bs="bs", df=4) + spline(x2, bs="bs",df=4)</span> + <span style="color:darkred">d1(x3) + d2(x5)</span>
+~ <font color='red'>1 + x1</span> + <span style="color:blue">spline(x1, bs="bs", df=4) + spline(x2, bs="bs",df=4)</span> + <span style="color:darkred">d1(x3) + d2(x5)</span>
 
 
 The structured part can have linear and smoothing (non-linear) terms, while the unstructured part consist of one or more neural network terms. The user needs to define the input data for each term in the formula (the same input data can be assigned to different terms). While the structured part only accepts structured (tabular) data as input, the unstructured part accepts both, structured (tabular) and unstructured (currently only images are supported) data as input. During the preprocessing, the input data is assigned to the corresponding terms and for each smoothing term, the respective basis functions and penalty matrices are computed. The framework currently supports B-splines (default) and cyclic cubic regression splines. In a last step, the orthogonalization of the smoothing terms wrt. the linear terms is computed. The output of the processed structured part (linear and smoothing terms) is called structured features (consitsting of linear and smoothing features), while the output of the processed unstructured part (input to the neural networks) is called unstructured features.
