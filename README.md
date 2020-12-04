@@ -217,18 +217,14 @@ Note that ```train_parameters['degrees_of_freedom']``` is a dictionary where the
 
 A list of all required inputs during initialization of the Sddr instance can be seen next:
 
-**distribution:** the assumed distribution of the data, see more in [Distributions](#Distributions)
-
-**formulas:** a dictionary with a list of formulas for each parameters of the distribution, see more in [Formulas](#Formulas)
-
-**deep_models_dict:** a dictionary, where keys are names of deep models and values are also dictionaries. In turn, their keys are 'model' with values being the model arcitectures and 'output_shape' with values being the output size of the model. Again see [Deep Neural Networks](#Deep-Neural-Networks) for more details
-
-**train_parameters:** a dictionary, where the training parameters are defined, see more in [Train Parameters](#Train-Parameters)
-
-Additionally, the path of the output directory (to save results) can be defined by the user by setting: **output_dir**.
+* distribution: the assumed distribution of the data, see more in [Distributions](#Distributions)
+* formulas: a dictionary with a list of formulas for each parameters of the distribution, see more in [Formulas](#Formulas)
+* deep_models_dict: a dictionary, where keys are names of deep models and values are also dictionaries. In turn, their keys are 'model' with values being the model arcitectures and 'output_shape' with values being the output size of the model. Again see [Deep Neural Networks](#Deep-Neural-Networks) for more details
+* train_parameters: a dictionary, where the training parameters are defined, see more in [Train Parameters](#Train-Parameters)
+* output_dir (optional): the path of the output directory (to save results)
 
 
-**Example**
+*Example for initialization parameters:*
 
 ```
 structured_data: ./X.csv
