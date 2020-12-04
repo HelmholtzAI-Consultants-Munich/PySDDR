@@ -292,7 +292,7 @@ The initialization parameters can also be given as a ```config.yaml``` file and 
 For training two simple steps are required by the user:
 
 * Initialize an Sddr instance, e.g. ```sddr = Sddr(config=config)```
-* Train the model ```sddr.train()```  
+* Train the model with ```sddr.train()```  
   * Train with the structured training data by ```sddr.train(target, structured_data)```  
   * Train with the structured and unstructured training data by ```sddr.train(target, structured_data, unstructured_data)```  
   * Train, plot and save loss curve by ```sddr.train(target, structured_data, unstructured_data, plot=True)```  
