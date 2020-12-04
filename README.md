@@ -64,7 +64,7 @@ The framework combines statistical regression models and neural networks into on
 
 ### Preprocessing
 
-Each distributional parameter is defined by a formula that consists of a structured (blue) and unstructured (red) part. 
+Each distributional parameter is defined by a formula that consists of a structured (*blue*) and unstructured (*red*) part. 
 
 ![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/formula.png)
 
@@ -292,9 +292,10 @@ The initialization parameters can also be given as a ```config.yaml``` file and 
 For training two simple steps are required by the user:
 
 * Initialize an Sddr instance, e.g. ```sddr = Sddr(config=config)```
-* Train with the structured training data by ```sddr.train(target, structured_data)```
-* Train with the structured and unstructured training data by ```sddr.train(target, structured_data, unstructured_data)```
-* Train, plot and save loss curve by ```sddr.train(target, structured_data, unstructured_data, plot=True)```
+* Train the model ```sddr.train()```  
+  * Train with the structured training data by ```sddr.train(target, structured_data)```  
+  * Train with the structured and unstructured training data by ```sddr.train(target, structured_data, unstructured_data)```  
+  * Train, plot and save loss curve by ```sddr.train(target, structured_data, unstructured_data, plot=True)```  
 
 ### Resume Training
 
