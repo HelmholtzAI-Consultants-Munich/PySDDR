@@ -4,10 +4,10 @@ import torch
 class Family():
     '''
     Create Family class, currently only 4 distributions are available:
-        - 'Normal': bernoulli distribution with logits (identity)
-        - 'Poisson': poisson with rate (exp)
-        - 'Bernoulli': bernoulli distribution with logits (identity)
-        - 'Bernoulli_prob': bernoulli distribution with probabilities (sigmoid)
+        - 'Normal': normal distribution with mean (loc) and variance (scale)
+        - 'Poisson': poisson with rate
+        - 'Bernoulli': bernoulli distribution with logits 
+        - 'Bernoulli_prob': bernoulli distribution with probabilities 
         - 'Multinomial': multinomial distribution parameterized by total_count(=1) and logits
         - 'Multinomial_prob': multinomial distribution parameterized by total_count(=1) and probs
     Later more distributions could be implemented, such as Gamma, Beta and NegativeBinomial
@@ -28,9 +28,9 @@ class Family():
                          'Poisson': ['rate'], 
                          'Bernoulli': ['logits'],
                          'Bernoulli_prob':['probs'],
+                         'Multinomial':['logits'],
                          'Multinomial_prob':['probs'],
                          'Logistic':['loc', 'scale']}
-#                        'Multinomial':['logits'],
 #                        'Gamma':['concentration', 'rate'],
 #                        'Beta':['concentration1', 'concentration0'],
                        #'NegativeBinomial':['loc', 'scale']}  # available family list
@@ -54,7 +54,7 @@ class Family():
             distribution_layer_type = torch.distributions.poisson.Poisson
         elif self.family == "Bernoulli" or self.family == "Bernoulli_prob":
             distribution_layer_type = torch.distributions.bernoulli.Bernoulli       
-        elif self.family == "Multinomial_prob":
+        elif self.family == "Multinomial" or self.family == "Multinomial_prob":
             distribution_layer_type = torch.distributions.multinomial.Multinomial 
         elif self.family == "Logistic":
             def logistic(loc, scale):
@@ -101,6 +101,10 @@ class Family():
             
         elif self.family == "Bernoulli_prob":
             pred_trafo["probs"] = torch.nn.functional.sigmoid(pred["probs"])
+        
+        elif self.family == "Multinomial":
+            pred_trafo["total_count"] = 1
+            pred_trafo["logits"] = pred["logits"]
             
         elif self.family == "Multinomial_prob":
             pred_trafo["total_count"] = 1
@@ -111,10 +115,6 @@ class Family():
             pred_trafo["scale"] = add_const + pred["scale"].exp()
 
             
-#         elif self.family == "Multinomial":
-#             pred_trafo["total_count"] = 1
-#             pred_trafo["logits"] = torch.nn.functional.softmax(pred["probs"])
-
 #         elif family == "Gamma":
 #             pred_trafo["concentration"] = add_const + pred["concentration"].exp()
 #             pred_trafo["rate"] = add_const + pred["rate"].exp()
