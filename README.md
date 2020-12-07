@@ -128,7 +128,7 @@ Currently, the available distribution in PySDDR are:
 * Poisson: poisson with rate
 * Bernoulli: bernoulli distribution modeling the logits
 * Bernoulli_prob: bernoulli distribution modeling probabilities
-* Multinomial: multinomial distribution parameterized by total_count (=1) and logits **-->is it implemented?**
+* Multinomial: multinomial distribution parameterized by total_count (=1) and logits
 * Multinomial_prob: multinomial distribution parameterized by total_count (=1) and probs
 * Logistic: logistic distribution parameterized by loc and scale
 
