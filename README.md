@@ -130,7 +130,7 @@ Currently, the available distribution in PySDDR are:
 * Bernoulli_prob: bernoulli distribution modeling probabilities(probs)
 * Multinomial: multinomial distribution parameterized by total_count (default=1) and logits(logits)
 * Multinomial_prob: multinomial distribution parameterized by total_count (default=1) and probabilities(probs)
-* Logistic: logistic distribution parameterized by loc and scale
+* Logistic: logistic distribution parameterized by loc(loc) and scale(scale)
 
 Note that when setting the ```distribution``` parameter, the distribution name should be given as above in string format, as well as their parameters (which are required when defining formulas and degrees of freedom of each parameter), e.g. ```distribution='Poisson'```.
 
