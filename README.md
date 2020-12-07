@@ -146,7 +146,7 @@ formulas = {'loc': '~ 1 + x1 + spline(x1, bs="bs", df=4) + spline(x2, bs="bs",df
             }
 ```
 
-In this example, ```formulas``` has two keys, 'loc' and 'scale', corresponding to the two parameters of the Logistic distribution. The features x1, x2, x3, x4 need to be structured data as they are given as input to the linear and smoothing terms (structured part). This means that the tabular data needs to have column names corresponding to the features, i.e. x1, x2, x3, x4. Feature x5 can be either structured or unstructured data - note that if it is unstructured data 'x5' should be a key value in the unstructured_data input. In addition, an intercept is implicitely added to the formula but can also be explicitely added with an ```1```as (see ```loc```in fumula example above). If the intercept should be removed, a ```-1```statement can be added to the formula (see ```scale```in fumula example above). 
+In this example, ```formulas``` has two keys, 'loc' and 'scale', corresponding to the two parameters of the Logistic distribution. The features x1, x2, x3, x4 need to be structured data as they are given as input to the linear and smoothing terms (structured part). This means that the tabular data needs to have column names corresponding to the features, i.e. x1, x2, x3, x4. Feature x5 can be either structured or unstructured data - note that if it is unstructured data 'x5' should be a key value in the unstructured_data input. In addition, an intercept is implicitely added to the formula but can also be explicitely added with an ```1``` (see ```loc```in fumula example above). If the intercept should be removed, a ```-1```statement can be added to the formula (see ```scale```in fumula example above). 
 
 
 #### Deep Neural Networks
