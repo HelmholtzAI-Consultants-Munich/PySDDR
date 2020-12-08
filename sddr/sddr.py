@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 # torch imports
 import torch
 from torch import nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, random_split
 import torch.optim as optim
 # pysddr imports
 from .sddrnetwork import SddrNet, SddrFormulaNet
@@ -125,18 +125,35 @@ class Sddr(object):
             self.net = self.net.to(self.device)
             self._setup_optim()
             self.cur_epoch = 0
-        
-        self.loader = DataLoader(self.dataset,
-                                batch_size=self.config['train_parameters']['batch_size'])
 
-        self.net.train()
-        loss_list = []
+        # get number of train and validation samples
+        # e.g. self.config['val_split']= 20 (%)
+        n_val = int(len(self.dataset) * self.config['val_split']/100)                                                    
+        n_train = len(self.dataset) - n_val
+        # split the dataset randomly to train and val
+        train, val = random_split(self.dataset, [n_train, n_val])  
+
+        # load train and val data with data loader
+        self.train_loader = DataLoader(train, 
+                                    batch_size=self.config['train_parameters']['batch_size'])
+        self.val_loader = DataLoader(val, 
+                                    batch_size=self.config['train_parameters']['batch_size'])
+        
+        #self.loader = DataLoader(self.dataset,
+                                #batch_size=self.config['train_parameters']['batch_size'])
+
+        train_loss_list = []
+        val_loss_list = []
+        if 'stop_early' in self.config.keys():
+            early_stop_counter = 0
+            best_loss = 1000000
         
         print('Beginning training ...')
         P = self.prepare_data.get_penalty_matrix(self.device)
         for epoch in range(self.cur_epoch , self.config['train_parameters']['epochs']):
-            self.epoch_loss = 0
-            for batch in self.loader:
+            self.net.train()
+            self.epoch_train_loss = 0
+            for batch in self.train_loader:
                 # for each batch
                 target = batch['target'].float().to(self.device)
                 datadict = batch['datadict']
@@ -157,19 +174,57 @@ class Sddr(object):
                 # and backprobagate
                 loss.backward()
                 self.optimizer.step()
-                self.epoch_loss += loss.item()
+                self.epoch_train_loss += loss.item()
                 
             # compute the avg loss over all batches in the epoch
-            self.epoch_loss = self.epoch_loss/len(self.loader)
+            self.epoch_train_loss = self.epoch_train_loss/len(self.train_loader)
             if epoch % epoch_print_interval == 0:
-                print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, self.epoch_loss))
-                
+                print('Train Epoch: {} \t Training Loss: {:.6f}'.format(epoch, self.epoch_train_loss))
             # and save it in a list in case we want to print later
-            loss_list.append(self.epoch_loss)
+            train_loss_list.append(self.epoch_train_loss)
+            
+            # after each epoch of training evaluate performance on validation set
+            with torch.no_grad():
+                self.net.eval()
+                epoch_val_loss = 0
+                for batch in self.val_loader:
+                    # for each batch
+                    target = batch['target'].float().to(self.device)
+                    datadict = batch['datadict']
+                    
+                    # send each input batch to the current device
+                    for param in datadict.keys():
+                        for data_part in datadict[param].keys():
+                            datadict[param][data_part] = datadict[param][data_part].float().to(self.device)
+                    _ = self.net(datadict)
+                    # compute the loss and add regularization
+                    val_batch_loss = torch.mean(self.net.get_log_loss(target))
+                    val_batch_loss += self.net.get_regularization(P).squeeze_() 
+                    epoch_val_loss += val_batch_loss
+                epoch_val_loss = epoch_val_loss/len(self.val_loader)
+                val_loss_list.append(epoch_val_loss)
+
+                # check if early stopping has been set
+                if 'stop_early' in self.config.keys():
+                    # criterion can change e.g. get difference and compare to a small valuecd ..
+                    if epoch_val_loss < best_loss:
+                        best_loss = epoch_val_loss
+                        early_stop_counter = 0 
+                    else:
+                        early_stop_counter += 1
+
+            if epoch % epoch_print_interval == 0:
+                print('Train Epoch: {} \t Validation Loss: {:.6f}'.format(epoch, epoch_val_loss))
+                    
+            if 'stop_early' in self.config.keys() and early_stop_counter == self.config['stop_early']:
+                print('Validationloss has not improved for the last %s epochs! To avoid overfitting we are going to stop training now'%(early_stop_counter))
+                break
 
         if plot:
-            plt.plot(loss_list)
-            plt.title('Training Loss')
+            plt.plot(train_loss_list, label='train')
+            plt.plot(val_loss_list, label='validation')
+            plt.legend(loc='upper left')
+            #plt.title('Loss')
             plt.ylabel('Loss')
             plt.xlabel('Epochs')
             plt.savefig(os.path.join(self.config['output_dir'], 'train_loss.png'))
@@ -275,7 +330,7 @@ class Sddr(object):
 
         state={
             'epoch': self.config['train_parameters']['epochs'],
-            'loss': self.epoch_loss,
+            'loss': self.epoch_train_loss, # or maybe save validation loss?
             'optimizer': self.optimizer.state_dict(),
             'sddr_net': self.net.state_dict()
         }

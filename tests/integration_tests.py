@@ -50,20 +50,30 @@ def integration_test_simple_gam():
 
     train_parameters = {
         'batch_size': 1000,
-        'epochs': 500,
+        'epochs': 1000,
         'degrees_of_freedom': {'rate': 6},
         'optimizer' : optim.RMSprop
     }
-
+    '''
     #initialize Sddr
     sddr = Sddr(output_dir=output_dir,
                 distribution=distribution,
                 formulas=formulas,
                 deep_models_dict=deep_models_dict,
                 train_parameters=train_parameters)
-    
+    '''
+    # christina edit
+    #initialize Sddr
+    sddr = Sddr(output_dir=output_dir,
+                distribution=distribution,
+                formulas=formulas,
+                deep_models_dict=deep_models_dict,
+                train_parameters=train_parameters,
+                val_split=20,
+                stop_early=100)
+
     # train Sddr
-    sddr.train(target=target, structured_data=data)
+    sddr.train(target=target, structured_data=data, plot=True)
     
     #compute partial effects
     partial_effects_rate = sddr.eval('rate',plot=False)
@@ -109,7 +119,7 @@ def integration_test_simple_gam():
     
     assert RMSE<0.02, "Partial effect not properly estimated on unseen data in simple GAM."
     
-    sddr.save('temp_simple_gam.pth')
+    sddr.save('temp_simple_gam.pth') # remove this?
 
     
 def integration_test_gamlss():
