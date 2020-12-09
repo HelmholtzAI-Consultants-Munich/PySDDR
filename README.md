@@ -307,7 +307,7 @@ The user can then evaluate the training on any distributional parameter, e.g. fo
 
 * To get the trained distribution the user can call ```distribution_layer = sddr.get_distribution()```. From this the user can then get all the properties available from [PyTorch's Probability Distributions package](https://pytorch.org/docs/stable/distributions.html) (torch.distributions), e.g. the mean can be retrieved by ```distribution_layer.mean``` or the standard deviaton by ```distribution_layer.stddev```.
 
-* To get the trained network's weights, i.e. coefficients, for the structured part and for a specific distributional parameter, the user can call:```sddr.coeff(self, 'rate')```.
+* To get the trained network's weights, i.e. coefficients, for the structured part and for a specific distributional parameter, the user can call:```sddr.coeff('rate')```.
 
 
 ### Predicting
