@@ -36,7 +36,7 @@ def checkups(params, formulas):
         # define an empty formula for parameters for which the user has not specified a formula
         else:
             warnings.simplefilter('always')
-            warnings.warn(f'Parameter formula f{param} for distribution not defined. Creating a zero formula for it.')
+            warnings.warn(f'Parameter formula f{param} for distribution not defined. Creating a zero formula for it.', stacklevel=2)
             new_formulas[param] = '~0'
     return new_formulas
 
@@ -172,7 +172,8 @@ def df2lambda(dm, P, df, lam = None, hat1 = True, lam_max = 1e+15):
         rank_dm = np.linalg.matrix_rank(dm)
         if df >= rank_dm:
             warnings.simplefilter('always')
-            warnings.warn("""df too large: Degrees of freedom (df = {0}) cannot be larger than the rank of the design matrix (rank = {1}). Unpenalized base-learner with df = {1} will be used. Re-consider model specification.""".format(df,rank_dm))
+            warnings.warn("""df too large: Degrees of freedom (df = {0}) cannot be larger than the rank of the design matrix (rank = {1}). 
+            Unpenalized base-learner with df = {1} will be used. Re-consider model specification.""".format(df,rank_dm), stacklevel=2)
             lam = 0
             return df, lam
 
@@ -213,14 +214,15 @@ def df2lambda(dm, P, df, lam = None, hat1 = True, lam_max = 1e+15):
     df_for_lam_max = df_fun(lam_max, d, hat1)
     if (df_for_lam_max - df) > 0 and (df_for_lam_max - df) > np.sqrt(machine_epsilon):
         warnings.simplefilter('always')
-        warnings.warn("""lambda needs to be larger than lambda_max = {0} for given df. Settign lambda to {0} leeds to an deviation from your df of {1}. You can increase lambda_max in parameters. """.format(lam_max,df_for_lam_max - df))
+        warnings.warn("""lambda needs to be larger than lambda_max = {0} for given df. Settign lambda to {0} leeds to an deviation from your df of {1}. 
+        You can increase lambda_max in parameters. """.format(lam_max,df_for_lam_max - df), stacklevel=2)
         lam = lam_max
         return df, lam
 
     lam = sp.optimize.brentq(lambda l: df_fun(l, d, hat1) - df, 0, lam_max)
     if abs(df_fun(lam, d, hat1) - df) > np.sqrt(machine_epsilon):
         warnings.simplefilter('always')
-        warnings.warn("""estimated df differ from given df by {0} """.format(df_fun(lam, d, hat1) - df))
+        warnings.warn("""estimated df differ from given df by {0} """.format(df_fun(lam, d, hat1) - df), stacklevel=2)
 
     return df, lam
 

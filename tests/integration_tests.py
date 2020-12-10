@@ -52,28 +52,21 @@ def integration_test_simple_gam():
         'batch_size': 1000,
         'epochs': 1000,
         'degrees_of_freedom': {'rate': 6},
-        'optimizer' : optim.RMSprop
+        'optimizer' : optim.RMSprop,
+        'val_split': 0.15,
+        'early_stop_epochs': 100,
+        'early_stop_epsilon': 0.001
     }
-    '''
+    
     #initialize Sddr
     sddr = Sddr(output_dir=output_dir,
                 distribution=distribution,
                 formulas=formulas,
                 deep_models_dict=deep_models_dict,
                 train_parameters=train_parameters)
-    '''
-    # christina edit
-    #initialize Sddr
-    sddr = Sddr(output_dir=output_dir,
-                distribution=distribution,
-                formulas=formulas,
-                deep_models_dict=deep_models_dict,
-                train_parameters=train_parameters,
-                val_split=20,
-                stop_early=100)
 
     # train Sddr
-    sddr.train(target=target, structured_data=data, plot=True)
+    sddr.train(target=target, structured_data=data)
     
     #compute partial effects
     partial_effects_rate = sddr.eval('rate',plot=False)
@@ -118,8 +111,7 @@ def integration_test_simple_gam():
     RMSE = (y-y_target).std()
     
     assert RMSE<0.02, "Partial effect not properly estimated on unseen data in simple GAM."
-    
-    sddr.save('temp_simple_gam.pth') # remove this?
+
 
     
 def integration_test_gamlss():
@@ -162,7 +154,8 @@ def integration_test_gamlss():
         'batch_size': 1000,
         'epochs': 200,
         'degrees_of_freedom': {'loc':4, 'scale':4},
-        'optimizer' : optim.RMSprop
+        'optimizer' : optim.RMSprop,
+        'val_split': 0.01
     }
 
     #initialize Sddr
@@ -365,7 +358,8 @@ def integration_test_load_and_resume():
         'batch_size': 1000,
         'epochs': 100,
         'degrees_of_freedom': {'rate': 6},
-        'optimizer' : optim.RMSprop
+        'optimizer' : optim.RMSprop,
+        'val_split': 0
     }
     
     #initialize Sddr
@@ -388,7 +382,7 @@ def integration_test_load_and_resume():
                 train_parameters=train_parameters)
     sddr_resume.load('./outputs/temp_simple_gam.pth', data)
     sddr_resume.train(target=target, structured_data=data, resume=True)
-    loss_resume = sddr_resume.epoch_loss
+    loss_resume = sddr_resume.epoch_train_loss
     # train continuously
     #set seeds for reproducibility
     torch.manual_seed(1)
@@ -407,7 +401,8 @@ def integration_test_load_and_resume():
         'batch_size': 1000,
         'epochs': 500,
         'degrees_of_freedom': {'rate': 6},
-        'optimizer' : optim.RMSprop
+        'optimizer' : optim.RMSprop,
+        'val_split': 0
     }
     
     sddr_500 = Sddr(output_dir=output_dir,
@@ -416,7 +411,7 @@ def integration_test_load_and_resume():
             deep_models_dict=deep_models_dict,
             train_parameters=train_parameters)
     sddr_500.train(target=target, structured_data=data)
-    loss_500 = sddr_500.epoch_loss
+    loss_500 = sddr_500.epoch_train_loss
     loss_dif = abs(loss_500 - loss_resume)
     assert loss_dif < 0.001, "Loss function not equal in two training methods"
 
@@ -533,24 +528,24 @@ if __name__ == '__main__':
     print("Test simple GAM")
     integration_test_simple_gam()  
     print("---------------------------")
-    print("passed tests for simple GAM")
+    print("Passed tests for simple GAM")
     
     print("Test simple GAMLSS")
     integration_test_gamlss()   
     print("-----------------------")
-    print("passed tests for GAMLSS")
+    print("Passed tests for GAMLSS")
     
     print("Test with MNIST data")
     integration_test_mnist()   
     print("-----------------------")
-    print("passed tests for MNIST data")
+    print("Passed tests for MNIST data")
     
     print("Test loading a GAMLSS model and predicting")
     integration_test_load_and_predict()
     print("-----------------------")
-    print("passed tests for loading and predicting")
+    print("Passed tests for loading and predicting")
     
     print("Test loading a GAMLSS model and resuming training")
     integration_test_load_and_resume()
     print("-----------------------")
-    print("passed tests for loading and resuming training")
+    print("Passed tests for loading and resuming training")

@@ -1,5 +1,6 @@
 import os
 import yaml
+import sys
 
 import numpy as np
 import pandas as pd
@@ -127,8 +128,15 @@ class Sddr(object):
             self.cur_epoch = 0
 
         # get number of train and validation samples
-        # e.g. self.config['val_split']= 20 (%)
-        n_val = int(len(self.dataset) * self.config['val_split']/100)                                                    
+        # document val_split is 0.2 for e.g. 20% holdout
+        if 'val_split' in self.config['train_parameters'].keys():
+            val_split = self.config['train_parameters']['val_split']
+        else:
+            val_split = 0.2
+            warnings.simplefilter('always')
+            warnings.warn('No validation split has been given by the user. Setting to default value of 0.2', stacklevel=2)
+            
+        n_val = int(len(self.dataset) * val_split)                                                    
         n_train = len(self.dataset) - n_val
         # split the dataset randomly to train and val
         train, val = random_split(self.dataset, [n_train, n_val])  
@@ -138,15 +146,18 @@ class Sddr(object):
                                     batch_size=self.config['train_parameters']['batch_size'])
         self.val_loader = DataLoader(val, 
                                     batch_size=self.config['train_parameters']['batch_size'])
-        
-        #self.loader = DataLoader(self.dataset,
-                                #batch_size=self.config['train_parameters']['batch_size'])
 
         train_loss_list = []
         val_loss_list = []
-        if 'stop_early' in self.config.keys():
+
+        if 'early_stop_epochs' in self.config['train_parameters'].keys():
             early_stop_counter = 0
-            best_loss = 1000000
+            if not resume:
+                self.cur_best_loss = sys.maxsize
+            if 'early_stop_epsilon' in self.config['train_parameters'].keys():
+                eps = self.config['train_parameters']['early_stop_epsilon']
+            else:
+                eps = 0.001
         
         print('Beginning training ...')
         P = self.prepare_data.get_penalty_matrix(self.device)
@@ -186,7 +197,7 @@ class Sddr(object):
             # after each epoch of training evaluate performance on validation set
             with torch.no_grad():
                 self.net.eval()
-                epoch_val_loss = 0
+                self.epoch_val_loss = 0
                 for batch in self.val_loader:
                     # for each batch
                     target = batch['target'].float().to(self.device)
@@ -200,29 +211,32 @@ class Sddr(object):
                     # compute the loss and add regularization
                     val_batch_loss = torch.mean(self.net.get_log_loss(target))
                     val_batch_loss += self.net.get_regularization(P).squeeze_() 
-                    epoch_val_loss += val_batch_loss
-                epoch_val_loss = epoch_val_loss/len(self.val_loader)
-                val_loss_list.append(epoch_val_loss)
+                    self.epoch_val_loss += val_batch_loss
+                if len(self.val_loader) !=0:
+                    self.epoch_val_loss = self.epoch_val_loss/len(self.val_loader)
+                val_loss_list.append(self.epoch_val_loss)
 
                 # check if early stopping has been set
-                if 'stop_early' in self.config.keys():
-                    # criterion can change e.g. get difference and compare to a small valuecd ..
-                    if epoch_val_loss < best_loss:
-                        best_loss = epoch_val_loss
+                if 'early_stop_epochs' in self.config['train_parameters'].keys():
+                    # if model performance improves dif will be positive
+                    dif =  self.cur_best_loss - self.epoch_val_loss
+                    if dif > eps:
+                        self.cur_best_loss = self.epoch_val_loss
                         early_stop_counter = 0 
                     else:
                         early_stop_counter += 1
 
-            if epoch % epoch_print_interval == 0:
-                print('Train Epoch: {} \t Validation Loss: {:.6f}'.format(epoch, epoch_val_loss))
+            if epoch % epoch_print_interval == 0 and len(self.val_loader) !=0:
+                print('Train Epoch: {} \t Validation Loss: {:.6f}'.format(epoch, self.epoch_val_loss))
                     
-            if 'stop_early' in self.config.keys() and early_stop_counter == self.config['stop_early']:
-                print('Validationloss has not improved for the last %s epochs! To avoid overfitting we are going to stop training now'%(early_stop_counter))
+            if 'early_stop_epochs' in self.config['train_parameters'].keys() and early_stop_counter == self.config['train_parameters']['early_stop_epochs']:
+                print('Validation loss has not improved for the last %s epochs! To avoid overfitting we are going to stop training now'%(early_stop_counter))
                 break
 
         if plot:
             plt.plot(train_loss_list, label='train')
-            plt.plot(val_loss_list, label='validation')
+            if len(self.val_loader) !=0:
+                plt.plot(val_loss_list, label='validation')
             plt.legend(loc='upper left')
             #plt.title('Loss')
             plt.ylabel('Loss')
@@ -330,7 +344,8 @@ class Sddr(object):
 
         state={
             'epoch': self.config['train_parameters']['epochs'],
-            'loss': self.epoch_train_loss, # or maybe save validation loss?
+            'train_loss': self.epoch_train_loss,
+            'val_loss': self.epoch_val_loss,
             'optimizer': self.optimizer.state_dict(),
             'sddr_net': self.net.state_dict()
         }
@@ -339,7 +354,7 @@ class Sddr(object):
         # 'structured_matrix_design_info': self.prepare_data.structured_matrix_design_info,
         warnings.simplefilter('always')
         warnings.warn("""Please note that the metadata for the structured input has not been saved. If you want to load the model and use
-        it on new data you will need to also give the structured data used for training as input to the load function.""")
+        it on new data you will need to also give the structured data used for training as input to the load function.""", stacklevel=2)
         
         save_path = os.path.join(self.config['output_dir'], name)
         torch.save(state, save_path)
@@ -416,9 +431,9 @@ class Sddr(object):
         # Load optimizers
         self.optimizer.load_state_dict(state_dict['optimizer'])
         # Load losses
-        loss = state_dict['loss']
+        self.cur_best_loss = state_dict['val_loss']
         self.cur_epoch = state_dict['epoch']
-        print('Loaded model {} at epoch {} with a loss {:.4f}'.format(model_name, self.cur_epoch, loss))
+        print('Loaded model {} at epoch {} with a validation loss of {:.4f}'.format(model_name, self.cur_epoch, self.cur_best_loss))
 
 
 
