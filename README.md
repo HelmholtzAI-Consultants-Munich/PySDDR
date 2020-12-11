@@ -124,13 +124,13 @@ A combination of the above options is also possible, i.e. have the structured da
 
 Currently, the available distribution in PySDDR are:
 
-* Normal: normal distribution with mean(loc) and variance(scale)
-* Poisson: poisson with rate(rate)
-* Bernoulli: bernoulli distribution modeling the logits(logits)
-* Bernoulli_prob: bernoulli distribution modeling probabilities(probs)
-* Multinomial: multinomial distribution parameterized by total_count (default=1) and logits(logits)
-* Multinomial_prob: multinomial distribution parameterized by total_count (default=1) and probabilities(probs)
-* Logistic: logistic distribution parameterized by loc(loc) and scale(scale)
+* Normal: normal distribution with mean (loc) and variance (scale)
+* Poisson: poisson with rate (rate)
+* Bernoulli: bernoulli distribution modeling the logits (logits)
+* Bernoulli_prob: bernoulli distribution modeling probabilities (probs)
+* Multinomial: multinomial distribution parameterized by total_count (default=1) and logits (logits)
+* Multinomial_prob: multinomial distribution parameterized by total_count (default=1) and probabilities (probs)
+* Logistic: logistic distribution parameterized by loc (loc) and scale (scale)
 
 Note that when setting the ```distribution``` parameter, the distribution name should be given as above in string format, as well as their parameters (which are required when defining formulas and degrees of freedom of each parameter), e.g. ```distribution='Poisson'```.
 
