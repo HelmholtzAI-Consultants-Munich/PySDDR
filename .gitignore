@@ -1,0 +1,8 @@
+__pycache__/
+.ipynb_checkpoints
+.DS_Store
+.Rhistory
+PySddr.egg-info/
+example_data/images/
+outputs/
+mnist_data/mnist.npy
