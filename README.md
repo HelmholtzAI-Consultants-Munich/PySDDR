@@ -6,7 +6,7 @@ PySDDR is a python package used for regression tasks, which combines statistical
 
 PySDDR allows beginners to easily use and take advantage of this general framework but also enables the more advanced user to exploit features and tweak parameters in a flexible and interactive way. The framework is written in PyTorch and accepts any number of neural networks, from the simplest classifier to the more complicated architectures, such as LSTMs. 
 
-The python package was built based on the concepts presented in _paper_ and follows the R implementation found here _link_. 
+The python package was built based on the concepts presented in [A Unified Network Architecture for Semi-Structured Deep Distributional Regression](https://arxiv.org/abs/2002.05777) by Ruegamer, Kolb and Klein and follows the R implementation found here _link_. 
 
 
 
@@ -48,7 +48,17 @@ Two tutorials are available in the [tutorials](https://github.com/davidruegamer/
     2.7. [Predicting](#Predicting)  
      
 
+## How to cite this?
 
+Until published, please cite the following preprint:
+```
+@article{rugamer2020unifying,
+  title={A Unifying Network Architecture for Semi-Structured Deep Distributional Learning},
+  author={R{\"u}gamer, David and Kolb, Chris and Klein, Nadja},
+  journal={arXiv preprint arXiv:2002.05777},
+  year={2020}
+}
+```
 
 
 ## Model
@@ -78,7 +88,7 @@ As mentioned, each ```SddrFormulaNet``` predicts a distributional parameter, bas
 
 ### Orthogonalization
 
-Orthogonalization ensures identifiability of the input data by a decomposition of shared effects corresponding to the structured and unstructured part. It occurs in two parts of the network. The first orthogonalization is computed during preprocessing but only if linear features are a subset of the input of the smoothing terms. For example in ```~ 1 + x3 + spline(x3, bs='bs', df=9, degree=3)```, ```spline(x3, bs='bs', df=9, degree=3)``` is orthogonalized with respect to the intercept and x3. If any terms x2, x4 etc. are present they are ignored in this orthogonalization step. The second orthogonalization occurs in every forward step of the network and follows the same principle as before: it only occurs if linear or smoothing features are a subset of the input of the unstructured terms. For detailed description of the orthogonalization see _paper_ .
+Orthogonalization ensures identifiability of the input data by a decomposition of shared effects corresponding to the structured and unstructured part. It occurs in two parts of the network. The first orthogonalization is computed during preprocessing but only if linear features are a subset of the input of the smoothing terms. For example in ```~ 1 + x3 + spline(x3, bs='bs', df=9, degree=3)```, ```spline(x3, bs='bs', df=9, degree=3)``` is orthogonalized with respect to the intercept and x3. If any terms x2, x4 etc. are present they are ignored in this orthogonalization step. The second orthogonalization occurs in every forward step of the network and follows the same principle as before: it only occurs if linear or smoothing features are a subset of the input of the unstructured terms. For detailed description of the orthogonalization see the [here](https://arxiv.org/abs/2002.05777).
 
 
 ### Smoothing Penalty
