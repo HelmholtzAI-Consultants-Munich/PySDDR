@@ -1,6 +1,6 @@
 import sys
 import os
-
+#os.environ['KMP_DUPLICATE_LIB_OK']='True' # uncomment for error with MacOS BigSur
 # import the sddr module
 from sddr import Sddr
 import torch.nn as nn
@@ -490,8 +490,7 @@ def integration_test_mnist():
     # train Sddr
     sddr.train(structured_data=data,
                target="groundtruth",
-               unstructured_data = unstructured_data,
-              plot=True)
+               unstructured_data = unstructured_data)
 
     data_pred = data.loc[:,:]
     distribution_layer, partial_effect = sddr.predict(data_pred,
