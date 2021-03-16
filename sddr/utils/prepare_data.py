@@ -187,7 +187,7 @@ class PrepareData(object):
 
             # create the structured matrix using the same specification of the spline basis 
             try:
-                structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]], data, return_type='dataframe')[0]
+                structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]], data, NA_action='raise', return_type='dataframe')[0]
             except Exception as e:
                 if clipping == True:
                     train_data_min = {}
@@ -196,7 +196,7 @@ class PrepareData(object):
                         train_data_min[name]=self.data_range[0][name]
                         train_data_max[name]=self.data_range[1][name]
                     clipped_data = data.clip(lower=pd.Series(train_data_min),upper=pd.Series(train_data_max),axis=1)
-                    structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]], clipped_data, return_type='dataframe')[0]
+                    structured_matrix = build_design_matrices([self.structured_matrix_design_info[param]], clipped_data, NA_action='raise', return_type='dataframe')[0]
                 else:
                     raise Exception("Data should stay within the range of the training data. Please try clipping or manually set knots.")
 

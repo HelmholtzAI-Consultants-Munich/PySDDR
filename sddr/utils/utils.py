@@ -297,7 +297,6 @@ def get_P_from_design_matrix(dm, dfs):
     
     big_P = np.zeros((dm.shape[1],dm.shape[1]))
     
-    column_counter = 0
     spline_counter = 0
     
     for term in terms:
@@ -321,9 +320,6 @@ def get_P_from_design_matrix(dm, dfs):
                 df_lam = df2lambda(dm_spline, P[0], df)
                 big_P[slice_of_term,slice_of_term] = P[0]*df_lam[1]
                 spline_counter += 1
-
-            column_counter += num_columns
-
     return big_P
 
 
