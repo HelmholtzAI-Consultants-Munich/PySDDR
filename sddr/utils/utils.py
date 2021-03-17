@@ -450,8 +450,8 @@ def _orthogonalize(constraints, X):
     """
     Q, _ = np.linalg.qr(constraints) # compute Q
     Projection_Matrix = np.matmul(Q,Q.T)
+    temp=np.matmul(Projection_Matrix,X)
     constrained_X = X - np.matmul(Projection_Matrix,X)
-    
     return constrained_X
 
 
@@ -487,9 +487,9 @@ def orthogonalize_spline_wrt_non_splines(structured_matrix,
 
         if len(constraints)>0:
             constraints = np.concatenate(constraints,axis=1)
-            constrained_X = _orthogonalize(constraints, X)
+            constrained_X = _orthogonalize(constraints, np.array(X))
             structured_matrix.iloc[:,spline_slice] = constrained_X
-            
+        
             
 def compute_orthogonalization_pattern_deepnets(net_feature_names, 
                                                spline_info, 

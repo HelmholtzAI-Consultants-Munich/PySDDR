@@ -212,7 +212,6 @@ class PrepareData(object):
                                                                                        non_spline_info) 
                 
                 self.network_info_dict[param]['orthogonalization_pattern'][net_name] = orthogonalization_pattern
-            
             # orthogonalize splines with respect to non-splines (including an intercept if it is there)
             orthogonalize_spline_wrt_non_splines(structured_matrix, spline_info, non_spline_info)
 
