@@ -269,7 +269,7 @@ def integration_test_load_and_predict():
     data = pd.read_csv(data_path,delimiter=';')
     target = pd.read_csv(target_path)
     train_data = data.iloc[:800]
-    train_target = data.iloc[:800]
+    train_target = target.iloc[:800] #data.iloc[:800]
     test_data = data.iloc[800:]
 
     output_dir = './outputs'
@@ -454,8 +454,7 @@ def integration_test_mnist():
     }
 
     for i in data.index:
-        data.loc[i,'numbers'] = f'img_{i}.jpg'
-
+        data.loc[i,'numbers'] = f'img_{i}.jpg'#f'{data.id[i]}.jpg'
 
 
     #define Sddr parameters
@@ -524,12 +523,12 @@ def integration_test_mnist():
 if __name__ == '__main__':
     
     # run integration tests
-    print("Test simple GAM")
+    print("Test with simple GAM")
     integration_test_simple_gam()  
     print("---------------------------")
     print("Passed tests for simple GAM")
     
-    print("Test simple GAMLSS")
+    print("Test with GAMLSS")
     integration_test_gamlss()   
     print("-----------------------")
     print("Passed tests for GAMLSS")
