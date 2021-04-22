@@ -6,7 +6,7 @@ PySDDR is a python package used for regression tasks, which combines statistical
 
 PySDDR allows beginners to easily use and take advantage of this general framework but also enables the more advanced user to exploit features and tweak parameters in a flexible and interactive way. The framework is written in PyTorch and accepts any number of neural networks, from the simplest classifier to the more complicated architectures, such as LSTMs. 
 
-The python package was built based on the concepts presented in _paper_ and follows the R implementation found here _link_. 
+The python package was built based on the concepts presented in [deepregression: a Flexible Neural Network Framework for Semi-Structured Deep Distributional Regression](https://arxiv.org/abs/2104.02705) and follows the R implementation found [here](https://github.com/davidruegamer/deepregression). 
 
 
 
