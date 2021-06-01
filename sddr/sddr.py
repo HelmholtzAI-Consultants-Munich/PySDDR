@@ -211,7 +211,7 @@ class Sddr(object):
                     # compute the loss and add regularization
                     val_batch_loss = torch.mean(self.net.get_log_loss(target))
                     val_batch_loss += self.net.get_regularization(P).squeeze_() 
-                    self.epoch_val_loss += val_batch_loss
+                    self.epoch_val_loss += val_batch_loss.item()
                 if len(self.val_loader) !=0:
                     self.epoch_val_loss = self.epoch_val_loss/len(self.val_loader)
                 val_loss_list.append(self.epoch_val_loss)
@@ -273,7 +273,7 @@ class Sddr(object):
         # get the weights of the linear layer of the structured part - do this computation on cpu
         structured_head_params = self.net.single_parameter_sddr_list[param].structured_head.weight.detach().cpu()
         # and the structured data after the smoothing
-        smoothed_structured = data[param]["structured"]
+        smoothed_structured = data[param]["structured"].cpu()
         
         # get a list of the slice that each spline has in the design matrix
         list_of_spline_slices = self.prepare_data.dm_info_dict[param]['spline_info']['list_of_spline_slices']
@@ -306,6 +306,7 @@ class Sddr(object):
                     feature.append(get_feature(feature_name))
                 # the partial effect of this spline cannot be plotted later on - too complicated for now as not 2d
                 can_plot.append(False)
+                  
             partial_effects.append((feature, structured_pred.numpy()))
 
         if plot:
@@ -451,7 +452,7 @@ class Sddr(object):
         list_of_term_names += self.prepare_data.dm_info_dict[param]['spline_info']['list_of_term_names']
 
         #get the vector of all coefficients for the structured part for this parameter
-        all_coeffs = self.net.single_parameter_sddr_list[param].structured_head.weight.detach().numpy()
+        all_coeffs = self.net.single_parameter_sddr_list[param].structured_head.weight.detach().cpu().numpy()
 
         #create dictionary that contains the coefficients for each term in the formula
         coefs_dict = {}
