@@ -76,7 +76,7 @@ The framework combines statistical regression models and neural networks into on
 
 Each distributional parameter is defined by a formula that consists of a structured (*blue*) and unstructured (*red*) part. 
 
-![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/formula.png)
+![image](https://github.com/HelmholtzAI-Consultants-Munich/PySDDR/blob/dev/images/formula.png)
 
 The structured part can have linear (*lightblue*) and smoothing (*darkblue*, non-linear) terms, while the unstructured part consist of one or more neural network (*red*) terms. The user needs to define the input data for each term in the formula (the same input data can be assigned to different terms). While the structured part only accepts structured (tabular) data as input, the unstructured part accepts both, structured (tabular) and unstructured (currently only images are supported) data as input. During the preprocessing, the input data is assigned to the corresponding terms and for each smoothing term, the respective basis functions and penalty matrices are computed. The framework currently supports B-splines (default) and cyclic cubic regression splines. In a last step, the orthogonalization of the smoothing terms wrt. the linear terms is computed. The output of the processed structured part (linear and smoothing terms) is called structured features (consitsting of linear and smoothing features), while the output of the processed unstructured part (input to the neural networks) is called unstructured features.
 
@@ -84,7 +84,7 @@ The structured part can have linear (*lightblue*) and smoothing (*darkblue*, non
 
 As mentioned, each ```SddrFormulaNet``` predicts a distributional parameter, based on the corresponding user-defined formula. The inputs to the ```SddrFormulaNet``` network are the processed structured and unstructured features. The structured features are concatenated and given to a fully connected layer, which we name Structured Head. The unstructured features are fed into one or multiple neural networks. Both the number and architecture of these networks are pre-defined by the user and are built within the ```SddrFormulaNet``` in a parallel fashion. Their outputs are concatenated and are given, together with the structured features, to the orthogonalization layer. Next, the orthogonalized, concatenated output of the neural networks is fed into a fully connected layer, which we name Deep Head. The sum of this output and the output of the Structured Head forms the parameter prediction of the SddrFormulaNet. An example of the architecture can be seen below.
 
-![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/sddr_formula_net.jpeg)
+![image](https://github.com/HelmholtzAI-Consultants-Munich/PySDDR/blob/dev/images/sddr_formula_net.jpeg)
 
 ### Orthogonalization
 
@@ -100,7 +100,7 @@ For each spline in the formula, the number of basis function (```df```) and the 
  
 The user interacts with the package through the Sddr class. An overview of this class and its iteraction with the rest of the package can be seen in the figure below:
 
-![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/sddr_user_interface.jpeg)
+![image](https://github.com/HelmholtzAI-Consultants-Munich/PySDDR/blob/dev/images/sddr_user_interface.jpeg)
 
 ### User inputs 
 
