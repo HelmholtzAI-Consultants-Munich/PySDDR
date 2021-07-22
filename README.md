@@ -68,7 +68,7 @@ Until published, please cite the following preprint:
 
 The framework combines statistical regression models and neural networks into one larger unifying network - ```SddrNet``` - which has a dynamic network architecture because its architecture depends on the user input, i.e. assumed model distribution and defined formulas of distributional parameters. If ```SddrNet``` is used to build a distributional regression model, the user has to define a formula for each distributional parameter (e.g. a normal distribution has two parameters, *loc* and *scale*), which is then used by ```SddrNet``` to build a sub-network - ```SddrFormulaNet``` - for each distributional parameter. The output of each ```SddrFormulaNet``` is the predicted parameter value, which are collected by ```SddrNet```, transformed based on the distrubution's rules (e.g., an `exp` transformation to get a positive variance value) and then given as input to a distributional layer. From the distributional layer a regularized log loss is computed, which is then backpropagated. An example of this can be seen below.
 
-![image](https://github.com/davidruegamer/PySDDR/blob/dev/images/sddr_net.jpeg)
+![image](https://github.com/HelmholtzAI-Consultants-Munich/PySDDR/blob/dev/images/sddr_net.jpeg)
 
 
 
