@@ -450,7 +450,6 @@ def _orthogonalize(constraints, X):
     """
     Q, _ = np.linalg.qr(constraints) # compute Q
     Projection_Matrix = np.matmul(Q,Q.T)
-    temp=np.matmul(Projection_Matrix,X)
     constrained_X = X - np.matmul(Projection_Matrix,X)
     return constrained_X
 
