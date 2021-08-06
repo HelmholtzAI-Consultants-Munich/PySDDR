@@ -234,9 +234,14 @@ class Sddr(object):
                 break
 
         if plot:
-            plt.plot(train_loss_list, label='train')
-            if len(self.val_loader) !=0:
-                plt.plot(val_loss_list, label='validation')
+            if plot == 'log':
+                plt.plot(np.log(train_loss_list), label='train')
+                if len(self.val_loader) !=0:
+                    plt.plot(np.log(val_loss_list), label='validation')
+            else:
+                plt.plot(train_loss_list, label='train')
+                if len(self.val_loader) !=0:
+                    plt.plot(val_loss_list, label='validation')
             plt.legend(loc='upper left')
             #plt.title('Loss')
             plt.ylabel('Loss')

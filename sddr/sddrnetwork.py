@@ -53,7 +53,10 @@ class SddrFormulaNet(nn.Module):
             self.add_module(key,value)
         
         self.orthogonalization_pattern = orthogonalization_pattern
-        self.structured_head = nn.Linear(struct_shapes,1, bias = False)
+        if struct_shapes == 0:
+            self.structured_head = Zero_Layer()
+        else:
+            self.structured_head = nn.Linear(struct_shapes,1, bias = False)
         
         if len(deep_models_dict) != 0:
             output_size_of_deep_models  = sum([deep_shapes[key] for key in deep_shapes.keys()])
@@ -114,8 +117,11 @@ class SddrFormulaNet(nn.Module):
         # do this somewhere else in the future?
         P = P.to(torch.device("cuda" if torch.cuda.is_available() else "cpu"))
         '''
-        weights = self.structured_head.weight #should have shape 1 x struct_shapes
-        regularization = weights @ P @ weights.T
+        try:
+            weights = self.structured_head.weight #should have shape 1 x struct_shapes
+            regularization = weights @ P @ weights.T
+        except:
+            regularization = 0
         return regularization
         
         
@@ -196,3 +202,13 @@ class SddrNet(nn.Module):
             sddr_net = self.single_parameter_sddr_list[param]
             regularization += sddr_net.get_regularization(P[param])
         return regularization
+
+    
+class Zero_Layer(nn.Module):
+
+    def __init__(self, *args, **kwargs):
+        super(Zero_Layer, self).__init__()
+        self.weight = torch.tensor(0)
+
+    def forward(self, input):
+        return torch.tensor(0)

@@ -106,7 +106,7 @@ def make_matrix_positive_semi_definite(A,machine_epsilon):
         A = rho * A + (1 - rho) * np.identity(A.shape[0])
 
         ## now check if it is really positive definite by recursively calling
-        A = make_matrix_positive_semi_definite(A)
+        A = make_matrix_positive_semi_definite(A,machine_epsilon)
     return (A)
 
 
@@ -263,6 +263,14 @@ def _get_penalty_matrix_from_factor_info(factor_info):
     # check if the tuple indeed contained only one element and that the obtained object is a spline. If both is true obatain and return the penalty matrix of this spline.
     if (len(outer_objects_in_factor)==1) and isinstance(obj, Spline):
         P = obj.penalty_matrices
+        
+        is_there_a_nan_in_any_P_matrix = max([np.isnan(p.max()) for p in P])
+        
+        if is_there_a_nan_in_any_P_matrix:
+            P = False
+            warnings.warn(f'Could not compute proper P matrix for {factor.name()}, as P matrix contains NaN values. Therefore {factor.name()} has no smoothing penalty.', stacklevel=2)
+
+        
         return P
     # factor is not a spline, so there is not penalty matrix
     else:
