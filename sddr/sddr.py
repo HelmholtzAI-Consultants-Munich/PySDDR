@@ -316,27 +316,21 @@ class Sddr(object):
 
         if plot:
             num_plots =  sum(can_plot)
-            current_non_plots = 0
             if num_plots == 0:
                 print('Nothing to plot. No (non-)linear partial effects specified for this parameter. (Deep partial effects are not plotted.)')
             elif num_plots != len(partial_effects):
                 print('Cannot plot ', len(partial_effects) - num_plots, ' splines because they have more that one input')
             
-            plt.figure(figsize=(10,5))
             for i in range(len(partial_effects)):
-                if not can_plot[i]:
-                    current_non_plots += 1
-                else:
-                    plt.subplot(1,num_plots,i-current_non_plots+1)
+                if can_plot[i]:
                     feature, partial_effect = partial_effects[i]
                     partial_effect = [x for _,x in sorted(zip(feature, partial_effect))]
                     plt.scatter(np.sort(feature), partial_effect)
                     plt.title('Partial effect %s' % (i+1))
                     plt.ylabel(ylabels[i])
                     plt.xlabel(xlabels[i])
-            plt.tight_layout()
-            plt.savefig(os.path.join(self.config['output_dir'], 'partial_effects.png'))
-            plt.show()
+                    plt.show()
+#             plt.savefig(os.path.join(self.config['output_dir'], 'partial_effects.png'))
         return partial_effects
     
     def save(self, name = 'model.pth'):
