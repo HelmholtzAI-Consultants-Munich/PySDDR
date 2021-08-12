@@ -249,18 +249,20 @@ class Sddr(object):
             plt.savefig(os.path.join(self.config['output_dir'], 'train_loss.png'))
             plt.show()
     
-    def eval(self, param, plot=True, data=None, get_feature=None):
+    def eval(self, param, bins=10, plot=True, data=None, get_feature=None):
         """
         Evaluates the trained SddrNet for a specific parameter of the distribution.
         Parameters
         ----------
             param: string
                 The parameter of the distribution for which the evaluation is performed
+            bins: integer, default 10
+                 bins for the feature histogram plot, define the number of equal-width bins in the range.
             plot: boolean, default True
                 If true then a figure for each spline defined in the formula of the distribution's parameter is plotted.
                 This is only true for the splines which take only one feature as input.
                 If false then nothing is plotted.
-            data: dictionary - default Nonw
+            data: dictionary - default None
                 A dictionary where keys are the distribution's parameter names and values are dicts including data in structured 
                 and unstructured parts.
             get_feature: numpy array
@@ -293,6 +295,7 @@ class Sddr(object):
         xlabels = []
         ylabels = []
         
+        print(data[param]["structured"].shape)
         # for each spline
         for spline_slice, spline_input_features, term_name in zip(list_of_spline_slices, list_of_spline_input_features, list_of_term_names):
             # compute the partial effect = smooth_features * coefs (weights)
@@ -325,9 +328,14 @@ class Sddr(object):
                 if can_plot[i]:
                     feature, partial_effect = partial_effects[i]
                     partial_effect = [x for _,x in sorted(zip(feature, partial_effect))]
+                    plt.subplot(2,1,1)
                     plt.scatter(np.sort(feature), partial_effect)
                     plt.title('Partial effect %s' % (i+1))
                     plt.ylabel(ylabels[i])
+                    plt.xlabel(xlabels[i])
+                    plt.subplot(2,1,2)
+                    plt.hist(feature,bins=bins)
+                    plt.ylabel('Histogram of feature {}'.format(xlabels[i]))
                     plt.xlabel(xlabels[i])
                     plt.show()
 #             plt.savefig(os.path.join(self.config['output_dir'], 'partial_effects.png'))
@@ -468,7 +476,7 @@ class Sddr(object):
         return self.net.distribution_layer
     
     
-    def predict(self, data, unstructured_data = False, clipping=False, plot=False):
+    def predict(self, data, unstructured_data = False, clipping=False, plot=False, bins=10):
         """
         Predict and eval on unseen data.
         Parameters
@@ -484,6 +492,8 @@ class Sddr(object):
             plot: boolean, default False
                 If true, a figure for each spline defined in the formula of the distribution's parameter is plotted.
                 This is only true for the splines which take only one feature as input.
+            bins: integer, default 10
+                 bins for the feature histogram plot, define the number of equal-width bins in the range.
         Returns
         -------
             distribution_layer: trained distribution
@@ -513,7 +523,7 @@ class Sddr(object):
             
         get_feature = lambda feature_name: data.loc[:,feature_name].values
         for param in datadict.keys():
-            partial_effects[param] = self.eval(param, plot, data=datadict, get_feature=get_feature)
+            partial_effects[param] = self.eval(param, bins, plot, data=datadict, get_feature=get_feature)
         
         return distribution_layer, partial_effects
 
