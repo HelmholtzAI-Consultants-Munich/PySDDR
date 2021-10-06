@@ -317,7 +317,7 @@ The user may also wish to load a pretrained model to resume training. This can b
 
 ### Evaluating
 
-The user can then evaluate the training on any distributional parameter, e.g. for a Poisson distribution: ```sddr.eval('rate') ```. This will return and plot the partial effects of the structured features. To turn off the plot functionality the user must set ```plot=False ``` when calling ```sddr.eval()```.
+The user can then evaluate the training on any distributional parameter, e.g. for a Poisson distribution: ```sddr.eval('rate') ```. This will return and plot the partial effects of the structured features. In the plot, the blue region denotes the 95% quantile region of the results while the red region is the 50% quantile region. They are used to present the confidence interval of the partial effects of the structured features. To turn off the plot functionality the user must set ```plot=False ``` when calling ```sddr.eval()```.
 
 * To get the trained distribution the user can call ```distribution_layer = sddr.get_distribution()```. From this the user can then get all the properties available from [PyTorch's Probability Distributions package](https://pytorch.org/docs/stable/distributions.html) (torch.distributions), e.g. the mean can be retrieved by ```distribution_layer.mean``` or the standard deviaton by ```distribution_layer.stddev```.
 

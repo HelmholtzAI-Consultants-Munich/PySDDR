@@ -69,7 +69,7 @@ class Sddr(object):
             break
         # create a family instance
         self.family = Family(self.config['distribution'])
-        if 'dropout_rate' in self.config.keys():
+        if 'dropout_rate' in self.config['train_parameters'].keys():
             self.p = self.config['train_parameters']['dropout_rate']
         else:
             self.p = 0
@@ -448,7 +448,7 @@ class Sddr(object):
         else:
             state_dict = torch.load(model_name)
 
-        self.net = SddrNet(self.family, self.prepare_data.network_info_dict)
+        self.net = SddrNet(self.family, self.prepare_data.network_info_dict, self.p)
 
         #self.prepare_data.set_structured_matrix_design_info(state_dict['structured_matrix_design_info'])
         #self.prepare_data.set_data_range(state_dict['data_range'])
