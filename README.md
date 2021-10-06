@@ -207,7 +207,7 @@ The last two methods can only be used if the class inputs are defined in a pytho
 
 #### Train Parameters
 
-The training parameters are: batch size, epochs, optimizer, optimizer parameters, degrees of freedom, val_split, early_stop_epochs and early_stop_epsilon of each parameter. Batch size, epochs and degrees of freedom are required but defining the optimizer, a validation split and early stopping parameters are optional. If no optimizer is defined by the user, *Adam* is used per default with PyTorch's default optimizer parameters, which can be found [here](https://pytorch.org/docs/stable/optim.html). If no validation split is given, the default split of 0.2 is used (20% used for validation, 80% used for training). Validation split can be set off by specifying val_split=0. If no early stopping criteria are given, the model is trained for the given number of epochs. If early stopping is wanted, the user has to define the number of epochs without change of validation loss before the training is stopped and optionally give an epsilon (default is 0.001). An example of training parameters can be seen below:
+The training parameters are: batch size, epochs, optimizer, optimizer parameters, degrees of freedom, val_split, early_stop_epochs, early_stop_epsilon and dropout_rate of each parameter. Batch size, epochs and degrees of freedom are required but defining the optimizer, a validation split, dropout_rate and early stopping parameters are optional. If no optimizer is defined by the user, *Adam* is used per default with PyTorch's default optimizer parameters, which can be found [here](https://pytorch.org/docs/stable/optim.html). If no validation split is given, the default split of 0.2 is used (20% used for validation, 80% used for training). Validation split can be set off by specifying val_split=0. If no early stopping criteria are given, the model is trained for the given number of epochs. If early stopping is wanted, the user has to define the number of epochs without change of validation loss before the training is stopped and optionally give an epsilon (default is 0.001). Dropout_rate is used to calculate the uncertainty of the results (default is 0, which means no dropout is used and therefore confidence interval could not be caluclated). An example of training parameters can be seen below:
 
 
 ```
@@ -219,7 +219,8 @@ The training parameters are: batch size, epochs, optimizer, optimizer parameters
  'degrees_of_freedom': {'loc':4, 'scale':4},
  'val_split': 0.15,
  'early_stop_epochs': 100,
- 'early_stop_epsilon': 0.001
+ 'early_stop_epsilon': 0.001,
+ 'dropout_rate': 0.01 # 0 means no dropout
  }
  ```
 
@@ -273,7 +274,7 @@ train_parameters: {
   epochs: 1000,
   optimizer: 'optim.SGD',
   optimizer_params: {lr: 0.01, momentum: 0.9}, 
-  degrees_of_freedom: {rate: 10}
+  degrees_of_freedom: {rate: 10},
 }
 
 ```

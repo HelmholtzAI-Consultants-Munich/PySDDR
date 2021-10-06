@@ -28,6 +28,8 @@ class SddrFormulaNet(nn.Module):
     orthogonalization_pattern: list of slice objects
         orthogonalization patterns for the deep neural networks, For each term in the design matrix wrt that the deep neural 
         network should be orthogonalized there is a slice in the list.
+    p: float
+        Dropout rate, probability of an element to be zeroed
         
     Attributes
     ----------
@@ -43,7 +45,7 @@ class SddrFormulaNet(nn.Module):
         This value is true if deep models have been used on init of the ssdr_single network, otherwise it is false
     '''
     
-    def __init__(self, deep_models_dict, deep_shapes, struct_shapes, orthogonalization_pattern):
+    def __init__(self, deep_models_dict, deep_shapes, struct_shapes, orthogonalization_pattern, p):
         
         super(SddrFormulaNet, self).__init__()
         self.deep_models_dict = deep_models_dict
@@ -65,7 +67,7 @@ class SddrFormulaNet(nn.Module):
         else:
             self._deep_models_exist = False
         
-              
+        self.p = p     
         
     def _orthog_layer(self, Q, Uhat):
         """
@@ -77,7 +79,7 @@ class SddrFormulaNet(nn.Module):
         return Utilde
     
     
-    def forward(self, datadict):
+    def forward(self, datadict,training=True):
         X = datadict["structured"]
         
         if self._deep_models_exist:
@@ -101,13 +103,16 @@ class SddrFormulaNet(nn.Module):
             
             Utilde = torch.cat(Utilde_list, dim = 1) #concatenate the orthogonalized outputs of the deep NNs
             
+            Utilde = nn.functional.dropout(Utilde,p=self.p,training=training)            
             deep_pred = self.deep_head(Utilde)
         else:
             deep_pred = 0
-        
+                
+        X = nn.functional.dropout(X,p=self.p,training=training)        
         structured_pred = self.structured_head(X)
         
         pred = structured_pred + deep_pred
+        
 
         return pred
     
@@ -140,7 +145,9 @@ class SddrNet(nn.Module):
             An instance of the class Family
         network_info_dict: dict
             A dictionary with keys being parameters of the distribution, e.g. "eta" and "scale"
-            and values being dicts with keys deep_models_dict, deep_shapes, struct_shapes and orthogonalization_pattern 
+            and values being dicts with keys deep_models_dict, deep_shapes, struct_shapes and orthogonalization_pattern
+        p: float
+            Dropout rate, probability of an element to be zeroed
             
     Attributes
     ----------
@@ -156,7 +163,7 @@ class SddrNet(nn.Module):
             in family) and the predicted parameters from the forward pass
     '''
     
-    def __init__(self, family, network_info_dict):
+    def __init__(self, family, network_info_dict, p):
         super(SddrNet, self).__init__()
         self.family = family
         self.single_parameter_sddr_list = dict()
@@ -168,20 +175,21 @@ class SddrNet(nn.Module):
             self.single_parameter_sddr_list[key] = SddrFormulaNet(deep_models_dict, 
                                                                   deep_shapes, 
                                                                   struct_shapes, 
-                                                                  orthogonalization_pattern)
+                                                                  orthogonalization_pattern,
+                                                                  p)
             
             #register the SddrFormulaNet network
             self.add_module(key,self.single_parameter_sddr_list[key])
                 
         self.distribution_layer_type = family.get_distribution_layer_type()
         
-    def forward(self,datadict):
+    def forward(self,datadict,training=True):
         
         self.regularization = 0
         pred = dict()
         for parameter_name, data_dict_param  in datadict.items():
             sddr_net = self.single_parameter_sddr_list[parameter_name]
-            pred[parameter_name] = sddr_net(data_dict_param)
+            pred[parameter_name] = sddr_net(data_dict_param,training=training)
             
         predicted_parameters = self.family.get_distribution_trafos(pred)
         
