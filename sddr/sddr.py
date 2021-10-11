@@ -301,22 +301,7 @@ class Sddr(object):
         
         # for each spline
         for spline_slice, spline_input_features, term_name in zip(list_of_spline_slices, list_of_spline_input_features, list_of_term_names):
-            # use dropout to calculate uncertainty
-            structured_pred_dropout = []
-            for dropout_iteration in range(1000):
-                mask = torch.bernoulli(torch.full([1,structured_head_params.shape[1]], 1-self.p).float()).int()
-                structured_head_params_dropout = mask * structured_head_params
-                structured_pred = torch.matmul(smoothed_structured[:,spline_slice], structured_head_params_dropout[0, spline_slice])*(1/(1-self.p))
-                structured_pred_dropout.append(structured_pred.numpy())
             
-            # mean of the dropouted result
-            structured_pred = np.mean(np.array(structured_pred_dropout),axis=0)
-            # calculate 95% quantile and 50% quantile
-            ci950 = np.quantile(np.array(structured_pred_dropout), 0.025, axis=0)
-            ci951 = np.quantile(np.array(structured_pred_dropout), 0.975, axis=0)
-            ci250 = np.quantile(np.array(structured_pred_dropout), 0.25, axis=0)
-            ci251 = np.quantile(np.array(structured_pred_dropout), 0.75, axis=0)
-                       
             # if only one feature was sent as input to spline
             if len(spline_input_features) == 1:
                 # get that feature
@@ -331,8 +316,28 @@ class Sddr(object):
                     feature.append(get_feature(feature_name))
                 # the partial effect of this spline cannot be plotted later on - too complicated for now as not 2d
                 can_plot.append(False)
-            
-            partial_effects.append((feature, structured_pred, ci950, ci951, ci250, ci251))
+                
+            # use dropout to calculate uncertainty
+            if self.p == 0:
+                structured_pred = torch.matmul(smoothed_structured[:,spline_slice], structured_head_params[0, spline_slice])
+                partial_effects.append((feature, structured_pred))
+            else:
+                structured_pred_dropout = []
+                for dropout_iteration in range(1000):
+                    mask = torch.bernoulli(torch.full([1,structured_head_params.shape[1]], 1-self.p).float()).int()
+                    structured_head_params_dropout = mask * structured_head_params
+                    structured_pred = torch.matmul(smoothed_structured[:,spline_slice], structured_head_params_dropout[0, spline_slice])*(1/(1-self.p))
+                    structured_pred_dropout.append(structured_pred.numpy())
+
+                # mean of the dropouted result
+                structured_pred = np.mean(np.array(structured_pred_dropout),axis=0)
+                # calculate 95% quantile and 50% quantile
+                ci950 = np.quantile(np.array(structured_pred_dropout), 0.025, axis=0)
+                ci951 = np.quantile(np.array(structured_pred_dropout), 0.975, axis=0)
+                ci250 = np.quantile(np.array(structured_pred_dropout), 0.25, axis=0)
+                ci251 = np.quantile(np.array(structured_pred_dropout), 0.75, axis=0)
+                                  
+                partial_effects.append((feature, structured_pred, ci950, ci951, ci250, ci251))
             
 
         if plot:
@@ -344,21 +349,39 @@ class Sddr(object):
             
             for i in range(len(partial_effects)):
                 if can_plot[i]:
-                    feature, partial_effect, ci950, ci951, ci250, ci251 = partial_effects[i]
-                    re = np.array([[x,y,m,n,o] for _,x,y,m,n,o in sorted(zip(feature, partial_effect, ci950, ci951, ci250, ci251))])
-                    partial_effect, ci950, ci951, ci250, ci251 = re[:,0],re[:,1],re[:,2],re[:,3],re[:,4]
-                    plt.subplot(2,1,1)
-                    plt.scatter(np.sort(feature), partial_effect,label='partial_effect')
-                    plt.fill_between(np.sort(feature), ci950, ci951, color='b', alpha=.1, label='95 quantile')
-                    plt.fill_between(np.sort(feature), ci250, ci251, color='r', alpha=.2,label='50 quantile')
-                    plt.title('Partial effect %s' % (i+1))
-                    plt.ylabel(ylabels[i])
-                    plt.xlabel(xlabels[i])
-                    plt.subplot(2,1,2)
-                    plt.hist(feature,bins=bins)
-                    plt.ylabel('Histogram of feature {}'.format(xlabels[i]))
-                    plt.xlabel(xlabels[i])
-                    plt.show()
+                    
+                    if self.p == 0:
+                        feature, partial_effect = partial_effects[i]
+                        partial_effect = [x for _,x in sorted(zip(feature, partial_effect))]
+                        plt.subplot(2,1,1)
+                        plt.scatter(np.sort(feature), partial_effect)
+                        plt.title('Partial effect %s' % (i+1))
+                        plt.ylabel(ylabels[i])
+                        plt.xlabel(xlabels[i])
+                        plt.subplot(2,1,2)
+                        plt.hist(feature,bins=bins)
+                        plt.ylabel('Histogram of feature {}'.format(xlabels[i]))
+                        plt.xlabel(xlabels[i])
+                        plt.tight_layout()
+                        plt.show()
+                    else:
+                        feature, partial_effect, ci950, ci951, ci250, ci251 = partial_effects[i]
+                        re = np.array([[x,y,m,n,o] for _,x,y,m,n,o in sorted(zip(feature, partial_effect, ci950, ci951, ci250, ci251))])
+                        partial_effect, ci950, ci951, ci250, ci251 = re[:,0],re[:,1],re[:,2],re[:,3],re[:,4]
+                        plt.subplot(2,1,1)
+                        plt.plot(np.sort(feature), partial_effect,label='Mean of partial_effect')
+                        plt.fill_between(np.sort(feature), ci950, ci951, color='b', alpha=.1, label='95% confidence interval')
+                        plt.fill_between(np.sort(feature), ci250, ci251, color='r', alpha=.2,label='50% confidence interval')
+                        plt.legend()
+                        plt.title('Partial effect %s' % (i+1))
+                        plt.ylabel(ylabels[i])
+                        plt.xlabel(xlabels[i])
+                        plt.subplot(2,1,2)
+                        plt.hist(feature,bins=bins)
+                        plt.ylabel('Histogram of feature {}'.format(xlabels[i]))
+                        plt.xlabel(xlabels[i])
+                        plt.tight_layout()
+                        plt.show()
 #             plt.savefig(os.path.join(self.config['output_dir'], 'partial_effects.png'))
         return partial_effects
     

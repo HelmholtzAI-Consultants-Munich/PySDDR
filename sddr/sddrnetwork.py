@@ -29,7 +29,7 @@ class SddrFormulaNet(nn.Module):
         orthogonalization patterns for the deep neural networks, For each term in the design matrix wrt that the deep neural 
         network should be orthogonalized there is a slice in the list.
     p: float
-        Dropout rate, probability of an element to be zeroed
+        Dropout rate, probability of an element to be zeroed, the recommend value should between 0.01-0.1(depending on the feature numbers). The dropout is used for eastimate uncertainty.
         
     Attributes
     ----------
@@ -147,7 +147,7 @@ class SddrNet(nn.Module):
             A dictionary with keys being parameters of the distribution, e.g. "eta" and "scale"
             and values being dicts with keys deep_models_dict, deep_shapes, struct_shapes and orthogonalization_pattern
         p: float
-            Dropout rate, probability of an element to be zeroed
+            Dropout rate, probability of an element to be zeroed, the recommend value should between 0.01-0.1(depending on the feature numbers). The dropout is used for eastimate uncertainty.
             
     Attributes
     ----------
