@@ -163,7 +163,7 @@ class Sddr(object):
             else:
                 eps = 0.001
         
-        print('Beginning training ...')
+        print('Beginning training Lalalala...')
 	if !resume:
 	    print('lalala')
             P = self.prepare_data.get_penalty_matrix(self.device)
