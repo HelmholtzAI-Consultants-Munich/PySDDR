@@ -164,7 +164,8 @@ class Sddr(object):
                 eps = 0.001
         
         print('Beginning training ...')
-        P = self.prepare_data.get_penalty_matrix(self.device)
+	if resume = False:
+            P = self.prepare_data.get_penalty_matrix(self.device)
         for epoch in range(self.cur_epoch , self.config['train_parameters']['epochs']):
             self.net.train()
             self.epoch_train_loss = 0
