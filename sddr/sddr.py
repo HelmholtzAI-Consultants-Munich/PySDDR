@@ -215,7 +215,7 @@ class Sddr(object):
                     _ = self.net(datadict)
                     # compute the loss and add regularization
                     val_batch_loss = torch.mean(self.net.get_log_loss(target))
-                    val_batch_loss += self.net.get_regularization(P).squeeze_() 
+                    val_batch_loss += self.net.get_regularization(self.P).squeeze_() 
                     self.epoch_val_loss += val_batch_loss.item()
                 if len(self.val_loader) !=0:
                     self.epoch_val_loss = self.epoch_val_loss/len(self.val_loader)
