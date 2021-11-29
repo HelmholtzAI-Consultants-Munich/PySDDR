@@ -164,7 +164,8 @@ class Sddr(object):
                 eps = 0.001
         
         print('Beginning training ...')
-        P = self.prepare_data.get_penalty_matrix(self.device)
+        if not resume:
+            self.P = self.prepare_data.get_penalty_matrix(self.device)
         for epoch in range(self.cur_epoch , self.config['train_parameters']['epochs']):
             self.net.train()
             self.epoch_train_loss = 0
@@ -184,7 +185,7 @@ class Sddr(object):
                 
                 # compute the loss and add regularization
                 loss = torch.mean(self.net.get_log_loss(target))
-                loss += self.net.get_regularization(P).squeeze_() 
+                loss += self.net.get_regularization(self.P).squeeze_() 
                 
                 # and backprobagate
                 loss.backward()
@@ -214,7 +215,7 @@ class Sddr(object):
                     _ = self.net(datadict)
                     # compute the loss and add regularization
                     val_batch_loss = torch.mean(self.net.get_log_loss(target))
-                    val_batch_loss += self.net.get_regularization(P).squeeze_() 
+                    val_batch_loss += self.net.get_regularization(self.P).squeeze_() 
                     self.epoch_val_loss += val_batch_loss.item()
                 if len(self.val_loader) !=0:
                     self.epoch_val_loss = self.epoch_val_loss/len(self.val_loader)
