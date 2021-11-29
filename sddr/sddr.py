@@ -165,6 +165,7 @@ class Sddr(object):
         
         print('Beginning training ...')
         if not resume:
+
             self.P = self.prepare_data.get_penalty_matrix(self.device)
         for epoch in range(self.cur_epoch , self.config['train_parameters']['epochs']):
             self.net.train()
