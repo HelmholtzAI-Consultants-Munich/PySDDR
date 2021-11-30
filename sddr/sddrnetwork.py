@@ -82,8 +82,8 @@ class SddrFormulaNet(nn.Module):
     
     def forward(self, datadict,training=True):
         X = datadict["structured"]
-        print(datadict["structured"])
-        print(datadict["structured"].shape)
+        #print(datadict["structured"])
+        #print(datadict["structured"].shape)
         
         if self._deep_models_exist:
 
@@ -92,7 +92,7 @@ class SddrFormulaNet(nn.Module):
                 net = self.deep_models_dict[key]
                 
                 Uhat_net = net(datadict[key])
-                print(key)
+                #print(key)
                 #print(datadict[key])
                 
                 # orthogonalize the output of the neural network with respect to the parts of the structured part,
