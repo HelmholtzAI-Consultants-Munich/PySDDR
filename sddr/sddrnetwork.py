@@ -83,6 +83,7 @@ class SddrFormulaNet(nn.Module):
     def forward(self, datadict,training=True):
         X = datadict["structured"]
         print(datadict["structured"])
+        print(datadict["structured"].shape)
         
         if self._deep_models_exist:
 
