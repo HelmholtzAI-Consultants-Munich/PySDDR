@@ -73,7 +73,7 @@ class SddrFormulaNet(nn.Module):
         """
         Utilde = Uhat - QQTUhat
         """
-        
+        print(Q)
         Projection_Matrix = Q @ Q.T
         Utilde = Uhat - Projection_Matrix @ Uhat
         
@@ -97,7 +97,6 @@ class SddrFormulaNet(nn.Module):
                     X_sliced_with_orthogonalization_pattern = torch.cat([X[:,sl] for sl in self.orthogonalization_pattern[key]],1)
                     Q, R = torch.qr(X_sliced_with_orthogonalization_pattern)
                     Utilde_net = self._orthog_layer(Q, Uhat_net)
-                    print(Q)
                 else:
                     Utilde_net = Uhat_net
                 
