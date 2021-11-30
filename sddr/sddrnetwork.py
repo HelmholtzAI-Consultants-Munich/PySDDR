@@ -90,8 +90,8 @@ class SddrFormulaNet(nn.Module):
                 net = self.deep_models_dict[key]
                 
                 Uhat_net = net(datadict[key])
-                print(key)
-                print(datadict[key])
+                #print(key)
+                #print(datadict[key])
                 
                 # orthogonalize the output of the neural network with respect to the parts of the structured part,
                 # that contain the same input as the neural network
@@ -101,7 +101,8 @@ class SddrFormulaNet(nn.Module):
                     Utilde_net = self._orthog_layer(Q, Uhat_net)
                     print(Q)
                 else:
-                    print('no orthog')
+                    print('self.orthogonalization_pattern[key]')
+                    print(self.orthogonalization_pattern[key])
                     Utilde_net = Uhat_net
                 
                 Utilde_list.append(Utilde_net)
