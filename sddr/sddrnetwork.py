@@ -90,6 +90,7 @@ class SddrFormulaNet(nn.Module):
                 net = self.deep_models_dict[key]
                 
                 Uhat_net = net(datadict[key])
+                print(datadict[key])
                 
                 # orthogonalize the output of the neural network with respect to the parts of the structured part,
                 # that contain the same input as the neural network
