@@ -82,6 +82,7 @@ class SddrFormulaNet(nn.Module):
     
     def forward(self, datadict,training=True):
         X = datadict["structured"]
+        print(datadict["structured"])
         
         if self._deep_models_exist:
 
@@ -99,10 +100,10 @@ class SddrFormulaNet(nn.Module):
                     X_sliced_with_orthogonalization_pattern = torch.cat([X[:,sl] for sl in self.orthogonalization_pattern[key]],1)
                     Q, R = torch.qr(X_sliced_with_orthogonalization_pattern)
                     Utilde_net = self._orthog_layer(Q, Uhat_net)
-                    print(Q)
+                    #print(Q)
                 else:
-                    print('self.orthogonalization_pattern[key]')
-                    print(self.orthogonalization_pattern[key])
+                    #print('self.orthogonalization_pattern[key]')
+                    #print(self.orthogonalization_pattern[key])
                     Utilde_net = Uhat_net
                 
                 Utilde_list.append(Utilde_net)
