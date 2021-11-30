@@ -79,6 +79,8 @@ class Sddr(object):
         self.prepare_data = PrepareData(formulas,
                                         self.config['deep_models_dict'],
                                         self.config['train_parameters']['degrees_of_freedom'])
+        
+        print(self.prepare_data)
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print('Using device: ', self.device)
