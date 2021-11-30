@@ -99,6 +99,7 @@ class SddrFormulaNet(nn.Module):
                     Utilde_net = self._orthog_layer(Q, Uhat_net)
                     print(Q)
                 else:
+                    print('no orthog')
                     Utilde_net = Uhat_net
                 
                 Utilde_list.append(Utilde_net)
