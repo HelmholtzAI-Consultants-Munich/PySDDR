@@ -97,15 +97,15 @@ class SddrFormulaNet(nn.Module):
                 
                 # orthogonalize the output of the neural network with respect to the parts of the structured part,
                 # that contain the same input as the neural network
-                if len(self.orthogonalization_pattern[key]) >0:
-                    X_sliced_with_orthogonalization_pattern = torch.cat([X[:,sl] for sl in self.orthogonalization_pattern[key]],1)
-                    Q, R = torch.qr(X_sliced_with_orthogonalization_pattern)
-                    Utilde_net = self._orthog_layer(Q, Uhat_net)
+                #if len(self.orthogonalization_pattern[key]) >0:
+                X_sliced_with_orthogonalization_pattern = X # torch.cat([X[:,sl] for sl in self.orthogonalization_pattern[key]],1)
+                Q, R = torch.qr(X_sliced_with_orthogonalization_pattern)
+                Utilde_net = self._orthog_layer(Q, Uhat_net)
                     #print(Q)
-                else:
+               # else:
                     #print('self.orthogonalization_pattern[key]')
                     #print(self.orthogonalization_pattern[key])
-                    Utilde_net = Uhat_net
+                #    Utilde_net = Uhat_net
                 
                 Utilde_list.append(Utilde_net)
             
