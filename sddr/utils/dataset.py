@@ -106,7 +106,16 @@ class SddrDataset(Dataset):
         #img = Image.open(os.path.join(root_path, image_path))
         img = self.transform(img)
         return img
-
+    
+    def load_time_series(self, root_path, image_path):
+        time_series = pd.read_csv(os.path.join(root_path, image_path)).to_numpy()
+        # next 3 lines are used to resize images to size for testing the use of alexnet
+        #img = cv2.resize(img,(227,227))
+        #img = cv2.cvtColor(img,cv2.COLOR_GRAY2RGB)
+        #img = Image.open(os.path.join(root_path, image_path))
+        time_series = self.transform(time_series)
+        return time_series
+    
     def __getitem__(self,index):
         datadict = dict()
         found_unstructred = False
