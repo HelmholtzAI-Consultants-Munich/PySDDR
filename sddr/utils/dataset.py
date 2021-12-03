@@ -107,14 +107,14 @@ class SddrDataset(Dataset):
         img = self.transform(img)
         return img
     
-    def load_time_series(self, root_path, image_path):
-        time_series = pd.read_csv(os.path.join(root_path, image_path)).to_numpy()
+    def load_csv(self, root_path, image_path):
+        csv = pd.read_csv(os.path.join(root_path, image_path)).to_numpy()
         # next 3 lines are used to resize images to size for testing the use of alexnet
         #img = cv2.resize(img,(227,227))
         #img = cv2.cvtColor(img,cv2.COLOR_GRAY2RGB)
         #img = Image.open(os.path.join(root_path, image_path))
-        time_series = self.transform(time_series)
-        return time_series
+        csv = self.transform(csv)
+        return csv
     
     def __getitem__(self,index):
         datadict = dict()
@@ -151,6 +151,16 @@ class SddrDataset(Dataset):
                                 for image_file_name in data_row[cur_feature]:
                                     images.append(self.load_image(root_path, image_file_name).unsqueeze(0))
                                 datadict[param][structured_or_net_name] = torch.cat(images)
+                                
+                        if feat_datatype == 'csv':
+                            if type(index) is int:
+                                datadict[param][structured_or_net_name] = self.load_csv(root_path, data_row[cur_feature])
+                            else:
+                                images = []
+                                for image_file_name in data_row[cur_feature]:
+                                    images.append(self.load_csv(root_path, image_file_name).unsqueeze(0))
+                                datadict[param][structured_or_net_name] = torch.cat(images)
+                                                      
                                                       
                             # extend for more cases
                         
