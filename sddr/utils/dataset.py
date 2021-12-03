@@ -153,7 +153,6 @@ class SddrDataset(Dataset):
                                 datadict[param][structured_or_net_name] = torch.cat(images)
                                 
                         if feat_datatype == 'csv':
-                            print('test')
                             if type(index) is int:
                                 datadict[param][structured_or_net_name] = self.load_csv(root_path, data_row[cur_feature])
                             else:
