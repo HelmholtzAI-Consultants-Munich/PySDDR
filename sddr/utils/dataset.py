@@ -159,7 +159,14 @@ class SddrDataset(Dataset):
                                 images = []
                                 for image_file_name in data_row[cur_feature]:
                                     images.append(self.load_csv(root_path, image_file_name).unsqueeze(0))
-                                datadict[param][structured_or_net_name] = torch.cat(images)
+                                    
+                                ## pad pack sequences:
+                                data = torch.nn.utils.rnn.pad_sequence(images, batch_first=True, padding_value=-1.0)
+                                data_len = torch.LongTensor(list(map(len, images)))
+                                data_packed = torch.nn.utils.rnn.pack_padded_sequence(data, data_len, batch_first=True, enforce_sorted=False)
+                                    
+                                #datadict[param][structured_or_net_name] = torch.cat(images)
+                                datadict[param][structured_or_net_name] = data_packed
                                                       
                                                       
                             # extend for more cases
