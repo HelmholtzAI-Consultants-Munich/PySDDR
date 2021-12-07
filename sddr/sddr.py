@@ -163,6 +163,7 @@ class Sddr(object):
                     print('structured_or_net_name', structured_or_net_name)
                     print('batch', batch)
                     #if csv than pad 
+                    print('out[datadict]',out['datadict'])
                     out['datadict'][param][structured_or_net_name] = torch.vstack([x[param][structured_or_net_name] for x in batch])
                 
                 
