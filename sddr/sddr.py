@@ -164,12 +164,14 @@ class Sddr(object):
                     #print('batch', batch)
                     #if csv than pad 
                     #print('out[datadict]',out['datadict'])
-                    try:
+                    if structured_or_net_name == 'dnn':
+                        out['datadict'][param][structured_or_net_name] = torch.nn.utils.rnn.pad_sequence([x['datadict'][param][structured_or_net_name] for x in batch], batch_first=True, padding_value=-1.0)
+                    else:
+                    
                         out['datadict'][param][structured_or_net_name] = torch.stack([x['datadict'][param][structured_or_net_name] for x in batch])
                         
-                    finally:
-                        out['datadict'][param][structured_or_net_name] = torch.nn.utils.rnn.pad_sequence([x['datadict'][param][structured_or_net_name] for x in batch], batch_first=True, padding_value=-1.0)
                 
+                        
                 
             #target
             out['target'] = torch.stack([x['target'] for x in batch])
