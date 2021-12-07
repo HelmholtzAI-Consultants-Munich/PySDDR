@@ -178,6 +178,11 @@ class SddrDataset(Dataset):
                                 print('packed data')
                                 print(data_packed)
                                 
+                                print('re-padded data')
+                                
+                                print(pad_packed_sequence(data_packed, batch_first=True))
+                                
+                                
                                 
                                 
                                 #datadict[param][structured_or_net_name] = data_packed
