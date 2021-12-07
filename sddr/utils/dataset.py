@@ -171,7 +171,8 @@ class SddrDataset(Dataset):
                                 #print('init data struct')
                                 #print(images)
                                 
-                                datadict[param][structured_or_net_name] = data_packed
+                                datadict[param][structured_or_net_name] = data
+                                
                                 #print('padded data')
                                 #print(data)
                                 
