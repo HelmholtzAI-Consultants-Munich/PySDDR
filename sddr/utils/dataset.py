@@ -167,14 +167,14 @@ class SddrDataset(Dataset):
                                 data_len = torch.LongTensor(list(map(len, images)))
                                 data_packed = torch.nn.utils.rnn.pack_padded_sequence(data, data_len, batch_first=True, enforce_sorted=False)
                                     
-                                #datadict[param][structured_or_net_name] = torch.cat(images)
-                                #print('init data struct')
-                                #print(images)
+                                datadict[param][structured_or_net_name] = torch.cat(images)
+                                print('init data struct')
+                                print(images)
                                 
                                 datadict[param][structured_or_net_name] = data
                                 
-                                #print('padded data')
-                                #print(data)
+                                print('padded data')
+                                print(data)
                                 
                                 
                                 #print('packed data')
