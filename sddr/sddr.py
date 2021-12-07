@@ -176,6 +176,7 @@ class Sddr(object):
                 # for each batch
                 target = batch['target'].float().to(self.device)
                 datadict = batch['datadict']
+                print(batch)
                 
                 # send each input batch to the current device
                 for param in datadict.keys():
