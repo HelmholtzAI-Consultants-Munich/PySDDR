@@ -168,19 +168,19 @@ class SddrDataset(Dataset):
                                 data_packed = torch.nn.utils.rnn.pack_padded_sequence(data, data_len, batch_first=True, enforce_sorted=False)
                                     
                                 #datadict[param][structured_or_net_name] = torch.cat(images)
-                                print('init data struct')
-                                print(images)
+                                #print('init data struct')
+                                #print(images)
                                 
-                                datadict[param][structured_or_net_name] = data
-                                print('padded data')
-                                print(data)
+                                datadict[param][structured_or_net_name] = data_packed
+                                #print('padded data')
+                                #print(data)
                                 
                                 
-                                print('packed data')
-                                print(data_packed)
+                                #print('packed data')
+                                #print(data_packed)
                                 
-                                print('re-padded data')
-                                print(torch.nn.utils.rnn.pad_packed_sequence(data_packed, batch_first=True))
+                                #print('re-padded data')
+                                #print(torch.nn.utils.rnn.pad_packed_sequence(data_packed, batch_first=True))
                                 
                                 
                                 
