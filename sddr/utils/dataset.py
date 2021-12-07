@@ -113,7 +113,7 @@ class SddrDataset(Dataset):
         #img = cv2.resize(img,(227,227))
         #img = cv2.cvtColor(img,cv2.COLOR_GRAY2RGB)
         #img = Image.open(os.path.join(root_path, image_path))
-        csv = self.transform(csv)
+        csv = torch.nn.Flatten(0,1)(self.transform(csv))
         return csv
     
     def __getitem__(self,index):
