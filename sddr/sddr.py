@@ -156,7 +156,7 @@ class Sddr(object):
 
             #datadict
             out['datadict'] = dict()
-            for param in self.dataset.prepared_data.prepared_data.keys():
+            for param in self.dataset.prepared_data.keys():
                 
                 datadict[param] = dict()
                 for structured_or_net_name in self.dataset.prepared_data[param].keys():
