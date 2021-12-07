@@ -114,7 +114,9 @@ class SddrDataset(Dataset):
         #img = cv2.resize(img,(227,227))
         #img = cv2.cvtColor(img,cv2.COLOR_GRAY2RGB)
         #img = Image.open(os.path.join(root_path, image_path))
-        csv = torch.nn.Flatten(0,1)(self.transform(csv))
+        
+        #csv = torch.nn.Flatten(0,1)(self.transform(csv))
+        csv = self.transform(csv)
         return csv
     
     def __getitem__(self,index):
@@ -159,7 +161,8 @@ class SddrDataset(Dataset):
                             else:
                                 images = []
                                 for image_file_name in data_row[cur_feature]:
-                                    images.append(self.load_csv(root_path, image_file_name))
+                                    #images.append(self.load_csv(root_path, image_file_name))
+                                    images.append(self.load_csv(root_path, image_file_name).unsqueeze(0))
                                     
                                 ## pad pack sequences:
                                 data = torch.nn.utils.rnn.pad_sequence(images, batch_first=True, padding_value=-1.0)
@@ -167,11 +170,11 @@ class SddrDataset(Dataset):
                                 data_len = torch.LongTensor(list(map(len, images)))
                                 data_packed = torch.nn.utils.rnn.pack_padded_sequence(data, data_len, batch_first=True, enforce_sorted=False)
                                     
-                                #datadict[param][structured_or_net_name] = torch.cat(images)
+                                datadict[param][structured_or_net_name] = torch.cat(images)
                                 #print('init data struct')
                                 #print(torch.cat(images))
                                 
-                                datadict[param][structured_or_net_name] = data
+                                #datadict[param][structured_or_net_name] = data
                                 
                                 #print('padded data')
                                 #print(data)
