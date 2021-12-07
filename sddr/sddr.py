@@ -150,7 +150,7 @@ class Sddr(object):
 
         # load train and val data with data loader
         
-        def collate_pad(self, batch): 
+        def collate_pad(batch): 
             
             out = dict() 
 
