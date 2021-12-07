@@ -167,7 +167,7 @@ class Sddr(object):
             #target
             out['target'] = torch.vstack([x['target'] for x in batch])
 
-            return(batch)
+            return(out)
         
         self.train_loader = DataLoader(train, 
                                     batch_size=self.config['train_parameters']['batch_size'],
