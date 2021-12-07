@@ -1,6 +1,7 @@
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
+
 from PIL import Image
 from torchvision.transforms import ToTensor
 import os
@@ -179,8 +180,7 @@ class SddrDataset(Dataset):
                                 print(data_packed)
                                 
                                 print('re-padded data')
-                                
-                                print(pad_packed_sequence(data_packed, batch_first=True))
+                                print(torch.nn.utils.rnn.pad_packed_sequence(data_packed, batch_first=True))
                                 
                                 
                                 
