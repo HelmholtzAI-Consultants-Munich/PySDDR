@@ -169,7 +169,7 @@ class Sddr(object):
                 
             #target
             out['target'] = torch.vstack([x['target'] for x in batch])
-
+            print(out)
             return(out)
         
         self.train_loader = DataLoader(train, 
