@@ -168,7 +168,7 @@ class SddrDataset(Dataset):
                                     
                                 #datadict[param][structured_or_net_name] = torch.cat(images)
                                 print('init data struct')
-                                print(images)
+                                print(torch.cat(images))
                                 
                                 datadict[param][structured_or_net_name] = data
                                 print('padded data')
