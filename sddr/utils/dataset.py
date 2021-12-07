@@ -158,7 +158,7 @@ class SddrDataset(Dataset):
                             else:
                                 images = []
                                 for image_file_name in data_row[cur_feature]:
-                                    images.append(self.load_csv(root_path, image_file_name).unsqueeze(0))
+                                    images.append(self.load_csv(root_path, image_file_name))
                                     
                                 ## pad pack sequences:
                                 data = torch.nn.utils.rnn.pad_sequence(images, batch_first=True, padding_value=-1.0)
