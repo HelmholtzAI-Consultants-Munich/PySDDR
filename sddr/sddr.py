@@ -157,14 +157,18 @@ class Sddr(object):
             #datadict
             out['datadict'] = dict()
             for param in self.dataset.prepared_data.keys():
-                print('param', param)
+                #print('param', param)
                 out['datadict'][param] = dict()
                 for structured_or_net_name in self.dataset.prepared_data[param].keys():
-                    print('structured_or_net_name', structured_or_net_name)
-                    print('batch', batch)
+                    #print('structured_or_net_name', structured_or_net_name)
+                    #print('batch', batch)
                     #if csv than pad 
-                    print('out[datadict]',out['datadict'])
-                    out['datadict'][param][structured_or_net_name] = torch.stack([x['datadict'][param][structured_or_net_name] for x in batch])
+                    #print('out[datadict]',out['datadict'])
+                    try:
+                        out['datadict'][param][structured_or_net_name] = torch.stack([x['datadict'][param][structured_or_net_name] for x in batch])
+                        
+                    finally:
+                        out['datadict'][param][structured_or_net_name] = torch.nn.utils.rnn.pad_sequence([x['datadict'][param][structured_or_net_name] for x in batch], batch_first=True, padding_value=-1.0)
                 
                 
             #target
