@@ -151,14 +151,15 @@ class Sddr(object):
         # load train and val data with data loader
         
         def collate_pad(batch): 
+            print(batch)
             return(batch)
         
         self.train_loader = DataLoader(train, 
-                                    batch_size=self.config['train_parameters']['batch_size'])#,
-                                    #collate_fn=collate_pad )
+                                    batch_size=self.config['train_parameters']['batch_size'],
+                                    collate_fn=collate_pad )
         self.val_loader = DataLoader(val, 
-                                    batch_size=self.config['train_parameters']['batch_size'])#,
-                                    #collate_fn=collate_pad)
+                                    batch_size=self.config['train_parameters']['batch_size'],
+                                    collate_fn=collate_pad)
 
         train_loss_list = []
         val_loss_list = []
