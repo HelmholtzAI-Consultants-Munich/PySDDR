@@ -175,7 +175,7 @@ class Sddr(object):
                 
             #target
             out['target'] = torch.stack([x['target'] for x in batch])
-            print(out)
+            #print(out)
             return(out)
         
         self.train_loader = DataLoader(train, 
