@@ -164,8 +164,16 @@ class Sddr(object):
                     #print('batch', batch)
                     #if csv than pad 
                     #print('out[datadict]',out['datadict'])
-                    if structured_or_net_name == 'dnn':
-                        out['datadict'][param][structured_or_net_name] = torch.nn.utils.rnn.pad_sequence([x['datadict'][param][structured_or_net_name] for x in batch], batch_first=True, padding_value=-1.0)
+                    
+                    ##FIND WAY TO AUTOMATICALLY USE PROPER NAME
+                    if '_ts' in structured_or_net_name:
+                        
+                        data_as_list =[x['datadict'][param][structured_or_net_name] for x in batch]
+                        data_len = torch.LongTensor(list(map(len, data_as_list)))
+                        #out['datadict'][param][structured_or_net_name] = torch.nn.utils.rnn.pad_sequence(data_as_list, batch_first=True, padding_value=-1.0)
+                        data = torch.nn.utils.rnn.pad_sequence(data_as_list, batch_first=True, padding_value=-1.0)
+                        out['datadict'][param][structured_or_net_name]  = torch.nn.utils.rnn.pack_padded_sequence(data, data_len, batch_first=True, enforce_sorted=False)
+                                 
                     else:
                     
                         out['datadict'][param][structured_or_net_name] = torch.stack([x['datadict'][param][structured_or_net_name] for x in batch])
@@ -208,7 +216,7 @@ class Sddr(object):
                 # for each batch
                 target = batch['target'].float().to(self.device)
                 datadict = batch['datadict']
-                print(batch)
+                #print(batch)
                 
                 # send each input batch to the current device
                 for param in datadict.keys():
