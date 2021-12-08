@@ -179,13 +179,16 @@ class Sddr(object):
                         else:
                     
                             out['datadict'][param][structured_or_net_name] = torch.stack([x['datadict'][param][structured_or_net_name] for x in batch])
+            
+                            
+                        #target
+                        out['target'] = torch.stack([x['target'] for x in batch])
+            
             else:
                 out = batch 
                     
                         
-                
-            #target
-            out['target'] = torch.stack([x['target'] for x in batch])
+
             #print(out)
             return(out)
         
