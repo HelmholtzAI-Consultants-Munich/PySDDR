@@ -152,33 +152,36 @@ class Sddr(object):
         
         def collate_pad(batch): 
             
-            out = dict() 
+            if isinstance(batch, list):
+            
+                out = dict() 
 
-            #datadict
-            out['datadict'] = dict()
-            for param in self.dataset.prepared_data.keys():
-                #print('param', param)
-                out['datadict'][param] = dict()
-                for structured_or_net_name in self.dataset.prepared_data[param].keys():
-                    #print('structured_or_net_name', structured_or_net_name)
-                    #print('batch', batch)
-                    #if csv than pad 
-                    #print('out[datadict]',out['datadict'])
+                #datadict
+                out['datadict'] = dict()
+                for param in self.dataset.prepared_data.keys():
+                    #print('param', param)
+                    out['datadict'][param] = dict()
+                    for structured_or_net_name in self.dataset.prepared_data[param].keys():
+                        #print('structured_or_net_name', structured_or_net_name)
+                        #print('batch', batch)
+                        #if csv than pad 
+                        #print('out[datadict]',out['datadict'])
                     
-                    ##FIND WAY TO AUTOMATICALLY USE PROPER NAME
-                    if '_ts' in structured_or_net_name:
+                        ##FIND WAY TO AUTOMATICALLY USE PROPER NAME
+                        if '_ts' in structured_or_net_name:
                         
-                        data_as_list =[x['datadict'][param][structured_or_net_name] for x in batch]
-                        data_len = torch.LongTensor(list(map(len, data_as_list)))
-                        #out['datadict'][param][structured_or_net_name] = torch.nn.utils.rnn.pad_sequence(data_as_list, batch_first=True, padding_value=-1.0)
-                        data = torch.nn.utils.rnn.pad_sequence(data_as_list, batch_first=True, padding_value=-1.0)
-                        out['datadict'][param][structured_or_net_name]  = torch.nn.utils.rnn.pack_padded_sequence(data, data_len, batch_first=True, enforce_sorted=False)
+                            data_as_list =[x['datadict'][param][structured_or_net_name] for x in batch]
+                            data_len = torch.LongTensor(list(map(len, data_as_list)))
+                            #out['datadict'][param][structured_or_net_name] = torch.nn.utils.rnn.pad_sequence(data_as_list, batch_first=True, padding_value=-1.0)
+                            data = torch.nn.utils.rnn.pad_sequence(data_as_list, batch_first=True, padding_value=-1.0)
+                            out['datadict'][param][structured_or_net_name]  = torch.nn.utils.rnn.pack_padded_sequence(data, data_len, batch_first=True, enforce_sorted=False)
                                  
-                    else:
+                        else:
                     
-                        out['datadict'][param][structured_or_net_name] = torch.stack([x['datadict'][param][structured_or_net_name] for x in batch])
-                        
-                
+                            out['datadict'][param][structured_or_net_name] = torch.stack([x['datadict'][param][structured_or_net_name] for x in batch])
+            else:
+                out = batch 
+                    
                         
                 
             #target
