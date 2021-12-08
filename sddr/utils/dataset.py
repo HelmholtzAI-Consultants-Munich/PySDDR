@@ -123,10 +123,10 @@ class SddrDataset(Dataset):
         datadict = dict()
         found_unstructred = False
         for param in self.prepared_data.keys():
-            print('param', param)
+            #print('param', param)
             datadict[param] = dict()
             for structured_or_net_name in self.prepared_data[param].keys():
-                print('structured_or_net_name', structured_or_net_name)
+                #print('structured_or_net_name', structured_or_net_name)
                 unstructured_feat_list = []
                 # extract row from pandas data frame
                 if type(self.prepared_data[param][structured_or_net_name]) == torch.Tensor:
@@ -138,11 +138,11 @@ class SddrDataset(Dataset):
                     else:
                         feature_names = data_row.columns
                     for cur_feature in feature_names:
-                        print('cur_feature', cur_feature)
+                       # print('cur_feature', cur_feature)
                         # if there is an unstructured feature it must be read from memory so store that feature in a list
                         if cur_feature in self.unstructured_data_info.keys():
-                            print('cur_feature', cur_feature)
-                            print('self.unstructured_data_info.keys()', self.unstructured_data_info.keys())
+                            #print('cur_feature', cur_feature)
+                            #print('self.unstructured_data_info.keys()', self.unstructured_data_info.keys())
                             unstructured_feat_list.append(cur_feature)
                             # for now we can only have one unstructured feature so if it is found break loop
                             break
