@@ -30,10 +30,10 @@ class Family():
                          'Bernoulli_prob':['probs'],
                          'Multinomial':['logits'],
                          'Multinomial_prob':['probs'],
-                         'Logistic':['loc', 'scale']}
+                         'Logistic':['loc', 'scale'],
 #                        'Gamma':['concentration', 'rate'],
 #                        'Beta':['concentration1', 'concentration0'],
-                       #'NegativeBinomial':['loc', 'scale']}  # available family list
+                         'NegativeBinomial':['total_count', 'probs']}  # available family list
         assert family in self.families.keys(),'Given distribution is not available. Please try with a different distribution. Available distributions are %s' % (self.families.keys())
 
         self.family = family   # current distribution family
@@ -67,8 +67,8 @@ class Family():
 #             distribution_layer_type = torch.distributions.gamma.Gamma
 #         elif family == "Beta":
 #             distribution_layer_type = torch.distributions.beta.Beta
-#         elif family == "NegativeBinomial":
-#             distribution_layer_type = torch.distributions.negative_binomial.NegativeBinomial
+        elif self.family == "NegativeBinomial":
+             distribution_layer_type = torch.distributions.negative_binomial.NegativeBinomial
         else:
             raise ValueError('Unknown distribution')
            
@@ -123,10 +123,17 @@ class Family():
 #             pred_trafo["concentration1"] = add_const + pred["concentration1"].exp()
 #             pred_trafo["concentration0"] = add_const + pred["concentration0"].exp()
             
-#         elif family == "NegativeBinomial":   
-#             ####### to do: loc, scale -> f(total count) , p(probs)
-#             pred_trafo["total_count"] = pred["total_count"]  # constant
-#             pred_trafo["probs"] = pred["probs"]
+        elif self.family == "NegativeBinomial":   
+             ####### to do: loc, scale -> f(total count) , p(probs)
+            #pred_trafo["total_count"] = pred["total_count"]  # constant
+            #pred_trafo["probs"] = pred["probs"]
+            pred_trafo["probs"] = (pred["total_count"].exp()*pred["probs"].exp()) / (1 + pred["total_count"].exp()*pred["probs"].exp())
+            #print('min_probs', min(pred_trafo["probs"]))
+            #print('max_probs', max(pred_trafo["probs"]))
+            pred_trafo["total_count"] = 1/ (add_const + pred["probs"].exp())
+            #print('min_total_count', min(pred_trafo["total_count"]))
+            #print('max_total_count', max(pred_trafo["total_count"]))# constant
+
             
         else:
             raise ValueError('Unknown distribution')
