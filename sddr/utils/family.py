@@ -125,14 +125,11 @@ class Family():
             
         elif self.family == "NegativeBinomial":   
              ####### to do: loc, scale -> f(total count) , p(probs)
-            #pred_trafo["total_count"] = pred["total_count"]  # constant
-            #pred_trafo["probs"] = pred["probs"]
-            pred_trafo["probs"] = (pred["total_count"].exp()*pred["probs"].exp()) / (1 + pred["total_count"].exp()*pred["probs"].exp())
-            #print('min_probs', min(pred_trafo["probs"]))
-            #print('max_probs', max(pred_trafo["probs"]))
-            pred_trafo["total_count"] = 1/ (add_const + pred["probs"].exp())
-            #print('min_total_count', min(pred_trafo["total_count"]))
-            #print('max_total_count', max(pred_trafo["total_count"]))# constant
+
+            #pred_trafo["probs"] = (pred["total_count"].exp()*pred["probs"].exp()) / (1 + pred["total_count"].exp()*pred["probs"].exp())
+            pred_trafo["probs"] = pred_trafo["probs"].exp()/(pred_trafo["probs"].exp()+ pred_trafo["total_count"].exp())
+            #pred_trafo["total_count"] = 1/ (add_const + pred["probs"].exp())
+            pred_trafo["total_count"] = pred_trafo["total_count"].exp()
 
             
         else:
