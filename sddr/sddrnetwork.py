@@ -76,6 +76,7 @@ class SddrFormulaNet(nn.Module):
         
         Projection_Matrix = Q @ Q.T
         Utilde = Uhat - Projection_Matrix @ Uhat
+        print('Projection_Matrix', Projection_Matrix)
         
         return Utilde
     
