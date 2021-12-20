@@ -207,10 +207,12 @@ class Sddr(object):
         self.train_loader = DataLoader(train, 
                                     batch_size=self.config['train_parameters']['batch_size'],
                                     collate_fn=collate_pad,
+                                    sampler = torch.data.samplers.SequentialSamplerSequentialSampler(train, batch_size=self.config['train_parameters']['batch_size'], drop_last=False),
                                     num_workers=self.config['train_parameters']['num_workers'])
         self.val_loader = DataLoader(val, 
                                     batch_size=self.config['train_parameters']['batch_size'],
                                     collate_fn=collate_pad,
+                                    sampler = torch.data.samplers.SequentialSamplerSequentialSampler(val, batch_size=self.config['train_parameters']['batch_size'], drop_last=False),
                                     num_workers=self.config['train_parameters']['num_workers'])
 
         train_loss_list = []
