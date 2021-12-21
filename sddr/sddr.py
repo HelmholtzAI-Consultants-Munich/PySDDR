@@ -20,7 +20,7 @@ import warnings
 import copy
 import time #to delete later
 
-BatchSampler
+#BatchSampler
 
 class Sddr(object):
     '''
@@ -154,6 +154,7 @@ class Sddr(object):
         # load train and val data with data loader
         
         def collate_pad(batch): 
+            time10 = time.time()
             
             if isinstance(batch, list):
             
@@ -201,7 +202,8 @@ class Sddr(object):
             
             else:
                 out = batch 
-                    
+            time11 = time.time()
+            print('time collate', time11 -time10)
                         
 
             #print(out)
