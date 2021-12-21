@@ -8,7 +8,7 @@ from matplotlib import pyplot as plt
 # torch imports
 import torch
 from torch import nn
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, random_split, BatchSampler,SequentialSampler
 import torch.optim as optim
 # pysddr imports
 from .sddrnetwork import SddrNet, SddrFormulaNet
@@ -18,6 +18,9 @@ from .utils.prepare_data import PrepareData
 from .utils.family import Family
 import warnings
 import copy
+import time #to delete later
+
+BatchSampler
 
 class Sddr(object):
     '''
@@ -204,19 +207,28 @@ class Sddr(object):
             #print(out)
             return(out)
         
-        #self.train_loader = DataLoader(train, 
-        #                            #batch_size=self.config['train_parameters']['batch_size'],
-        #                            #collate_fn=collate_pad,
-        #                            sampler = torch.utils.data.SequentialSampler(train, batch_size=self.config['train_parameters']['batch_size'], drop_last=False),
-        #                            num_workers=self.config['train_parameters']['num_workers'])
-        #self.val_loader = DataLoader(val, 
-        #                            #batch_size=self.config['train_parameters']['batch_size'],
-        #                            #collate_fn=collate_pad,
-        #                            sampler = torch.utils.data.SequentialSampler(val, batch_size=self.config['train_parameters']['batch_size'], drop_last=False),
-        #                            num_workers=self.config['train_parameters']['num_workers'])
-        self.train_loader = torch.utils.data.SequentialSampler(train, batch_size=self.config['train_parameters']['batch_size'], drop_last=False)
-        self.val_loader = torch.utils.data.SequentialSampler(val, batch_size=self.config['train_parameters']['batch_size'], drop_last=False)
-
+       # self.train_loader = DataLoader(train, 
+       #                             batch_size=self.config['train_parameters']['batch_size'],
+       #                             sampler = torch.utils.data.SequentialSampler(train),
+       #                             num_workers=self.config['train_parameters']['num_workers'])
+       # self.val_loader = DataLoader(val, 
+       #                             batch_size=self.config['train_parameters']['batch_size'],
+       #                             sampler = torch.utils.data.SequentialSampler(val),
+       #                             num_workers=self.config['train_parameters']['num_workers'])
+        if self.config['train_parameters']['Full_Batch_Training'] == True:
+            self.train_loader = BatchSampler(SequentialSampler(train), batch_size=self.config['train_parameters']['batch_size'], drop_last=False)
+            self.val_loader = BatchSampler(SequentialSampler(val), batch_size=self.config['train_parameters']['batch_size'], drop_last=False)
+            
+        else: 
+            self.train_loader = DataLoader(train, 
+                                           batch_size=self.config['train_parameters']['batch_size'],
+                                           collate_fn=collate_pad,
+                                           num_workers=self.config['train_parameters']['num_workers'])
+            self.val_loader = DataLoader(val, 
+                                         batch_size=self.config['train_parameters']['batch_size'],
+                                         collate_fn=collate_pad,
+                                         num_workers=self.config['train_parameters']['num_workers'])
+     
 
         train_loss_list = []
         val_loss_list = []
@@ -237,16 +249,30 @@ class Sddr(object):
         for epoch in range(self.cur_epoch , self.config['train_parameters']['epochs']):
             self.net.train()
             self.epoch_train_loss = 0
+            
             for batch in self.train_loader:
+                time1 = time.time()
+                 #to delete
                 # for each batch
-                target = batch['target'].float().to(self.device)
-                datadict = batch['datadict']
-                #print(batch)
+                #
+                if self.config['train_parameters']['Full_Batch_Training'] == True:
+                    target = train[batch]['target'].float().to(self.device)
+                    datadict =  train[batch]['datadict']
+                else: 
+                    target = batch['target'].float().to(self.device)
+                    datadict =  batch['datadict']
+                time2 = time.time()
+                
+                print('dataloading time im sec', time2 -time1 )
+                
+               
                 
                 # send each input batch to the current device
                 for param in datadict.keys():
                     for data_part in datadict[param].keys():
                         datadict[param][data_part] = datadict[param][data_part].float().to(self.device)
+                time22 = time.time()
+                print('send batch to curren devvice time', time22 -time2 )
                         
                 # get the network output
                 self.optimizer.zero_grad()
@@ -260,7 +286,8 @@ class Sddr(object):
                 loss.backward()
                 self.optimizer.step()
                 self.epoch_train_loss += loss.item()
-                
+                time3 = time.time()
+                print('time for training', time3- time2)
             # compute the avg loss over all batches in the epoch
             self.epoch_train_loss = self.epoch_train_loss/len(self.train_loader)
             if epoch % epoch_print_interval == 0:

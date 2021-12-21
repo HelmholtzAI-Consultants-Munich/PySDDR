@@ -155,6 +155,7 @@ class SddrDataset(Dataset):
                             if type(index) is int:
                                 datadict[param][structured_or_net_name] = self.load_image(root_path, data_row[cur_feature])
                             else:
+                                print('loads as batch')
                                 images = []
                                 for image_file_name in data_row[cur_feature]:
                                     images.append(self.load_image(root_path, image_file_name).unsqueeze(0))
