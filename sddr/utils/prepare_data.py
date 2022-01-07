@@ -143,13 +143,7 @@ class PrepareData(object):
             # compute the penalty matrix and add content to the dicts to be returned
             self.P[param] = get_P_from_design_matrix(structured_matrix, dfs)  
             self.network_info_dict[param]['struct_shapes'] = structured_matrix.shape[1]
-    '''
-    def set_structured_matrix_design_info(self, structured_matrix_design_info):
-        self.structured_matrix_design_info = structured_matrix_design_info
-    
-    def set_data_range(self, data_range):
-        self.data_range = data_range
-    '''
+            
     def get_penalty_matrix(self, device):
         ''' Return penalty matrix as a torch and cast to device '''
         P = self.P

@@ -59,6 +59,9 @@ class Sddr(object):
             The defined torch optimizer, e.g. torch.optim.RMSprop
     '''
     def __init__(self, **kwargs):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        print('Using device: ', self.device)
+        
         # depending on whether the user has given a dict as input or multiple arguments self.config
         # should be a dict with keys the parameters defined by the user
         for key in kwargs.keys():
@@ -79,9 +82,6 @@ class Sddr(object):
         self.prepare_data = PrepareData(formulas,
                                         self.config['deep_models_dict'],
                                         self.config['train_parameters']['degrees_of_freedom'])
-
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print('Using device: ', self.device)
 
         # check if an output directory has been given - if yes check if it already exists and create it if not
         if 'output_dir' in self.config.keys():
@@ -128,6 +128,7 @@ class Sddr(object):
             self.dataset = SddrDataset(structured_data, self.prepare_data, target, unstructured_data)
             self.net = SddrNet(self.family, self.prepare_data.network_info_dict, self.p)
             self.net = self.net.to(self.device)
+            self.P = self.prepare_data.get_penalty_matrix(self.device)
             self._setup_optim()
             self.cur_epoch = 0
 
@@ -164,7 +165,6 @@ class Sddr(object):
                 eps = 0.001
         
         print('Beginning training ...')
-        P = self.prepare_data.get_penalty_matrix(self.device)
         for epoch in range(self.cur_epoch , self.config['train_parameters']['epochs']):
             self.net.train()
             self.epoch_train_loss = 0
@@ -184,7 +184,7 @@ class Sddr(object):
                 
                 # compute the loss and add regularization
                 loss = torch.mean(self.net.get_log_loss(target))
-                loss += self.net.get_regularization(P).squeeze_() 
+                loss += self.net.get_regularization(self.P).squeeze_() 
                 
                 # and backprobagate
                 loss.backward()
@@ -214,7 +214,7 @@ class Sddr(object):
                     _ = self.net(datadict)
                     # compute the loss and add regularization
                     val_batch_loss = torch.mean(self.net.get_log_loss(target))
-                    val_batch_loss += self.net.get_regularization(P).squeeze_() 
+                    val_batch_loss += self.net.get_regularization(self.P).squeeze_() 
                     self.epoch_val_loss += val_batch_loss.item()
                 if len(self.val_loader) !=0:
                     self.epoch_val_loss = self.epoch_val_loss/len(self.val_loader)
@@ -466,6 +466,7 @@ class Sddr(object):
                 design info
         """
         self._load_and_create_design_info(training_data, self.prepare_data)
+        self.P = self.prepare_data.get_penalty_matrix(self.device)
         if not torch.cuda.is_available():
             state_dict = torch.load(model_name, map_location='cpu')
         else:
