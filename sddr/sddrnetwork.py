@@ -49,6 +49,7 @@ class SddrFormulaNet(nn.Module):
         
         super(SddrFormulaNet, self).__init__()
         self.deep_models_dict = deep_models_dict
+        self.deep_shapes = deep_shapes
         
         #register external neural networks
         for key, value in deep_models_dict.items():
@@ -78,6 +79,15 @@ class SddrFormulaNet(nn.Module):
         
         return Utilde
     
+    def _check_network_output_shape(self, Uhat_net, key,datadict):
+        
+        expected_batchsize = datadict[key].shape[0]
+        expetec_output_size = self.deep_shapes[key]
+        
+        actual_output_shape = tuple(Uhat_net.shape)
+        
+        assert actual_output_shape == (expected_batchsize, expetec_output_size), f"Expected output of {key} to be {(expected_batchsize, expetec_output_size)} (batch-size, output_shape), but instead we found {actual_output_shape}"
+    
     
     def forward(self, datadict,training=True):
         X = datadict["structured"]
@@ -87,8 +97,8 @@ class SddrFormulaNet(nn.Module):
             Utilde_list = []
             for key in self.deep_models_dict.keys(): #assume that the input for the NN has the name of the NN as key
                 net = self.deep_models_dict[key]
-                
                 Uhat_net = net(datadict[key])
+                self._check_network_output_shape(Uhat_net, key, datadict)
                 
                 # orthogonalize the output of the neural network with respect to the parts of the structured part,
                 # that contain the same input as the neural network

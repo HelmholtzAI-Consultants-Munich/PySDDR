@@ -176,7 +176,7 @@ class Sddr(object):
                 # send each input batch to the current device
                 for param in datadict.keys():
                     for data_part in datadict[param].keys():
-                        datadict[param][data_part] = datadict[param][data_part].float().to(self.device)
+                        datadict[param][data_part] = datadict[param][data_part].to(self.device)
                         
                 # get the network output
                 self.optimizer.zero_grad()
@@ -210,7 +210,7 @@ class Sddr(object):
                     # send each input batch to the current device
                     for param in datadict.keys():
                         for data_part in datadict[param].keys():
-                            datadict[param][data_part] = datadict[param][data_part].float().to(self.device)
+                            datadict[param][data_part] = datadict[param][data_part].to(self.device)
                     _ = self.net(datadict)
                     # compute the loss and add regularization
                     val_batch_loss = torch.mean(self.net.get_log_loss(target))
@@ -560,7 +560,7 @@ class Sddr(object):
         # send each input batch to the current device
         for parameter in datadict.keys():
             for data_part in datadict[parameter].keys():
-                datadict[parameter][data_part] = datadict[parameter][data_part].float().to(self.device)
+                datadict[parameter][data_part] = datadict[parameter][data_part].to(self.device)
                         
         # get the network output
         with torch.no_grad():
