@@ -27,7 +27,7 @@ This installation was tested for python version 3.7 and 3.8
 
 ## Tutorials
 
-Two tutorials are available in the [tutorials](https://github.com/davidruegamer/PySDDR/tree/dev/tutorials) directory. One is aimed as a beginner's guide, where toy data is used to familiarize the user with the package and the second includes a more advanced tutorial with an example of applying the package also to unstructured data.
+Two tutorials are available in the [tutorials](./tutorials) directory. One is aimed as a beginner's guide, where toy data is used to familiarize the user with the package and the second includes a more advanced tutorial with an example of applying the package also to unstructured data.
 
 ## Contents
 
