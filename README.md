@@ -1,5 +1,9 @@
 # PySDDR
 
+![stability-stable](https://img.shields.io/badge/stability-stable-green.svg)
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/HelmholtzAI-Consultants-Munich/PySDDR)
+
+
 ## What is this?
 
 PySDDR is a python package used for regression tasks, which combines statistical regression models and neural networks into a general framework to deal with multi-modal data (e.g. tabular and image data). It can be used for mean regression as well as for distributional regression, i.e. estimating any parameter of the assumed distribution, not just the mean. Each distributional parameter is defined by a formula, consisting of a structured (statistical regression model) and unstructured (neural networks) part. One of the main advantages of this package is the introduction of an orthogonalization layer, which ensure identifiability when structured and unstructured parts share some input data, thus making the attribution of shared effects to either one of the parts (structured or unstructured) identifiable.
