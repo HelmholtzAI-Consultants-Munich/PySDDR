@@ -1,6 +1,8 @@
 # PySDDR
 
 ![stability-stable](https://img.shields.io/badge/stability-stable-green.svg)
+[![pySDDR using pip](https://github.com/HelmholtzAI-Consultants-Munich/PySDDR/actions/workflows/pySDDR_CI.yml/badge.svg)](https://github.com/HelmholtzAI-Consultants-Munich/PySDDR/actions/workflows/pySDDR_CI.yml)
+
 [![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/HelmholtzAI-Consultants-Munich/PySDDR)
 
 
