@@ -1,0 +1,21 @@
+name: pySDDR using pip
+
+on: [push]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v3
+      with:
+        python-version: 3.8
+    - name: Install package
+      run: |
+        pip install -e .
+    - name: Test with pytest
+      run: |
+        pip install pytest
+        pytest
