@@ -1,4 +1,4 @@
-name: pySDDR using pip
+name: Continuous integration of pySDDR using pytest
 
 on: [push]
 
